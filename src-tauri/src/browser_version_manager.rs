@@ -50,7 +50,7 @@ impl BrowserVersionManager {
     let (os, arch) = Self::get_platform_info();
 
     match browser {
-      "wayfern" => {
+      "camoufox" => {
         let platform_key = format!("{os}-{arch}");
         Ok(matches!(
           platform_key.as_str(),
@@ -68,7 +68,7 @@ impl BrowserVersionManager {
 
   /// Get list of browsers supported on the current platform
   pub fn get_supported_browsers(&self) -> Vec<String> {
-    let all_browsers = vec!["wayfern"];
+    let all_browsers = vec!["camoufox"];
 
     all_browsers
       .into_iter()
@@ -109,12 +109,12 @@ impl BrowserVersionManager {
     self.api_client.is_cache_expired(browser)
   }
 
-  /// Get the latest Wayfern version (fresh cache first)
+  /// Get the latest Camoufox version (fresh cache first)
   pub async fn get_browser_release_types(
     &self,
     browser: &str,
   ) -> Result<BrowserReleaseTypes, Box<dyn std::error::Error + Send + Sync>> {
-    if browser != "wayfern" {
+    if browser != "camoufox" {
       return Err(format!("Unsupported browser: {browser}").into());
     }
 
@@ -171,7 +171,7 @@ impl BrowserVersionManager {
 
     // Fetch fresh versions from API
     let fresh_versions = match browser {
-      "wayfern" => self.fetch_wayfern_versions(true).await?,
+      "camoufox" => self.fetch_camoufox_versions(true).await?,
       _ => return Err(format!("Unsupported browser: {browser}").into()),
     };
 
@@ -234,7 +234,7 @@ impl BrowserVersionManager {
     // Since we don't have detailed date/prerelease info for cached versions,
     // we'll fetch fresh detailed info and map it to our merged versions
     let detailed_info: Vec<BrowserVersionInfo> = match browser {
-      "wayfern" => merged_versions
+      "camoufox" => merged_versions
         .into_iter()
         .map(|version| BrowserVersionInfo {
           version: version.clone(),
@@ -297,29 +297,32 @@ impl BrowserVersionManager {
     let (os, arch) = Self::get_platform_info();
 
     match browser {
-      "wayfern" => {
-        // Wayfern downloads from https://download.wayfern.com/
-        // File naming: wayfern-{chromium_version}-{platform}-{arch}.{ext}
-        // Platform/arch format: linux-x64, macos-arm64, etc.
-        let platform_key = format!("{os}-{arch}");
-        let (filename, is_archive) = match platform_key.as_str() {
-          "macos-arm64" | "macos-x64" => (format!("wayfern-{version}-{platform_key}.dmg"), true),
-          "linux-x64" | "linux-arm64" => (format!("wayfern-{version}-{platform_key}.tar.xz"), true),
-          "windows-x64" | "windows-arm64" => {
-            (format!("wayfern-{version}-{platform_key}.zip"), true)
-          }
+      "camoufox" => {
+        // Camoufox downloads from GitHub releases with pattern:
+        // camoufox-{version}-{release}-{os}.{arch}.zip. The exact asset URL
+        // (including the beta build number) is resolved dynamically in
+        // downloader.rs::resolve_download_url against the fetched release
+        // list, since it isn't derivable from the tag name alone.
+        let (os_name, arch_name) = match (&os[..], &arch[..]) {
+          ("windows", "x64") => ("win", "x86_64"),
+          ("windows", "arm64") => ("win", "arm64"),
+          ("linux", "x64") => ("lin", "x86_64"),
+          ("linux", "arm64") => ("lin", "arm64"),
+          ("macos", "x64") => ("mac", "x86_64"),
+          ("macos", "arm64") => ("mac", "arm64"),
           _ => {
             return Err(
-              format!("Unsupported platform/architecture for Wayfern: {os}/{arch}").into(),
+              format!("Unsupported platform/architecture for Camoufox: {os}/{arch}").into(),
             )
           }
         };
 
-        // Note: The actual URL will be resolved dynamically from version.json in downloader.rs
         Ok(DownloadInfo {
-          url: format!("https://download.wayfern.com/{filename}"),
-          filename,
-          is_archive,
+          url: format!(
+            "https://github.com/daijro/camoufox/releases/download/{version}/camoufox-{version}-{os_name}.{arch_name}.zip"
+          ),
+          filename: format!("camoufox-{version}-{os_name}.{arch_name}.zip"),
+          is_archive: true,
         })
       }
       _ => Err(format!("Unsupported browser: {browser}").into()),
@@ -349,25 +352,15 @@ impl BrowserVersionManager {
     (os.to_string(), arch.to_string())
   }
 
-  async fn fetch_wayfern_versions(
+  async fn fetch_camoufox_versions(
     &self,
     no_caching: bool,
   ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
-    let version_info = self
+    let releases = self
       .api_client
-      .fetch_wayfern_version_with_caching(no_caching)
+      .fetch_camoufox_releases_with_caching(no_caching)
       .await?;
-
-    // Check if current platform has a download available
-    if self
-      .api_client
-      .has_wayfern_compatible_download(&version_info)
-    {
-      Ok(vec![version_info.version])
-    } else {
-      // No compatible download for current platform
-      Ok(vec![])
-    }
+    Ok(releases.into_iter().map(|r| r.tag_name).collect())
   }
 }
 
@@ -413,45 +406,45 @@ mod tests {
   fn test_get_download_info() {
     let service = BrowserVersionManager::instance();
 
-    let wayfern_info = service.get_download_info("wayfern", "1.0.0").unwrap();
+    let camoufox_info = service.get_download_info("camoufox", "1.0.0").unwrap();
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-macos-arm64.dmg");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-mac.arm64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-macos-x64.dmg");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-mac.x86_64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-linux-x64.tar.xz");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-lin.x86_64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
     #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-linux-arm64.tar.xz");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-lin.arm64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-windows-x64.zip");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-win.x86_64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
     #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
     {
-      assert_eq!(wayfern_info.filename, "wayfern-1.0.0-windows-arm64.zip");
-      assert!(wayfern_info.is_archive);
+      assert_eq!(camoufox_info.filename, "camoufox-1.0.0-win.arm64.zip");
+      assert!(camoufox_info.is_archive);
     }
 
-    assert!(wayfern_info.url.contains("download.wayfern.com"));
+    assert!(camoufox_info.url.contains("github.com/daijro/camoufox"));
 
     let unsupported_result = service.get_download_info("testbrowser", "1.0.0");
     assert!(unsupported_result.is_err());

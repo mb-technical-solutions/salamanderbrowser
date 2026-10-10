@@ -11,8 +11,17 @@
 //! Wrong password fails the AES-GCM auth tag on the first decrypt, which
 //! doubles as password verification.
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use aes_gcm::{
+  aead::{Aead, KeyInit},
+  Aes256Gcm, Key,
+};
+use argon2::{password_hash::SaltString, Argon2, PasswordHasher};
+use base64::{
+  engine::general_purpose::{STANDARD as BASE64, URL_SAFE_NO_PAD},
+  Engine,
+};
 use globset::{Glob, GlobSet, GlobSetBuilder};
+use rand::RngExt;
 use ring::hmac;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -20,20 +29,113 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::SystemTime;
 
-use crate::sync::encryption::{decrypt_bytes, derive_profile_key, encrypt_bytes, generate_salt};
-
 /// Length of the on-disk HMAC filename in chars.
 const HMAC_FILENAME_LEN: usize = 32;
 
 /// Marker file written into encrypted profile dirs so launch code can verify
 /// the password before attempting to decrypt actual user data files.
-const VERIFY_FILE_NAME: &str = ".donut-pw-verify";
-const VERIFY_FILE_PATH: &str = "__donut_pw_verify__";
+const VERIFY_FILE_NAME: &str = ".salamander-pw-verify";
+const VERIFY_FILE_PATH: &str = "__salamander_pw_verify__";
+
+/// (sha256(password), salt) -> derived key.
+type DerivedKeyCache = HashMap<([u8; 32], String), [u8; 32]>;
 
 lazy_static::lazy_static! {
   /// In-memory cache of derived per-profile encryption keys, keyed by profile UUID.
   /// Only populated while a profile is unlocked / running. Never persisted.
   static ref KEY_CACHE: Mutex<HashMap<uuid::Uuid, [u8; 32]>> = Mutex::new(HashMap::new());
+
+  /// Cache of Argon2id-derived keys keyed on `(sha256(password), salt)`, so
+  /// repeated `derive_profile_key` calls with the same password+salt are O(1)
+  /// instead of paying the ~80-150ms Argon2id cost every time.
+  static ref DERIVE_KEY_CACHE: Mutex<DerivedKeyCache> = Mutex::new(HashMap::new());
+}
+
+fn password_fingerprint(pwd: &str) -> [u8; 32] {
+  use sha2::{Digest, Sha256};
+  let mut hasher = Sha256::new();
+  hasher.update(pwd.as_bytes());
+  let result = hasher.finalize();
+  let mut out = [0u8; 32];
+  out.copy_from_slice(&result);
+  out
+}
+
+/// Derive a per-profile encryption key using Argon2id, with an in-process
+/// cache keyed on `(sha256(password), salt)`.
+pub fn derive_profile_key(user_password: &str, profile_salt: &str) -> Result<[u8; 32], String> {
+  let pwd_fp = password_fingerprint(user_password);
+  let cache_key = (pwd_fp, profile_salt.to_string());
+
+  if let Ok(cache) = DERIVE_KEY_CACHE.lock() {
+    if let Some(cached) = cache.get(&cache_key) {
+      return Ok(*cached);
+    }
+  }
+
+  let salt_bytes = BASE64
+    .decode(profile_salt)
+    .map_err(|e| format!("Invalid salt encoding: {e}"))?;
+
+  let salt = SaltString::encode_b64(&salt_bytes)
+    .map_err(|e| format!("Failed to create salt string: {e}"))?;
+
+  let argon2 = Argon2::default();
+  let password_hash = argon2
+    .hash_password(user_password.as_bytes(), &salt)
+    .map_err(|e| format!("Key derivation failed: {e}"))?;
+  let hash_value = password_hash.hash.unwrap();
+  let hash_bytes = hash_value.as_bytes();
+
+  let mut key = [0u8; 32];
+  key.copy_from_slice(&hash_bytes[..32]);
+
+  if let Ok(mut cache) = DERIVE_KEY_CACHE.lock() {
+    cache.insert(cache_key, key);
+  }
+
+  Ok(key)
+}
+
+/// Generate a random 16-byte salt, base64-encoded
+pub fn generate_salt() -> String {
+  let salt: [u8; 16] = rand::rng().random();
+  BASE64.encode(salt)
+}
+
+/// Encrypt bytes with AES-256-GCM. Output format: [nonce 12B][ciphertext]
+pub fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, String> {
+  let aes_key = Key::<Aes256Gcm>::from(*key);
+  let cipher = Aes256Gcm::new(&aes_key);
+  let nonce_bytes: [u8; 12] = rand::rng().random();
+  let nonce = aes_gcm::Nonce::from(nonce_bytes);
+
+  let ciphertext = cipher
+    .encrypt(&nonce, plaintext)
+    .map_err(|e| format!("Encryption failed: {e}"))?;
+
+  let mut output = Vec::with_capacity(12 + ciphertext.len());
+  output.extend_from_slice(&nonce);
+  output.extend_from_slice(&ciphertext);
+  Ok(output)
+}
+
+/// Decrypt bytes encrypted with encrypt_bytes. Input format: [nonce 12B][ciphertext]
+pub fn decrypt_bytes(key: &[u8; 32], encrypted: &[u8]) -> Result<Vec<u8>, String> {
+  if encrypted.len() < 12 {
+    return Err("Encrypted data too short".to_string());
+  }
+
+  let nonce_bytes: [u8; 12] = encrypted[..12].try_into().map_err(|_| "Invalid nonce")?;
+  let nonce = aes_gcm::Nonce::from(nonce_bytes);
+  let ciphertext = &encrypted[12..];
+
+  let aes_key = Key::<Aes256Gcm>::from(*key);
+  let cipher = Aes256Gcm::new(&aes_key);
+
+  cipher
+    .decrypt(&nonce, ciphertext)
+    .map_err(|e| format!("Decryption failed: {e}"))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -147,13 +249,13 @@ fn atomic_write(path: &Path, data: &[u8]) -> std::io::Result<()> {
   if let Some(parent) = path.parent() {
     std::fs::create_dir_all(parent)?;
   }
-  let tmp = path.with_extension("donut-tmp");
+  let tmp = path.with_extension("salamander-tmp");
   std::fs::write(&tmp, data)?;
   std::fs::rename(&tmp, path)
 }
 
 fn write_verifier(key: &[u8; 32], encrypted_dir: &Path) -> PasswordResult<()> {
-  let encrypted = encrypt_profile_file(key, VERIFY_FILE_PATH, b"donut-verify")?;
+  let encrypted = encrypt_profile_file(key, VERIFY_FILE_PATH, b"salamander-verify")?;
   let path = encrypted_dir.join(VERIFY_FILE_NAME);
   atomic_write(&path, &encrypted)?;
   Ok(())
@@ -169,7 +271,7 @@ pub fn verify_key_against_dir(key: &[u8; 32], encrypted_dir: &Path) -> PasswordR
   }
   let bytes = std::fs::read(&path)?;
   let (relpath, content) = decrypt_profile_file(key, &bytes)?;
-  if relpath != VERIFY_FILE_PATH || content != b"donut-verify" {
+  if relpath != VERIFY_FILE_PATH || content != b"salamander-verify" {
     return Err(PasswordError::InvalidFormat);
   }
   Ok(())
@@ -413,6 +515,96 @@ mod tests {
 
   fn make_key() -> [u8; 32] {
     derive_profile_key("hunter2", &generate_salt()).unwrap()
+  }
+
+  #[test]
+  fn test_encrypt_decrypt_roundtrip() {
+    let key = [42u8; 32];
+    let plaintext = b"Hello, World!";
+    let encrypted = encrypt_bytes(&key, plaintext).unwrap();
+    let decrypted = decrypt_bytes(&key, &encrypted).unwrap();
+    assert_eq!(decrypted, plaintext);
+  }
+
+  #[test]
+  fn test_encrypt_decrypt_empty_data() {
+    let key = [1u8; 32];
+    let plaintext = b"";
+    let encrypted = encrypt_bytes(&key, plaintext).unwrap();
+    let decrypted = decrypt_bytes(&key, &encrypted).unwrap();
+    assert_eq!(decrypted, plaintext.to_vec());
+  }
+
+  #[test]
+  fn test_encrypt_decrypt_large_data() {
+    let key = [7u8; 32];
+    let plaintext = vec![0xABu8; 1_048_576]; // 1MB
+    let encrypted = encrypt_bytes(&key, &plaintext).unwrap();
+    let decrypted = decrypt_bytes(&key, &encrypted).unwrap();
+    assert_eq!(decrypted, plaintext);
+  }
+
+  #[test]
+  fn test_different_keys_different_ciphertext() {
+    let key1 = [1u8; 32];
+    let key2 = [2u8; 32];
+    let plaintext = b"same data";
+    let encrypted1 = encrypt_bytes(&key1, plaintext).unwrap();
+    let encrypted2 = encrypt_bytes(&key2, plaintext).unwrap();
+    assert!(decrypt_bytes(&key2, &encrypted1).is_err());
+    assert!(decrypt_bytes(&key1, &encrypted2).is_err());
+  }
+
+  #[test]
+  fn test_nonce_uniqueness() {
+    let key = [5u8; 32];
+    let plaintext = b"same data encrypted twice";
+    let encrypted1 = encrypt_bytes(&key, plaintext).unwrap();
+    let encrypted2 = encrypt_bytes(&key, plaintext).unwrap();
+    assert_ne!(encrypted1, encrypted2);
+    assert_eq!(
+      decrypt_bytes(&key, &encrypted1).unwrap(),
+      decrypt_bytes(&key, &encrypted2).unwrap()
+    );
+  }
+
+  #[test]
+  fn test_wrong_key_fails() {
+    let key = [10u8; 32];
+    let wrong_key = [20u8; 32];
+    let plaintext = b"secret data";
+    let encrypted = encrypt_bytes(&key, plaintext).unwrap();
+    assert!(decrypt_bytes(&wrong_key, &encrypted).is_err());
+  }
+
+  #[test]
+  fn test_key_derivation_deterministic() {
+    let salt = generate_salt();
+    let key1 = derive_profile_key("my_password", &salt).unwrap();
+    let key2 = derive_profile_key("my_password", &salt).unwrap();
+    assert_eq!(key1, key2);
+  }
+
+  #[test]
+  fn test_key_derivation_different_salts() {
+    let salt1 = generate_salt();
+    let salt2 = generate_salt();
+    let key1 = derive_profile_key("my_password", &salt1).unwrap();
+    let key2 = derive_profile_key("my_password", &salt2).unwrap();
+    assert_ne!(key1, key2);
+  }
+
+  #[test]
+  fn test_salt_generation_unique() {
+    let salt1 = generate_salt();
+    let salt2 = generate_salt();
+    assert_ne!(salt1, salt2);
+  }
+
+  #[test]
+  fn test_decrypt_too_short_data() {
+    let key = [1u8; 32];
+    assert!(decrypt_bytes(&key, &[0u8; 5]).is_err());
   }
 
   #[test]
@@ -661,7 +853,7 @@ mod tests {
     std::fs::write(&target, b"original").unwrap();
 
     // Simulate a stale tmp from a crashed write
-    std::fs::write(target.with_extension("donut-tmp"), b"partial").unwrap();
+    std::fs::write(target.with_extension("salamander-tmp"), b"partial").unwrap();
 
     // A successful write should overwrite the original even when stale tmp exists
     atomic_write(&target, b"new").unwrap();

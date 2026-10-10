@@ -3,8 +3,8 @@
 //! Two findings can stop a launch being what the user expects:
 //!
 //! * a **VPN/proxy extension** in the profile, which can override the proxy
-//!   Donut configured and silently move the browser's exit away from the one
-//!   the fingerprint was generated for — a warning, since Donut cannot tell
+//!   Salamander configured and silently move the browser's exit away from the one
+//!   the fingerprint was generated for — a warning, since Salamander cannot tell
 //!   from outside whether it is actually routing anything;
 //! * a measured **exit/fingerprint mismatch**, which is a hard block: the
 //!   browser does not start until the user explicitly proceeds.
@@ -34,11 +34,6 @@ pub enum FingerprintGate {
   /// Block on a measured mismatch. The default, and what the GUI uses.
   #[default]
   Enforce,
-  /// Measure only from cache and report; never block, never probe the network.
-  /// Automation runs here: a headless client has no dialog to answer and
-  /// cannot regenerate its fingerprint mid-run, so a hard failure would turn a
-  /// warning into an outage for a whole fleet.
-  Advisory,
   /// The user already said "launch anyway" and handed back a token.
   Consented(String),
 }
@@ -165,10 +160,6 @@ async fn enforce_direct_exit(
   if let FingerprintGate::Consented(token) = gate {
     return redeem_consent(token, profile, DIRECT_EXIT_IDENTITY);
   }
-  // Automation never probes; without a cache to consult there is nothing to say.
-  if matches!(gate, FingerprintGate::Advisory) {
-    return Ok(());
-  }
 
   let result = match fingerprint_consistency::probe_direct_and_check(profile).await {
     Ok(result) => result,
@@ -243,42 +234,20 @@ pub async fn enforce_fingerprint_gate(
     return Ok(());
   }
 
-  let result = if matches!(gate, FingerprintGate::Advisory) {
-    // Automation: answer from a warm cache or say nothing. Probing here would
-    // add seconds to every profile in a batch run.
-    fingerprint_consistency::check_profile_consistency_cached(profile)
-  } else {
-    match fingerprint_consistency::probe_and_check_consistency(profile, upstream, &key).await {
-      Ok(result) => result,
-      Err(e) => {
-        log::warn!(
-          "Fingerprint gate: exit probe failed for profile {}, allowing launch: {e}",
-          profile.name
-        );
-        return Ok(());
-      }
+  let result = match fingerprint_consistency::probe_and_check_consistency(profile, upstream, &key)
+    .await
+  {
+    Ok(result) => result,
+    Err(e) => {
+      log::warn!(
+        "Fingerprint gate: exit probe failed for profile {}, allowing launch: {e}",
+        profile.name
+      );
+      return Ok(());
     }
   };
 
   if !result.checked || result.consistent {
-    return Ok(());
-  }
-
-  // Automation is the only caller allowed past a measured mismatch, because it
-  // has no dialog to answer. A proxy-capable extension in the profile does NOT
-  // earn the same pass: it makes the measurement less trustworthy, and a route
-  // that might be worse than measured is a reason for more scrutiny, not less.
-  // Waiving the block on it also meant any download manager holding Chromium's
-  // `proxy` permission silently disarmed the gate for good.
-  if matches!(gate, FingerprintGate::Advisory) {
-    log::warn!(
-      "Fingerprint gate: {} launching with a known exit mismatch ({})",
-      profile.name,
-      result.mismatches.join(", ")
-    );
-    if let Err(e) = crate::events::emit("fingerprint-consistency-warning", &result) {
-      log::warn!("Failed to emit fingerprint consistency warning: {e}");
-    }
     return Ok(());
   }
 
@@ -406,10 +375,10 @@ mod tests {
   fn profile_with(fingerprint: &str) -> BrowserProfile {
     let mut profile = BrowserProfile {
       id: uuid::Uuid::new_v4(),
-      browser: "wayfern".into(),
+      browser: "camoufox".into(),
       ..Default::default()
     };
-    profile.wayfern_config = Some(crate::wayfern_manager::WayfernConfig {
+    profile.camoufox_config = Some(crate::camoufox_manager::CamoufoxConfig {
       fingerprint: Some(fingerprint.to_string()),
       ..Default::default()
     });

@@ -43,7 +43,7 @@ lazy_static::lazy_static! {
 /// capability nobody should be able to reach in a shipped binary.
 #[cfg(any(test, debug_assertions))]
 fn ephemeral_base_override() -> Option<PathBuf> {
-  std::env::var_os("DONUTBROWSER_EPHEMERAL_ROOT")
+  std::env::var_os("SALAMANDERBROWSER_EPHEMERAL_ROOT")
     .filter(|v| !v.is_empty())
     .map(PathBuf::from)
 }
@@ -69,7 +69,7 @@ fn get_ephemeral_base_dir() -> Result<(PathBuf, EphemeralBacking), String> {
 
   #[cfg(target_os = "linux")]
   {
-    let base = PathBuf::from("/dev/shm/donut-ephemeral");
+    let base = PathBuf::from("/dev/shm/salamander-ephemeral");
     std::fs::create_dir_all(&base)
       .map_err(|e| format!("Failed to create ephemeral base in /dev/shm: {e}"))?;
     Ok((base, EphemeralBacking::Ram))
@@ -100,7 +100,7 @@ fn get_ephemeral_base_dir() -> Result<(PathBuf, EphemeralBacking), String> {
     // makes and the previous "may use disk" wording was logged unconditionally
     // right before disk was used, so it read as speculative when it was
     // certain. The cause used to be discarded entirely.
-    let base = std::env::temp_dir().join("donut-ephemeral");
+    let base = std::env::temp_dir().join("salamander-ephemeral");
     std::fs::create_dir_all(&base)
       .map_err(|e| format!("Failed to create ephemeral base dir: {e}"))?;
     log::error!(
@@ -113,7 +113,7 @@ fn get_ephemeral_base_dir() -> Result<(PathBuf, EphemeralBacking), String> {
 
 #[cfg(target_os = "macos")]
 fn get_or_create_macos_ramdisk() -> Result<PathBuf, String> {
-  let mount_point = PathBuf::from("/Volumes/DonutEphemeral");
+  let mount_point = PathBuf::from("/Volumes/SalamanderEphemeral");
 
   // Reuse existing RAM disk from a previous session
   if mount_point.exists() && mount_point.is_dir() {
@@ -137,7 +137,7 @@ fn get_or_create_macos_ramdisk() -> Result<PathBuf, String> {
   let dev = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
   let fmt = std::process::Command::new("diskutil")
-    .args(["erasevolume", "HFS+", "DonutEphemeral", &dev])
+    .args(["erasevolume", "HFS+", "SalamanderEphemeral", &dev])
     .output()
     .map_err(|e| format!("diskutil erasevolume failed: {e}"))?;
 
@@ -159,7 +159,7 @@ fn get_or_create_macos_ramdisk() -> Result<PathBuf, String> {
 fn get_or_create_windows_ramdisk() -> Result<PathBuf, String> {
   // Check if a previous RAM disk with our directory already exists
   for letter in ['R', 'Q', 'P', 'O'] {
-    let base = PathBuf::from(format!("{}:\\DonutEphemeral", letter));
+    let base = PathBuf::from(format!("{}:\\SalamanderEphemeral", letter));
     if base.exists() && base.is_dir() {
       return Ok(base);
     }
@@ -178,7 +178,7 @@ fn get_or_create_windows_ramdisk() -> Result<PathBuf, String> {
 
     match output {
       Ok(out) if out.status.success() => {
-        let base = PathBuf::from(format!("{}\\DonutEphemeral", drive));
+        let base = PathBuf::from(format!("{}\\SalamanderEphemeral", drive));
         std::fs::create_dir_all(&base)
           .map_err(|e| format!("Failed to create dir on RAM disk: {e}"))?;
         log::info!("Created Windows RAM disk at {}", base.display());
@@ -353,7 +353,7 @@ pub fn recover_ephemeral_dirs() {
 /// fallback, unless that fallback is the base being used right now (in which
 /// case `recover_ephemeral_dirs` is about to adopt them instead).
 fn sweep_disk_fallback_residue(current_base: &Path) {
-  let fallback = std::env::temp_dir().join("donut-ephemeral");
+  let fallback = std::env::temp_dir().join("salamander-ephemeral");
   if !fallback.exists() || fallback == current_base {
     return;
   }
@@ -414,7 +414,7 @@ mod tests {
     BrowserProfile {
       id,
       name: "test".to_string(),
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "1.0".to_string(),
       proxy_id: None,
       vpn_id: None,
@@ -422,20 +422,16 @@ mod tests {
       process_id: None,
       last_launch: None,
       release_type: "stable".to_string(),
-      wayfern_config: None,
+      camoufox_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
-      sync_mode: crate::profile::types::SyncMode::Disabled,
       encryption_salt: None,
-      last_sync: None,
       host_os: None,
       ephemeral,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
-      created_by_id: None,
-      created_by_email: None,
       dns_blocklist: None,
       password_protected: false,
       clear_on_close: false,
@@ -453,7 +449,7 @@ mod tests {
   impl BaseGuard {
     fn new() -> Self {
       let tmp = tempfile::tempdir().unwrap();
-      std::env::set_var("DONUTBROWSER_EPHEMERAL_ROOT", tmp.path());
+      std::env::set_var("SALAMANDERBROWSER_EPHEMERAL_ROOT", tmp.path());
       BaseGuard(tmp)
     }
 
@@ -464,7 +460,7 @@ mod tests {
 
   impl Drop for BaseGuard {
     fn drop(&mut self) {
-      std::env::remove_var("DONUTBROWSER_EPHEMERAL_ROOT");
+      std::env::remove_var("SALAMANDERBROWSER_EPHEMERAL_ROOT");
     }
   }
 

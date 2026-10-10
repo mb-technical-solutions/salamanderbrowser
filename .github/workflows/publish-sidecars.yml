@@ -1,11 +1,11 @@
 name: Publish sidecars to R2
 
-# Publishes the `donut-proxy` sidecar to the bucket behind
+# Publishes the `salamander-proxy` sidecar to the bucket behind
 # https://download.wayfern.com, which is where the Wayfern VM fleet's bootstrap
 # scripts fetch it from.
 #
 # WHY THIS EXISTS SEPARATELY FROM release.yml
-# The desktop app ships donut-proxy INSIDE the bundle as a Tauri sidecar, so a
+# The desktop app ships salamander-proxy INSIDE the bundle as a Tauri sidecar, so a
 # desktop release never needs it in a bucket. The fleet is the opposite: a leased
 # macOS or Windows host has no bundle, and its agent refuses to launch a browser
 # at all when the sidecar is missing (agent/launcher.go). Tying publication to a
@@ -29,7 +29,7 @@ on:
       # modules `src/bin/proxy_server.rs` actually imports, rather than all of
       # src-tauri/src.
       #
-      # BEST EFFORT, deliberately: the bin reaches donutbrowser_lib, so a change
+      # BEST EFFORT, deliberately: the bin reaches salamanderbrowser_lib, so a change
       # deep in a shared module can alter the binary without matching a path
       # here. `workflow_dispatch` is the escape hatch, and the round-trip digest
       # check means a stale publish is visible rather than silent.
@@ -59,7 +59,7 @@ permissions:
 
 jobs:
   build:
-    name: Build donut-proxy (${{ matrix.target }})
+    name: Build salamander-proxy (${{ matrix.target }})
     runs-on: ${{ matrix.platform }}
     strategy:
       # One target failing must not leave the other unpublished and the pair
@@ -70,11 +70,11 @@ jobs:
           # The leased Mac mini (Apple silicon).
           - platform: macos-latest
             target: aarch64-apple-darwin
-            artifact: donut-proxy-aarch64-apple-darwin
+            artifact: salamander-proxy-aarch64-apple-darwin
           # The leased Elastic Metal Windows box.
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: donut-proxy-x86_64-pc-windows-msvc.exe
+            artifact: salamander-proxy-x86_64-pc-windows-msvc.exe
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -91,12 +91,12 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Build donut-proxy
+      - name: Build salamander-proxy
         shell: bash
         working-directory: ./src-tauri
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: cargo build --bin donut-proxy --target ${{ matrix.target }} --release
+        run: cargo build --bin salamander-proxy --target ${{ matrix.target }} --release
 
       - name: Stage the binary and record its digest
         id: stage
@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sidecars"
-          src="target/${{ matrix.target }}/release/donut-proxy"
+          src="target/${{ matrix.target }}/release/salamander-proxy"
           [ -f "$src.exe" ] && src="$src.exe"
           if [ ! -f "$src" ]; then
             echo "::error::cargo reported success but $src does not exist"
@@ -121,7 +121,7 @@ jobs:
           # later and less clearly.
           version="$("$dest" --version)"
           case "$version" in
-            "donut-proxy "*) ;;
+            "salamander-proxy "*) ;;
             *) echo "::error::unexpected --version output: $version"; exit 1 ;;
           esac
 

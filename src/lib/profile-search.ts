@@ -110,19 +110,6 @@ export const PROFILE_SEARCH_FIELDS: readonly ProfileSearchField[] = [
     values: ["running", "stopped"],
   },
   {
-    key: "sync",
-    aliases: [],
-    kind: "enum",
-    labelKey: "search.fields.sync",
-    values: ["disabled", "regular", "encrypted"],
-  },
-  {
-    key: "email",
-    aliases: ["owner"],
-    kind: "text",
-    labelKey: "search.fields.email",
-  },
-  {
     key: "version",
     aliases: [],
     kind: "version",
@@ -622,8 +609,6 @@ function fieldValue(
       return one(profile.browser);
     case "version":
       return one(profile.version);
-    case "email":
-      return one(profile.created_by_email);
     case "id":
       return { present: true, candidates: [profile.id.toLowerCase()] };
     case "tag": {
@@ -644,9 +629,7 @@ function fieldValue(
     case "dns":
       return one(profile.dns_blocklist);
     case "os":
-      return one(profile.host_os ?? profile.wayfern_config?.os);
-    case "sync":
-      return one(profile.sync_mode ?? "Disabled");
+      return one(profile.host_os ?? profile.camoufox_config?.os);
     case "status":
       return one(ctx.runningProfiles.has(profile.id) ? "running" : "stopped");
     default:

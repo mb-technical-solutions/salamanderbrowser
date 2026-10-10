@@ -28,10 +28,16 @@ const MAX_PREFERENCES_BYTES: u64 = 32 * 1024 * 1024;
 
 /// Chromium profile directories to search inside a user-data dir.
 ///
-/// Two layouts are real here: Donut launches Wayfern with only
-/// `--user-data-dir`, so Chromium uses `Default/`; but an imported profile is
+/// Two layouts are real here: a Chromium-based engine launched with only
+/// `--user-data-dir` uses `Default/`; but an imported profile is
 /// copied in as the profile directory itself, putting `Extensions/` at the
 /// root. Checking only one layout misses every profile of the other kind.
+///
+/// Camoufox (the only engine left after Wayfern's removal) is Firefox-based
+/// and lays out extensions differently, so this walk finds nothing for a
+/// Camoufox profile — a known gap, not a false-clean result: `scan_profile`
+/// in `mod.rs` still reports `scanned` since the directory itself was
+/// readable, just empty of anything this Chromium-shaped walk recognizes.
 fn candidate_profile_dirs(user_data_dir: &Path) -> Vec<PathBuf> {
   let mut dirs = Vec::new();
 

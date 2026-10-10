@@ -47,8 +47,6 @@
       "notGranted": "Chưa cấp",
       "connected": "Đã kết nối",
       "disconnected": "Đã ngắt kết nối",
-      "synced": "Đã đồng bộ",
-      "syncing": "Đang đồng bộ",
       "pending": "Đang chờ",
       "error": "Lỗi"
     },
@@ -134,60 +132,21 @@
       "title": "Trình duyệt mặc định",
       "setAsDefault": "Đặt làm trình duyệt mặc định",
       "alreadyDefault": "Đã là trình duyệt mặc định",
-      "description": "Khi được đặt làm mặc định, Donut Browser sẽ xử lý các liên kết web và cho phép bạn chọn hồ sơ để sử dụng.",
-      "setSuccess": "Donut Browser hiện là trình duyệt mặc định của bạn",
+      "description": "Khi được đặt làm mặc định, Salamander Browser sẽ xử lý các liên kết web và cho phép bạn chọn hồ sơ để sử dụng.",
+      "setSuccess": "Salamander Browser hiện là trình duyệt mặc định của bạn",
       "setFailed": "Không thể đặt trình duyệt mặc định",
       "finishInSystemSettings": "Hoàn tất trong Cài đặt Windows",
-      "finishInSystemSettingsDescription": "Donut Browser đã được đăng ký. Cài đặt Windows đang mở: chọn Donut Browser trong mục Trình duyệt web để hoàn tất."
+      "finishInSystemSettingsDescription": "Salamander Browser đã được đăng ký. Cài đặt Windows đang mở: chọn Salamander Browser trong mục Trình duyệt web để hoàn tất."
     },
     "permissions": {
       "title": "Quyền hệ thống",
       "loading": "Đang tải quyền...",
-      "description": "Các quyền này cho phép trình duyệt được khởi chạy từ Donut Browser truy cập tài nguyên hệ thống. Mỗi trang web vẫn sẽ yêu cầu quyền riêng lẻ.",
+      "description": "Các quyền này cho phép trình duyệt được khởi chạy từ Salamander Browser truy cập tài nguyên hệ thống. Mỗi trang web vẫn sẽ yêu cầu quyền riêng lẻ.",
       "microphone": "Micro",
       "microphoneDescription": "Quyền truy cập micro cho ứng dụng trình duyệt",
       "camera": "Camera",
       "cameraDescription": "Quyền truy cập camera cho ứng dụng trình duyệt",
       "accessRequested": "Yêu cầu quyền truy cập {{permission}}"
-    },
-    "integrations": {
-      "title": "Tích hợp",
-      "description": "Cấu hình Local API và MCP (Model Context Protocol) để tích hợp với công cụ bên ngoài và trợ lý AI.",
-      "openSettings": "Mở cài đặt tích hợp"
-    },
-    "encryption": {
-      "title": "Mã hóa đồng bộ",
-      "description": "Đặt mật khẩu để bật mã hóa đầu cuối (E2E) cho đồng bộ. Nếu mất mật khẩu này, các hồ sơ đã mã hóa sẽ không thể khôi phục.",
-      "passwordSet": "Đang hoạt động",
-      "passwordSetDescription": "Mật khẩu mã hóa E2E đã được thiết lập",
-      "noPassword": "Chưa đặt mật khẩu",
-      "passwordPlaceholder": "Mật khẩu (tối thiểu 8 ký tự)",
-      "confirmPlaceholder": "Xác nhận mật khẩu",
-      "setPassword": "Đặt mật khẩu",
-      "changePassword": "Đổi mật khẩu",
-      "removePassword": "Xóa mật khẩu",
-      "removed": "Đã xóa mật khẩu mã hóa",
-      "passwordSaved": "Đã thiết lập mật khẩu mã hóa",
-      "passwordMismatch": "Mật khẩu không khớp",
-      "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự",
-      "requiresProOrOwner": "Mã hóa hồ sơ chỉ dành cho người dùng Pro và chủ nhóm.",
-      "validatePassword": "Xác thực",
-      "validateDialog": {
-        "title": "Xác thực mật khẩu mã hóa",
-        "description": "Nhập mật khẩu mã hóa để xác minh khớp với mật khẩu được lưu trên thiết bị này.",
-        "submit": "Xác thực",
-        "matchToast": "Mật khẩu chính xác",
-        "mismatchToast": "Mật khẩu không khớp"
-      }
-    },
-    "commercial": {
-      "title": "Giấy phép thương mại",
-      "trialActive": "Dùng thử: còn {{days}} ngày, {{hours}} giờ",
-      "trialActiveDescription": "Sử dụng thương mại miễn phí trong thời gian dùng thử. Khi hết hạn, tất cả tính năng vẫn hoạt động — sử dụng cá nhân miễn phí, chỉ sử dụng thương mại mới cần giấy phép.",
-      "trialExpired": "Đã hết hạn dùng thử",
-      "trialExpiredDescription": "Sử dụng cá nhân vẫn miễn phí. Sử dụng thương mại cần giấy phép.",
-      "subscriptionActive": "Đã đăng ký — gói {{plan}}",
-      "subscriptionActiveDescription": "Đăng ký Donut Browser của bạn đang hoạt động. Sử dụng thương mại được cấp phép trong thời hạn gói."
     },
     "advanced": {
       "title": "Nâng cao",
@@ -200,7 +159,7 @@
       "copyLogsDescription": "Sao chép gói nhật ký gần đây đã được che thông tin nhạy cảm (tối đa 5 MB). Hãy xem lại trước khi chia sẻ vì việc che dữ liệu không thể nhận diện mọi loại dữ liệu cá nhân."
     },
     "disableAutoUpdates": "Tắt tự động cập nhật ứng dụng",
-    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật Donut Browser. Cập nhật trình duyệt không bị ảnh hưởng.",
+    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật Salamander Browser. Cập nhật trình duyệt không bị ảnh hưởng.",
     "keepDecryptedProfilesInRam": "Giữ hồ sơ đã giải mã trong RAM",
     "keepDecryptedProfilesInRamDescription": "Giữ bản sao đã giải mã trong RAM của hồ sơ được bảo vệ bằng mật khẩu giữa các lần khởi chạy để khởi động nhanh hơn. Bản sao trên ổ đĩa vẫn được mã hóa.",
     "privacy": {
@@ -222,13 +181,11 @@
       "settings": "Cài đặt",
       "proxies": "Proxy & VPN",
       "groups": "Nhóm",
-      "syncService": "Tài khoản",
-      "integrations": "Tích hợp",
       "importProfile": "Nhập hồ sơ",
       "extensions": "Tiện ích mở rộng"
     },
     "newProfile": "Mới",
-    "donutLogo": "Logo Donut Browser",
+    "salamanderLogo": "Logo Salamander Browser",
     "scrollGroupsLeft": "Cuộn nhóm sang trái",
     "scrollGroupsRight": "Cuộn nhóm sang phải"
   },
@@ -252,8 +209,6 @@
       "os": "Hệ điều hành",
       "browser": "Trình duyệt",
       "status": "Đang chạy hay không",
-      "sync": "Chế độ đồng bộ",
-      "email": "Email chủ sở hữu",
       "version": "Phiên bản trình duyệt",
       "locked": "Được bảo vệ bằng mật khẩu",
       "ephemeral": "Hồ sơ tạm thời",
@@ -308,7 +263,6 @@
       "emptyImport": "Nhập hồ sơ",
       "emptyFilteredTitle": "Không tìm thấy hồ sơ",
       "emptyFilteredHint": "Không có hồ sơ nào khớp với nhóm hoặc tìm kiếm này. Hãy thử bộ lọc khác hoặc tạo mới.",
-      "bot": "Bot",
       "profileId": "ID"
     },
     "actions": {
@@ -320,7 +274,6 @@
       "configure": "Cấu hình",
       "clone": "Nhân bản hồ sơ",
       "viewNetwork": "Xem mạng",
-      "syncSettings": "Cài đặt đồng bộ",
       "assignToGroup": "Gán vào nhóm",
       "changeFingerprint": "Đổi vân tay",
       "copyCookiesToProfile": "Sao chép Cookie sang hồ sơ",
@@ -328,22 +281,6 @@
       "setPassword": "Đặt mật khẩu",
       "changePassword": "Đổi mật khẩu",
       "removePassword": "Xóa mật khẩu"
-    },
-    "synchronizer": {
-      "launchWithSync": "Khởi chạy với trình đồng bộ",
-      "stopLeader": "Dừng hồ sơ này và tất cả hồ sơ đi theo",
-      "stopFollower": "Đang đi theo hành động của {{leaderName}}",
-      "desyncedTooltip": "Đồng bộ thất bại tại {{url}}",
-      "paidFeature": "Trình đồng bộ là tính năng trả phí",
-      "wayfernOnly": "Chỉ hồ sơ Wayfern mới có thể đồng bộ",
-      "selectFollowers": "Chọn hồ sơ đi theo",
-      "selectFollowersDesc": "Chọn các hồ sơ sẽ phản chiếu hành động của hồ sơ dẫn đầu. Chỉ hồ sơ Wayfern đã dừng mới có thể chọn.",
-      "leader": "Dẫn đầu",
-      "follower": "Đi theo",
-      "startSession": "Bắt đầu phiên đồng bộ",
-      "noFollowers": "Chọn ít nhất một hồ sơ đi theo",
-      "flakyBadge": "KHÔNG ỔN ĐỊNH",
-      "flakyTooltip": "Hồ sơ này có độ phân giải màn hình khác với hồ sơ dẫn đầu. Bố cục trang có thể khác, khiến nhấp chuột và tương tác có thể sai lệch."
     },
     "ephemeral": "Tạm thời",
     "ephemeralDescription": "Trình duyệt buộc ghi dữ liệu hồ sơ vào bộ nhớ thay vì ổ đĩa. Lưu ý rằng hệ điều hành có thể chuyển một phần bộ nhớ sang ổ đĩa khi tải nặng, nên dấu vết của phiên vẫn có thể bị khôi phục.",
@@ -395,26 +332,11 @@
       "nameDesc": "Tên (Z–A)",
       "newest": "Mới nhất trước",
       "oldest": "Cũ nhất trước"
-    },
-    "remote": {
-      "runningTooltip": "Đang chạy trên máy từ xa. Dừng lại để đưa hồ sơ về đây.",
-      "pendingSyncTooltip": "Đang tải về những gì phiên từ xa đã thay đổi. Sẽ dùng lại được khi hoàn tất."
     }
   },
   "createProfile": {
     "title": "Tạo hồ sơ mới",
     "configureTitle": "Tạo hồ sơ {{browser}} mới",
-    "antiDetect": {
-      "title": "Trình duyệt chống phát hiện",
-      "description": "Chọn trình duyệt có khả năng chống phát hiện",
-      "chromium": "Wayfern",
-      "badge": "Trình duyệt chống phát hiện"
-    },
-    "regular": {
-      "title": "Trình duyệt thông thường",
-      "description": "Chọn từ các trình duyệt thông thường được hỗ trợ",
-      "badge": "Trình duyệt thông thường"
-    },
     "profileName": "Tên hồ sơ",
     "profileNamePlaceholder": "Nhập tên hồ sơ",
     "proxy": {
@@ -423,8 +345,7 @@
       "noProxy": "Không dùng proxy / VPN",
       "noProxiesAvailable": "Chưa có proxy hoặc VPN nào. Hãy thêm một proxy để định tuyến lưu lượng của hồ sơ này.",
       "search": "Tìm kiếm proxy hoặc VPN...",
-      "notFound": "Không tìm thấy proxy hoặc VPN.",
-      "searchWithCountries": "Tìm kiếm proxy, VPN hoặc quốc gia..."
+      "notFound": "Không tìm thấy proxy hoặc VPN."
     },
     "launchHook": {
       "label": "URL Hook khởi chạy",
@@ -441,15 +362,30 @@
       "latestDownloading": "Đang tải xuống phiên bản ({{version}})...",
       "upgradeAvailable": "Đã có phiên bản mới hơn ({{version}}) của {{browser}}."
     },
-    "chromiumLabel": "Chromium",
-    "chromiumSubtitle": "Dựa trên Wayfern",
+    "chromiumLabel": "Camoufox",
     "platformUnavailable": "{{browser}} chưa khả dụng trên nền tảng của bạn.",
     "passwordProtect": {
       "label": "Bảo vệ hồ sơ bằng mật khẩu",
       "description": "Mã hóa dữ liệu hồ sơ trên ổ đĩa. Yêu cầu mật khẩu để khởi chạy."
     },
     "downloadingSubtitle": "Đang tải xuống…",
-    "browsersDownloading": "Trình duyệt vẫn đang được tải xuống. Việc tạo hồ sơ sẽ khả dụng khi quá trình tải hoàn tất."
+    "browsersDownloading": "Trình duyệt vẫn đang được tải xuống. Việc tạo hồ sơ sẽ khả dụng khi quá trình tải hoàn tất.",
+    "os": {
+      "label": "Hệ điều hành",
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "blockImages": "Chặn hình ảnh",
+    "blockWebrtc": "Chặn WebRTC",
+    "blockWebgl": "Chặn WebGL",
+    "geoip": "Tự động cấu hình thông tin vị trí dựa trên cấu hình proxy hoặc kết nối của bạn nếu không có proxy",
+    "presetTabs": {
+      "label": "Các tab định sẵn khi khởi chạy",
+      "google": "Tìm kiếm Google",
+      "youtube": "YouTube",
+      "instagram": "Instagram"
+    }
   },
   "deleteDialog": {
     "title": "Xóa hồ sơ",
@@ -468,17 +404,10 @@
       "loading": "Đang tải proxy...",
       "noneCreated": "Chưa có proxy nào. Tạo proxy đầu tiên bằng nút phía trên.",
       "usage": "Sử dụng",
-      "syncCol": "Đồng bộ",
-      "syncCannotDisable": "Không thể tắt đồng bộ khi proxy này đang được sử dụng bởi các hồ sơ đã đồng bộ",
-      "enableSync": "Bật đồng bộ",
-      "disableSync": "Tắt đồng bộ",
       "editProxy": "Chỉnh sửa proxy",
       "deleteProxy": "Xóa proxy",
       "cannotDelete_one": "Không thể xóa: đang được {{count}} hồ sơ sử dụng",
       "cannotDelete_other": "Không thể xóa: đang được {{count}} hồ sơ sử dụng",
-      "syncEnabled": "Đã bật đồng bộ",
-      "syncDisabled": "Đã tắt đồng bộ",
-      "updateSyncFailed": "Cập nhật đồng bộ thất bại",
       "deleteSuccess": "Đã xóa proxy thành công",
       "deleteFailed": "Xóa proxy thất bại",
       "deleteTitle": "Xóa proxy",
@@ -555,10 +484,6 @@
       "invalid": "Proxy không hợp lệ",
       "lastChecked": "Kiểm tra lần cuối: {{time}}"
     },
-    "sync": {
-      "enabled": "Đã bật đồng bộ",
-      "disabled": "Đã tắt đồng bộ"
-    },
     "exportDialog": {
       "title": "Xuất proxy",
       "description": "Xuất cấu hình proxy của bạn ra file",
@@ -596,7 +521,15 @@
       "importButton": "Nhập {{count}} proxy",
       "continueButton": "Tiếp tục",
       "doneButton": "Hoàn tất",
-      "failed": "Nhập proxy thất bại"
+      "failed": "Nhập proxy thất bại",
+      "subscription": {
+        "divider": "hoặc",
+        "label": "Nhập từ liên kết đăng ký",
+        "placeholder": "https://provider.example.com/subscribe/abc123",
+        "fetchButton": "Lấy",
+        "noServers": "Không tìm thấy máy chủ VLESS được hỗ trợ trong gói đăng ký đó.",
+        "skippedToast": "{{count}} máy chủ trong gói đăng ký sử dụng cấu hình không được hỗ trợ và đã bị bỏ qua."
+      }
     },
     "bulkDelete": {
       "proxiesTitle": "Xóa các proxy đã chọn",
@@ -624,10 +557,6 @@
     "profileCount": "{{count}} profile",
     "profileCount_plural": "{{count}} profile",
     "assignProfiles": "Gán profile",
-    "sync": {
-      "enabled": "Đã bật đồng bộ",
-      "disabled": "Đã tắt đồng bộ"
-    },
     "createTitle": "Tạo nhóm mới",
     "createDescription": "Tạo một nhóm mới để sắp xếp các profile trình duyệt của bạn.",
     "editTitle": "Chỉnh sửa nhóm",
@@ -656,161 +585,6 @@
     "pageTitle": "Nhóm profile",
     "pageDescription": "Nhóm profile giúp bạn sắp xếp trình duyệt theo khách hàng, môi trường hoặc mục đích sử dụng. Đồng bộ nhóm giữa các thiết bị để chia sẻ."
   },
-  "sync": {
-    "mode": {
-      "title": "Đồng bộ profile",
-      "description": "Quản lý cài đặt đồng bộ cho \"{{name}}\"",
-      "disabled": "Tắt",
-      "regular": "Đồng bộ thường",
-      "encrypted": "Đồng bộ mã hóa E2E",
-      "disabledDescription": "Không đồng bộ profile này",
-      "regularDescription": "Đồng bộ nhanh, không mã hóa",
-      "encryptedDescription": "Mã hóa trước khi tải lên. Máy chủ không bao giờ thấy dữ liệu dạng văn bản thuần.",
-      "noPasswordWarning": "Chưa đặt mật khẩu E2E. Vui lòng đặt mật khẩu trong Cài đặt.",
-      "passwordRequired": "Chưa đặt mật khẩu E2E. Vui lòng đặt mật khẩu trong Cài đặt trước.",
-      "enabledToast": "Đã bật đồng bộ",
-      "disabledToast": "Đã tắt đồng bộ",
-      "syncQueued": "Đã đưa đồng bộ vào hàng đợi",
-      "syncNow": "Đồng bộ ngay",
-      "lastSynced": "Lần đồng bộ cuối",
-      "notConfigured": "Chưa cấu hình dịch vụ đồng bộ.",
-      "configureService": "Cấu hình dịch vụ đồng bộ"
-    },
-    "title": "Tài khoản",
-    "config": {
-      "serverUrlRequired": "Vui lòng nhập URL máy chủ",
-      "connectionSuccess": "Kết nối thành công!",
-      "serverError": "Máy chủ trả về lỗi",
-      "connectFailed": "Kết nối máy chủ thất bại",
-      "storageEndpoint": "Bộ nhớ: {{endpoint}}",
-      "storageUnreachableStatus": "Không thể kết nối tới bộ nhớ",
-      "storageUnreachable": "Máy chủ có thể kết nối được, nhưng thiết bị này không truy cập được địa chỉ bộ nhớ {{endpoint}}. Việc truyền tệp sẽ thất bại. Nếu bạn tự lưu trữ, hãy đặt S3_PUBLIC_ENDPOINT thành địa chỉ mà thiết bị này truy cập được.",
-      "settingsSaved": "Đã lưu cài đặt đồng bộ",
-      "saveFailed": "Lưu cài đặt thất bại",
-      "disconnected": "Đã ngắt kết nối đồng bộ",
-      "disconnectFailed": "Ngắt kết nối thất bại"
-    },
-    "serverUrl": "URL máy chủ",
-    "serverUrlPlaceholder": "https://sync.example.com",
-    "token": "Token đồng bộ",
-    "tokenPlaceholder": "Nhập token đồng bộ của bạn",
-    "status": {
-      "connected": "Đã kết nối",
-      "disconnected": "Đã ngắt kết nối",
-      "syncing": "Đang đồng bộ...",
-      "error": "Lỗi đồng bộ"
-    },
-    "description": "Kết nối với máy chủ đồng bộ để đồng bộ profile, proxy và nhóm giữa các thiết bị.",
-    "cloud": {
-      "tabLabel": "Đám mây",
-      "selfHostedTabLabel": "Tự lưu trữ",
-      "email": "Email",
-      "deviceLinkInstructions": "Nhấn \"Đăng nhập\" để mở trang đăng nhập trong trình duyệt. Sau khi đăng nhập, sao chép mã hiển thị và dán vào bên dưới.",
-      "openLogin": "Đăng nhập",
-      "linkCodeLabel": "Mã đăng nhập",
-      "linkCodePlaceholder": "Dán mã từ trang web",
-      "signInTitle": "Đăng nhập",
-      "verifyAndLogin": "Xác minh và đăng nhập",
-      "loggingIn": "Đang đăng nhập...",
-      "connected": "Đã kết nối",
-      "plan": "Gói",
-      "profiles": "Profile",
-      "profileUsage": "{{used}} / {{limit}}",
-      "manageAccount": "Quản lý tài khoản",
-      "logout": "Đăng xuất",
-      "logoutConfirm": "Bạn có chắc muốn đăng xuất? Đồng bộ đám mây sẽ dừng lại.",
-      "loginSuccess": "Đăng nhập thành công!",
-      "logoutSuccess": "Đăng xuất thành công."
-    },
-    "team": {
-      "title": "Nhóm",
-      "name": "Tên nhóm",
-      "role": "Vai trò",
-      "roleOwner": "Chủ sở hữu",
-      "roleAdmin": "Quản trị viên",
-      "roleMember": "Thành viên",
-      "manageOnWeb": "Quản lý nhóm trên bảng điều khiển web",
-      "profileLocked": "Đang được sử dụng bởi {{email}}",
-      "profileLockedShort": "Đang sử dụng",
-      "cannotLaunchLocked": "Không thể khởi chạy — profile đang được sử dụng bởi {{email}}",
-      "createdBy": "Được tạo bởi {{email}}"
-    },
-    "disabled": "Tắt",
-    "toast": {
-      "profileSynced": "Đã đồng bộ profile '{{name}}' thành công",
-      "profileSyncFailed": "Đồng bộ profile '{{name}}' thất bại",
-      "profileSyncFailedWithError": "Đồng bộ profile '{{name}}' thất bại: {{error}}"
-    },
-    "enabledToast": "Đã bật đồng bộ",
-    "disabledToast": "Đã tắt đồng bộ",
-    "enabledDescription": "Đồng bộ profile đã được bật",
-    "disabledDescription": "Đồng bộ profile đã được tắt"
-  },
-  "integrations": {
-    "title": "Tích hợp",
-    "api": {
-      "title": "API cục bộ",
-      "description": "Bật máy chủ API cục bộ để tích hợp bên ngoài.",
-      "enabled": "Đã bật API",
-      "disabled": "Đã tắt API",
-      "port": "Cổng",
-      "token": "Token API",
-      "copyToken": "Sao chép token",
-      "regenerateToken": "Tạo lại token"
-    },
-    "mcp": {
-      "title": "Máy chủ MCP",
-      "description": "Bật máy chủ MCP (Model Context Protocol) để tích hợp trợ lý AI.",
-      "enabled": "Đã bật MCP",
-      "disabled": "Đã tắt MCP",
-      "port": "Cổng",
-      "token": "Token xác thực",
-      "tokenCopied": "Đã sao chép token",
-      "url": "URL máy chủ MCP",
-      "urlCopied": "Đã sao chép URL",
-      "config": "Cấu hình MCP",
-      "copyConfig": "Sao chép cấu hình",
-      "clientsLabel": "Ứng dụng khách",
-      "connected": "Đã kết nối",
-      "add": "Thêm",
-      "addedToClient": "Đã thêm vào {{name}}",
-      "removedFromClient": "Đã xóa khỏi {{name}}",
-      "removeAriaLabel": "Xóa khỏi {{name}}",
-      "category": {
-        "desktopApp": "Ứng dụng desktop",
-        "cli": "CLI",
-        "editor": "Trình soạn thảo",
-        "editorExt": "Tiện ích editor"
-      }
-    },
-    "tabApi": "API cục bộ",
-    "tabMcp": "MCP (Trợ lý AI)",
-    "apiEnableLabel": "Bật máy chủ API cục bộ",
-    "apiEnableDescription": "Cho phép quản lý profile, nhóm và proxy qua REST API.",
-    "apiPortLabel": "Cổng",
-    "apiTokenLabel": "Token xác thực",
-    "apiTokenHint": "Thêm vào header Authorization: Bearer {{tokenSlot}}",
-    "apiInvalidPort": "Cổng không hợp lệ",
-    "apiInvalidPortDescription": "Cổng phải từ 1 đến 65535",
-    "apiPortInUse": "Cổng {{port}} đang được sử dụng",
-    "apiFallbackPort": "Máy chủ đã khởi động ở cổng dự phòng {{port}}",
-    "apiStarted": "Máy chủ API đã khởi động trên cổng {{port}}",
-    "apiRunning": "Máy chủ API đang chạy trên cổng {{port}}",
-    "apiStopped": "Máy chủ API đã dừng",
-    "apiToggleFailed": "Bật/tắt máy chủ API thất bại",
-    "apiStartFailed": "Khởi động máy chủ API thất bại",
-    "apiUnknownError": "Lỗi không xác định",
-    "tokenCopied": "Đã sao chép token",
-    "mcpEnableLabel": "Bật máy chủ MCP (Model Context Protocol)",
-    "mcpEnableDescription": "Cho phép trợ lý AI như Claude Desktop điều khiển trình duyệt.",
-    "mcpAcceptTermsFirst": "(Chấp nhận điều khoản Wayfern trong Cài đặt trước)",
-    "mcpStarted": "Máy chủ MCP đã khởi động trên cổng {{port}}",
-    "mcpStopped": "Máy chủ MCP đã dừng",
-    "mcpToggleFailed": "Bật/tắt máy chủ MCP thất bại",
-    "openSettings": "Mở cài đặt tích hợp",
-    "apiRunningOn": "Đang chạy trên",
-    "apiExampleRequest": "Ví dụ yêu cầu"
-  },
   "import": {
     "title": "Nhập profile",
     "description": "Nhập một profile trình duyệt hiện có từ hệ thống của bạn.",
@@ -822,38 +596,6 @@
     "error": "Nhập profile thất bại"
   },
   "config": {
-    "wayfern": {
-      "title": "Cấu hình Wayfern",
-      "fingerprint": {
-        "title": "Vân tay",
-        "randomize": "Tạo ngẫu nhiên khi khởi chạy",
-        "randomizeDescription": "Tạo vân tay mới mỗi khi khởi chạy trình duyệt.",
-        "platformPlaceholder": "ví dụ: Win32, MacIntel, Linux x86_64",
-        "timezoneOffsetPlaceholder": "ví dụ: 300 cho EST (UTC-5)",
-        "webglRendererPlaceholder": "ví dụ: Intel(R) HD Graphics"
-      },
-      "os": {
-        "title": "Hệ điều hành",
-        "description": "Hệ điều hành mô phỏng để tạo vân tay.",
-        "windows": "Windows",
-        "macos": "macOS",
-        "linux": "Linux",
-        "android": "Android",
-        "ios": "iOS"
-      },
-      "screen": {
-        "title": "Kích thước màn hình",
-        "minWidth": "Chiều rộng tối thiểu",
-        "maxWidth": "Chiều rộng tối đa",
-        "minHeight": "Chiều cao tối thiểu",
-        "maxHeight": "Chiều cao tối đa"
-      },
-      "blocking": {
-        "title": "Chặn",
-        "webrtc": "Chặn WebRTC",
-        "webgl": "Chặn WebGL"
-      }
-    },
     "shared": {
       "browserBehavior": "Hành vi trình duyệt",
       "allowAddonsOpenTabs": "Cho phép tiện ích trình duyệt tự động mở tab mới"
@@ -876,7 +618,7 @@
       "sourcePlaceholder": "Chọn profile để sao chép cookie từ",
       "running": "(đang chạy)",
       "targetProfiles": "Profile đích ({{count}})",
-      "noOtherTargets": "Chưa chọn profile Wayfern nào khác",
+      "noOtherTargets": "Chưa chọn profile Camoufox nào khác",
       "selectSourceFirst": "Hãy chọn profile nguồn trước",
       "selectionStatus": "(đã chọn {{selected}}/{{total}})",
       "searchPlaceholder": "Tìm kiếm tên miền hoặc cookie...",
@@ -1039,8 +781,6 @@
       "downloadComplete": "Đã tải xuống {{browser}} {{version}} thành công!",
       "importSuccess": "Đã nhập thành công {{count}} mục",
       "exportSuccess": "Đã xuất thành công {{count}} mục",
-      "syncSuccess": "Đồng bộ hoàn tất",
-      "profileSynced": "Đã đồng bộ profile '{{name}}' thành công",
       "cacheCleared": "Xóa bộ nhớ đệm thành công"
     },
     "error": {
@@ -1059,8 +799,6 @@
       "downloadFailed": "Tải xuống {{browser}} thất bại",
       "importFailed": "Nhập thất bại",
       "exportFailed": "Xuất thất bại",
-      "syncFailed": "Đồng bộ thất bại",
-      "profileSyncFailed": "Đồng bộ profile '{{name}}' thất bại",
       "cacheClearFailed": "Xóa bộ nhớ đệm thất bại",
       "unknown": "Đã xảy ra lỗi không xác định"
     },
@@ -1068,9 +806,6 @@
       "downloading": "Đang tải xuống {{browser}} {{version}}",
       "extracting": "Đang giải nén {{browser}} {{version}}",
       "verifying": "Đang xác minh {{browser}} {{version}}",
-      "syncing": "Đang đồng bộ...",
-      "syncingProfile": "Đang đồng bộ profile '{{name}}'...",
-      "syncingProfileWithProgress": "{{count}} tệp ({{size}})",
       "updatingVersions": "Đang cập nhật phiên bản trình duyệt..."
     },
     "progress": {
@@ -1090,7 +825,6 @@
     "serverError": "Lỗi máy chủ. Vui lòng thử lại sau.",
     "unknownError": "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
     "noProfilesForUrl": "Không có profile nào. Vui lòng tạo profile trước khi mở URL.",
-    "updateWayfernConfigFailed": "Cập nhật cấu hình wayfern thất bại: {{error}}",
     "createProfileFailed": "Tạo profile thất bại: {{error}}",
     "launchBrowserFailed": "Khởi chạy trình duyệt thất bại: {{error}}",
     "cannotDeleteRunningProfile": "Không thể xóa profile khi trình duyệt đang chạy. Vui lòng dừng trình duyệt trước.",
@@ -1098,8 +832,7 @@
     "renameProfileFailed": "Đổi tên profile thất bại: {{error}}",
     "killBrowserFailed": "Dừng trình duyệt thất bại: {{error}}",
     "deleteSelectedProfilesFailed": "Xóa các profile đã chọn thất bại: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Sao chép cookie chỉ hoạt động với profile Wayfern",
-    "updateSyncSettingsFailed": "Cập nhật cài đặt đồng bộ thất bại",
+    "cookieCopyUnsupportedBrowser": "Sao chép cookie chỉ hoạt động với profile Camoufox",
     "cloneProfileFailed": "Nhân bản profile thất bại: {{error}}",
     "loadSupportedBrowsersFailed": "Tải danh sách trình duyệt hỗ trợ thất bại",
     "setupExtensionListenersFailed": "Thiết lập trình lắng nghe sự kiện tiện ích thất bại: {{error}}",
@@ -1113,9 +846,6 @@
     "setupVpnListenersFailed": "Thiết lập trình lắng nghe sự kiện VPN thất bại: {{error}}",
     "themeNotFound": "Không tìm thấy chủ đề Tokyo Night",
     "setProfilePasswordFailed": "Đặt mật khẩu profile thất bại: {{error}}"
-  },
-  "browser": {
-    "wayfern": "Wayfern"
   },
   "fingerprint": {
     "crossOsWarning": "Giả mạo vân tay cho hệ điều hành khác kém tin cậy hơn vì không thể mô phỏng hoàn hảo tất cả thành phần nền tảng. Hãy sử dụng thận trọng.",
@@ -1222,7 +952,8 @@
     "regenerateConfirmDescription": "Hồ sơ vẫn giữ cookie và phiên đăng nhập, nhưng sẽ hiện ra như một thiết bị khác. Các trang đã biết hồ sơ này có thể yêu cầu bạn đăng nhập lại, bắt bạn xác minh, hoặc khóa tài khoản. Chỉ tạo lại hồ sơ mà bạn chưa dùng, hoặc hồ sơ bạn chấp nhận mất. Không thể hoàn tác thao tác này.",
     "canvasNoiseSeedPlaceholder": "Nhập chuỗi hạt giống cho vân tay canvas",
     "addFontsPlaceholder": "Thêm phông chữ...",
-    "enterAsJson": "Nhập {{title}} dưới dạng JSON"
+    "enterAsJson": "Nhập {{title}} dưới dạng JSON",
+    "derivedFromIdentity": "Được suy ra từ danh tính của hồ sơ này và không thể chỉnh sửa."
   },
   "warnings": {
     "windowResizeTitle": "Kích thước cửa sổ tùy chỉnh",
@@ -1230,20 +961,6 @@
     "dontShowAgain": "Không hiển thị lại",
     "continue": "Tiếp tục",
     "cancel": "Hủy"
-  },
-  "syncAll": {
-    "title": "Bật đồng bộ cho các mục hiện có",
-    "description": "Bạn có các mục chưa được đồng bộ. Bạn có muốn bật đồng bộ cho tất cả không?",
-    "enableAll": "Bật tất cả",
-    "skip": "Bỏ qua",
-    "success": "Đã bật đồng bộ cho tất cả mục",
-    "labels": {
-      "proxies": "Proxy",
-      "vpns": "VPN",
-      "groups": "Nhóm",
-      "extensions": "Tiện ích",
-      "extensionGroups": "Nhóm tiện ích"
-    }
   },
   "crossOs": {
     "viewOnly": "Profile này được tạo trên {{os}} và không được hỗ trợ trên hệ thống này",
@@ -1265,13 +982,11 @@
       "group": "Nhóm",
       "tags": "Thẻ",
       "note": "Ghi chú",
-      "syncStatus": "Trạng thái đồng bộ",
       "lastLaunched": "Lần khởi chạy cuối",
       "hostOs": "HĐH chủ",
       "ephemeral": "Tạm thời",
       "extensionGroup": "Nhóm tiện ích",
       "totalSessions": "Tổng số phiên",
-      "syncMode": "Chế độ đồng bộ",
       "proxy": "PROXY",
       "vpn": "VPN",
       "cookieCount": "Cookie đã lưu",
@@ -1303,7 +1018,7 @@
     "launchHook": {
       "title": "URL hook khởi chạy",
       "label": "URL hook khởi chạy",
-      "description": "Donut Browser sẽ gửi yêu cầu GET đến URL này mỗi khi profile được khởi chạy.",
+      "description": "Salamander Browser sẽ gửi yêu cầu GET đến URL này mỗi khi profile được khởi chạy.",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "Nhập URL http:// hoặc https:// hợp lệ."
     },
@@ -1326,7 +1041,6 @@
       "network": "Mạng",
       "cookies": "Cookie",
       "extensions": "Tiện ích",
-      "sync": "Đồng bộ",
       "automation": "Tự động hóa",
       "security": "Bảo mật",
       "delete": "Xóa profile",
@@ -1338,7 +1052,6 @@
       "network": "Quản lý proxy hoặc VPN mà profile này sử dụng để truy cập internet.",
       "cookies": "Nhập, sao chép hoặc xóa cookie cho profile này.",
       "extensions": "Chọn tiện ích nào được tải khi profile này khởi chạy.",
-      "sync": "Cấu hình cách profile này được phản chiếu sang các thiết bị khác của bạn.",
       "automation": "Chạy lệnh hoặc script mỗi khi profile này khởi chạy.",
       "security": "Mã hóa dữ liệu profile bằng mật khẩu.",
       "launchHook": "Gửi yêu cầu GET đến URL này mỗi khi profile khởi chạy."
@@ -1357,20 +1070,15 @@
       "cannotWhileRunning": "Dừng profile trước khi thay đổi mật khẩu."
     },
     "fingerprint": {
-      "notSupported": "Chỉnh sửa vân tay chỉ khả dụng cho profile Wayfern.",
       "lockedTitle": "Xem và chỉnh sửa vân tay là tính năng Pro",
-      "lockedDescription": "Thông tin thiết bị của bạn được bảo vệ trong mọi profile. Việc xem và chỉnh sửa vân tay của profile yêu cầu gói trả phí đang hoạt động."
-    },
-    "syncStatusValue": {
-      "waiting": "Đang chờ",
-      "syncing": "Đang đồng bộ",
-      "synced": "Đã đồng bộ",
-      "error": "Lỗi"
+      "lockedDescription": "Thông tin thiết bị của bạn được bảo vệ trong mọi profile. Việc xem và chỉnh sửa vân tay của profile yêu cầu gói trả phí đang hoạt động.",
+      "camoufoxDescription": "Camoufox tạo dấu vân tay cục bộ khi tạo (hoặc nhập) hồ sơ; chưa có trình chỉnh sửa từng trường. Bạn có thể xóa dấu vân tay đã lưu để lần khởi chạy tiếp theo sẽ tạo một dấu vân tay mới.",
+      "camoufoxRegenerateButton": "Xóa dấu vân tay (tạo lại ở lần khởi chạy tiếp theo)",
+      "camoufoxRegenerateQueued": "Đã xóa dấu vân tay — một dấu vân tay mới sẽ được tạo vào lần tới hồ sơ này khởi chạy."
     },
     "ephemeral": {
       "cookiesUnavailable": "Hồ sơ tạm thời bị xoá khi đóng trình duyệt, nên ở đây không có cookie nào để quản lý.",
       "extensionsUnavailable": "Hồ sơ tạm thời bị xoá khi đóng trình duyệt, nên không thể gán nhóm tiện ích mở rộng cho chúng.",
-      "syncUnavailable": "Hồ sơ tạm thời bị xoá khi đóng trình duyệt, nên không có gì để đồng bộ lên đám mây.",
       "hint": "Hãy tạo hồ sơ thường nếu bạn cần giữ lại dữ liệu này."
     }
   },
@@ -1432,20 +1140,15 @@
     "selectedFolder": "Thư mục đã chọn",
     "selectFolder": "Chọn thư mục",
     "linkFolder": "Tải trực tiếp từ thư mục này",
-    "linkFolderOff": "Thư mục được sao chép vào Donut. Tiện ích có thể mang đi và đồng bộ sang các thiết bị khác của bạn.",
-    "linkFolderOn": "Donut tải tiện ích trực tiếp từ thư mục này mỗi lần khởi chạy. Các thay đổi của bạn có hiệu lực ở lần mở trình duyệt tiếp theo, nhưng tiện ích chỉ nằm trên máy này và không bao giờ đồng bộ.",
+    "linkFolderOff": "Thư mục được sao chép vào Salamander. Tiện ích có thể mang đi và đồng bộ sang các thiết bị khác của bạn.",
+    "linkFolderOn": "Salamander tải tiện ích trực tiếp từ thư mục này mỗi lần khởi chạy. Các thay đổi của bạn có hiệu lực ở lần mở trình duyệt tiếp theo, nhưng tiện ích chỉ nằm trên máy này và không bao giờ đồng bộ.",
     "replaceSource": "Thay nguồn",
-    "linkedNoSync": "Tiện ích được liên kết chỉ nằm trên máy này nên không thể đồng bộ.",
     "uploadFailed": "Không thêm được tiện ích",
     "updateFailed": "Không cập nhật được tiện ích",
     "deleteFailed": "Không xóa được tiện ích",
     "groupCreateFailed": "Không tạo được nhóm tiện ích",
     "groupUpdateFailed": "Không cập nhật được nhóm tiện ích",
     "groupDeleteFailed": "Không xóa được nhóm tiện ích",
-    "syncEnabled": "Đã bật đồng bộ",
-    "syncDisabled": "Đã tắt đồng bộ",
-    "syncEnableTooltip": "Bật đồng bộ",
-    "syncDisableTooltip": "Tắt đồng bộ",
     "loadGroupsFailed": "Tải nhóm tiện ích thất bại",
     "assignGroupFailed": "Gán nhóm tiện ích thất bại",
     "bulkDelete": {
@@ -1577,7 +1280,6 @@
       "deleteVpn": "Xóa VPN",
       "cannotDelete_one": "Không thể xóa: đang được sử dụng bởi {{count}} profile",
       "cannotDelete_other": "Không thể xóa: đang được sử dụng bởi {{count}} profile",
-      "syncCannotDisable": "Không thể tắt đồng bộ khi VPN này được sử dụng bởi profile đã đồng bộ",
       "deleteSuccess": "Xóa VPN thành công",
       "deleteFailed": "Xóa VPN thất bại",
       "deleteTitle": "Xóa VPN",
@@ -1610,6 +1312,13 @@
     "selectedCount": "Đã chọn {{count}}",
     "scanButton": "Quét",
     "manualHint": "Chọn thư mục hồ sơ, thư mục dữ liệu người dùng của trình duyệt, thư mục chứa các hồ sơ đã xuất hoặc tệp ZIP.",
+    "camoufoxImport": "Camoufox",
+    "camoufoxImportTitle": "Nhập hồ sơ Camoufox hiện có",
+    "camoufoxImportHint": "Trỏ đến thư mục hồ sơ Camoufox (họ Firefox) hiện có — ví dụ một hồ sơ đã lưu bằng thư viện Python camoufox. Cookie, lịch sử, tiện ích mở rộng và đăng nhập sẽ được chuyển sang; dấu vân tay sẽ được tạo mới trừ khi bạn dán một cái bên dưới.",
+    "camoufoxFingerprintToggle": "Dùng cấu hình dấu vân tay đã lưu (nâng cao)",
+    "camoufoxFingerprintHint": "Dán cấu hình JSON phẳng được tạo bởi camoufox.generate_data() / json.dumps() từ phiên Python của bạn, nếu bạn đã lưu. Để trống để tạo dấu vân tay mới.",
+    "camoufoxImportButton": "Nhập hồ sơ Camoufox",
+    "camoufoxImportSuccess": "Đã nhập \"{{name}}\" thành hồ sơ Camoufox mới",
     "selectArchiveTitle": "Chọn tệp ZIP",
     "noProfilesInLocation": "Không tìm thấy hồ sơ nào ở vị trí này.",
     "selectAtLeastOne": "Chọn ít nhất một hồ sơ để nhập",
@@ -1656,19 +1365,6 @@
       "storeUnreadable": "Một cơ sở dữ liệu không đọc được nên đã bị bỏ qua thay vì sao chép hỏng."
     }
   },
-  "syncTooltips": {
-    "syncing": "Đang đồng bộ...",
-    "syncedAt": "Đã đồng bộ {{time}}",
-    "synced": "Đã đồng bộ",
-    "waiting": "Đang chờ đồng bộ",
-    "errorWith": "Lỗi đồng bộ: {{error}}",
-    "error": "Lỗi đồng bộ",
-    "notSynced": "Chưa đồng bộ",
-    "enable": "Bật đồng bộ",
-    "disable": "Tắt đồng bộ",
-    "lockedInUse": "Đồng bộ bị khóa khi đang được sử dụng bởi profile đã đồng bộ",
-    "bulkToggle": "Bật/tắt đồng bộ"
-  },
   "groupManagement": {
     "description": "Quản lý nhóm profile của bạn",
     "createGroup": "Tạo nhóm",
@@ -1678,7 +1374,6 @@
     "profileCount_other": "{{count}} hồ sơ",
     "groupsLabel": "Nhóm",
     "profilesCol": "Profile",
-    "syncCannotDisable": "Không thể tắt đồng bộ khi nhóm này được sử dụng bởi profile đã đồng bộ",
     "editGroupTooltip": "Chỉnh sửa nhóm",
     "deleteGroupTooltip": "Xóa nhóm",
     "loadFailed": "Tải nhóm thất bại",
@@ -1743,31 +1438,13 @@
     "badgeUnavailable": "Không khả dụng",
     "openButton": "Mở"
   },
-  "wayfernTerms": {
-    "title": "Điều khoản và điều kiện Wayfern",
-    "description": "Trước khi sử dụng Donut Browser, bạn phải đọc và đồng ý với Điều khoản và Điều kiện của Wayfern.",
-    "reviewLabel": "Vui lòng xem lại Điều khoản và Điều kiện tại:",
-    "agreeNotice": "Bằng cách nhấn \"Tôi chấp nhận\", bạn đồng ý bị ràng buộc bởi các điều khoản này.",
-    "acceptButton": "Tôi chấp nhận",
-    "acceptSuccess": "Chấp nhận điều khoản thành công",
-    "acceptFailed": "Chấp nhận điều khoản thất bại",
-    "tryAgain": "Vui lòng thử lại"
-  },
-  "commercialTrial": {
-    "title": "Thời gian dùng thử thương mại đã hết",
-    "description": "Thời gian dùng thử thương mại 2 tuần của bạn đã kết thúc.",
-    "body": "Nếu bạn sử dụng Donut Browser cho mục đích thương mại, bạn cần mua giấy phép thương mại để tiếp tục. Bạn vẫn có thể sử dụng miễn phí cho mục đích cá nhân.",
-    "understandButton": "Tôi hiểu",
-    "failed": "Lưu xác nhận thất bại",
-    "tryAgain": "Vui lòng thử lại"
-  },
   "permissionDialog": {
     "titleMicrophone": "Yêu cầu quyền truy cập micro",
     "titleCamera": "Yêu cầu quyền truy cập camera",
-    "descMicrophone": "Donut Browser cần quyền truy cập micro để bật tính năng micro trong trình duyệt web. Mỗi trang web muốn sử dụng micro vẫn sẽ hỏi quyền bạn riêng lẻ.",
-    "descCamera": "Donut Browser cần quyền truy cập camera để bật tính năng camera trong trình duyệt web. Mỗi trang web muốn sử dụng camera vẫn sẽ hỏi quyền bạn riêng lẻ.",
-    "grantedMicrophone": "Đã cấp quyền! Trình duyệt khởi chạy từ Donut Browser giờ có thể truy cập micro của bạn.",
-    "grantedCamera": "Đã cấp quyền! Trình duyệt khởi chạy từ Donut Browser giờ có thể truy cập camera của bạn.",
+    "descMicrophone": "Salamander Browser cần quyền truy cập micro để bật tính năng micro trong trình duyệt web. Mỗi trang web muốn sử dụng micro vẫn sẽ hỏi quyền bạn riêng lẻ.",
+    "descCamera": "Salamander Browser cần quyền truy cập camera để bật tính năng camera trong trình duyệt web. Mỗi trang web muốn sử dụng camera vẫn sẽ hỏi quyền bạn riêng lẻ.",
+    "grantedMicrophone": "Đã cấp quyền! Trình duyệt khởi chạy từ Salamander Browser giờ có thể truy cập micro của bạn.",
+    "grantedCamera": "Đã cấp quyền! Trình duyệt khởi chạy từ Salamander Browser giờ có thể truy cập camera của bạn.",
     "notGrantedMicrophone": "Chưa cấp quyền. Nhấn nút bên dưới để yêu cầu quyền truy cập micro.",
     "notGrantedCamera": "Chưa cấp quyền. Nhấn nút bên dưới để yêu cầu quyền truy cập camera.",
     "doneButton": "Xong",
@@ -1847,22 +1524,11 @@
     "tooltipDefault": "Kiểm tra tính hợp lệ cấu hình VPN"
   },
   "profileTable": {
-    "syncTooltipDisabled": "Đã tắt đồng bộ",
-    "syncTooltipSyncing": "Đang đồng bộ...",
-    "syncTooltipSyncedAt": "Đã đồng bộ {{time}}",
-    "syncTooltipSynced": "Đã đồng bộ",
-    "syncTooltipWaiting": "Đang chờ đồng bộ",
-    "syncTooltipErrorWith": "Lỗi đồng bộ: {{error}}",
-    "syncTooltipError": "Lỗi đồng bộ",
-    "syncTooltipNotSynced": "Chưa đồng bộ",
     "noTags": "Không có thẻ",
-    "syncTooltipCloseToSync": "Đóng profile để đồng bộ",
-    "syncTooltipDisabledWithLast": "Đã tắt đồng bộ, lần đồng bộ cuối {{time}}",
     "addTagsPlaceholder": "Thêm thẻ",
     "tagsHeader": "Thẻ",
     "noteHeader": "Ghi chú",
-    "vpnsHeading": "VPN",
-    "createByCountryHeading": "Tạo theo quốc gia"
+    "vpnsHeading": "VPN"
   },
   "dataTableActionBar": {
     "selected": "Đã chọn {{count}}",
@@ -1870,7 +1536,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "Cập nhật Donut Browser thất bại",
+      "updateFailed": "Cập nhật Salamander Browser thất bại",
       "restartFailed": "Khởi động lại thất bại",
       "updateReady": "Bản cập nhật sẵn sàng, khởi động lại để áp dụng",
       "manualDownloadRequired": "Cần tải xuống thủ công",
@@ -1963,7 +1629,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "Quan trọng: mật khẩu này không thể khôi phục",
-      "forgetWarningBody": "Donut Browser không thể đặt lại, khôi phục hoặc bỏ qua mật khẩu này. Nếu bạn quên, bạn sẽ mất quyền truy cập vĩnh viễn vào dữ liệu profile này."
+      "forgetWarningBody": "Salamander Browser không thể đặt lại, khôi phục hoặc bỏ qua mật khẩu này. Nếu bạn quên, bạn sẽ mất quyền truy cập vĩnh viễn vào dữ liệu profile này."
     },
     "modes": {
       "set": "Đặt",
@@ -2006,36 +1672,28 @@
     "extensionNotADirectory": "Đường dẫn đó không phải là thư mục.",
     "extensionManifestMissing": "Thư mục đó không có manifest.json. Hãy chọn thư mục chứa manifest.json của tiện ích.",
     "extensionManifestInvalid": "Không đọc được manifest.json trong thư mục đó.",
-    "extensionDirTooLarge": "Thư mục đó quá lớn để sao chép vào Donut (giới hạn là 256 MB và 20.000 tệp). Hãy liên kết thư mục thay vì sao chép.",
+    "extensionDirTooLarge": "Thư mục đó quá lớn để sao chép vào Salamander (giới hạn là 256 MB và 20.000 tệp). Hãy liên kết thư mục thay vì sao chép.",
     "extensionPathHasComma": "Đường dẫn thư mục có dấu phẩy nên Chromium không tải được. Hãy đổi tên hoặc di chuyển thư mục.",
     "extensionLinkRequiresDirectory": "Chỉ có thể tải tại chỗ một thư mục. Hãy tắt liên kết để thêm tệp nén.",
-    "extensionLinkedCannotSync": "Tiện ích này được tải từ một thư mục trên máy này nên không có gì để đồng bộ.",
-    "cannotModifyCloudManagedProxy": "Không thể chỉnh sửa đồng bộ cho proxy được quản lý bởi đám mây",
-    "syncLockedByProfile": "Không thể tắt đồng bộ khi đang được sử dụng bởi profile đã đồng bộ",
-    "syncNotConfigured": "Chưa cấu hình đồng bộ. Đăng nhập hoặc cấu hình máy chủ tự lưu trữ trước.",
     "internal": "Đã xảy ra lỗi: {{detail}}",
     "invalidLaunchHookUrl": "URL hook khởi chạy không hợp lệ. Sử dụng URL http:// hoặc https:// đầy đủ.",
     "cookieDbLocked": "Không thể đọc cookie — cơ sở dữ liệu bị khóa. Đóng trình duyệt và thử lại.",
     "cookieDbUnavailable": "Không thể đọc cookie — kho cookie không khả dụng.",
     "cookieImportBrowserRunning": "Không thể nhập cookie khi trình duyệt đang chạy. Hãy đóng trình duyệt và thử lại.",
     "cookieImportProfileProtected": "Không thể nhập cookie vào hồ sơ được bảo vệ bằng mật khẩu. Hãy gỡ mật khẩu trước.",
-    "cookieImportRemoteSession": "Không thể nhập cookie khi một phiên từ xa đang giữ hồ sơ này. Hãy đợi quá trình đồng bộ hoàn tất.",
     "cookieImportNoCookies": "Không tìm thấy cookie nào trong nội dung bạn đã dán.",
-    "selfHostedRequiresLogout": "Đăng xuất khỏi tài khoản Donut trước khi cấu hình máy chủ tự lưu trữ.",
-    "fingerprintRequiresPro": "Xem hoặc chỉnh sửa vân tay yêu cầu gói trả phí đang hoạt động. Tính năng bảo vệ được bao gồm trong mọi gói.",
     "proxyNotWorking": "Proxy đã chọn không hoạt động, nên profile chưa được tạo.",
-    "proxyPaymentRequired": "Proxy đã chọn yêu cầu thanh toán (402) — gói đăng ký của nó có thể đã hết hạn — nên profile chưa được tạo.",
     "vpnNotWorking": "VPN đã chọn không hoạt động, nên profile chưa được tạo.",
-    "camoufoxImportDeprecated": "Việc nhập loại hồ sơ này không còn được hỗ trợ. Vui lòng sử dụng Wayfern thay thế.",
     "updateChecksumsUnavailable": "Không thể xác minh bản cập nhật {{version}} vì không thể tải tệp checksum. Bản cập nhật chưa được cài đặt; sẽ thử lại sau.",
     "updateChecksumMismatch": "Tệp cập nhật đã tải xuống {{file}} không vượt qua kiểm tra checksum và đã bị loại bỏ. Vui lòng thử lại.",
     "browserChecksumUnavailable": "Không thể xác minh {{browser}} {{version}} vì không thể tải tệp checksum. Quá trình tải xuống đã dừng; sẽ thử lại sau.",
     "browserChecksumMismatch": "Kho lưu trữ {{browser}} {{version}} đã tải xuống không vượt qua kiểm tra checksum và đã bị loại bỏ. Vui lòng thử lại.",
     "nameCannotBeEmpty": "Tên không được để trống",
-    "wayfernVersionNotAvailable": "Phiên bản Wayfern {{requested}} không có sẵn để tải xuống. Phiên bản hiện tại là {{current}}.",
     "profileNameExists": "Hồ sơ có tên \"{{name}}\" đã tồn tại",
     "importSourceNotFound": "Đường dẫn nguồn không tồn tại",
     "importNoItems": "Chưa chọn mục nào để nhập",
+    "camoufoxImportInvalidFolder": "Thư mục này không giống hồ sơ Camoufox/Firefox",
+    "camoufoxImportCopyFailed": "Nhập Camoufox đã tạo hồ sơ, nhưng sao chép tệp không thành công: {{detail}}",
     "browserNotDownloaded": "Không có phiên bản {{browser}} nào đã tải xuống. Hãy tải xuống trước, sau đó thử nhập lại.",
     "archiveExtractionFailed": "Không thể giải nén tệp: {{detail}}",
     "unsupportedArchiveFormat": "Định dạng tệp nén không được hỗ trợ. Chỉ hỗ trợ tệp ZIP.",
@@ -2046,80 +1704,37 @@
     "dnsRulesSaveFailed": "Không thể lưu quy tắc DNS.",
     "dnsRulesExportFailed": "Không thể xuất quy tắc DNS.",
     "fingerprintMatchFailed": "Không thể khớp vân tay với proxy.",
-    "proxySidecarVersionMismatch": "Một số tệp Donut Browser thuộc các phiên bản khác nhau. Hãy cài đặt lại bản cập nhật mới nhất; hồ sơ của bạn vẫn được giữ an toàn.",
+    "proxySidecarVersionMismatch": "Một số tệp Salamander Browser thuộc các phiên bản khác nhau. Hãy cài đặt lại bản cập nhật mới nhất; hồ sơ của bạn vẫn được giữ an toàn.",
     "updateProfilesRunning": "Hãy dừng tất cả hồ sơ đang chạy trước khi cài đặt bản cập nhật.",
-    "updatePreparationFailed": "Donut Browser không thể dừng an toàn một tiến trình mạng chạy nền. Hãy khởi động lại máy tính rồi thử cập nhật lại.",
-    "wayfernTermsRequired": "Hãy chấp nhận Điều khoản và Điều kiện của Wayfern trước khi khởi động máy chủ MCP.",
-    "apiPortUnavailable": "Máy chủ API không tìm thấy cổng khả dụng.",
-    "mcpServerAlreadyRunning": "Máy chủ MCP đang chạy.",
-    "mcpServerNotRunning": "Máy chủ MCP chưa chạy.",
-    "mcpPortUnavailable": "Máy chủ MCP không tìm thấy cổng khả dụng.",
-    "mcpConfigurationUnavailable": "Cấu hình máy chủ MCP không khả dụng. Hãy khởi động lại máy chủ rồi thử lại.",
-    "mcpAgentUnknown": "Ứng dụng MCP này không được hỗ trợ.",
-    "mcpAgentInstallFailed": "Không thể thêm Donut Browser vào ứng dụng MCP: {{detail}}",
-    "mcpAgentRemoveFailed": "Không thể xóa Donut Browser khỏi ứng dụng MCP: {{detail}}",
+    "updatePreparationFailed": "Salamander Browser không thể dừng an toàn một tiến trình mạng chạy nền. Hãy khởi động lại máy tính rồi thử cập nhật lại.",
     "vlessConfigInvalid": "URI VLESS không hợp lệ.",
     "xrayUnavailable": "Xray-core không khả dụng trên hệ thống này.",
     "xrayUnsupportedOs": "VLESS yêu cầu macOS 12 trở lên.",
     "xrayStartFailed": "Không thể khởi động Xray-core.",
-    "cloudNotSignedIn": "Hãy đăng nhập tài khoản Donut Browser để dùng tính năng này.",
-    "cloudUnreachable": "Không kết nối được tới máy chủ Donut Browser. Hãy kiểm tra kết nối và thử lại.",
-    "cloudRequestFailed": "Yêu cầu thất bại. Hãy thử lại sau giây lát.",
-    "remoteRateLimited": "Quá nhiều yêu cầu. Hãy đợi một lát rồi thử lại.",
-    "remoteNoCapacity": "Hiện không có máy từ xa nào rảnh. Hãy thử lại sau vài phút.",
-    "remoteNotEntitled": "Gói của bạn không bao gồm chạy từ xa.",
-    "remoteInteractiveNotEntitled": "Gói của bạn chỉ bao gồm giờ từ xa cho Cookie Bot, không dùng cho phiên từ xa thao tác trực tiếp.",
-    "remoteRequiresRemoteExitNode": "Proxy của hồ sơ này chỉ hoạt động trên máy tính này (ví dụ 127.0.0.1 hoặc địa chỉ mạng nội bộ). Phiên từ xa chạy trên máy chủ của chúng tôi nên cần proxy có địa chỉ công khai.",
-    "remoteSessionRefused": "Máy từ xa đã từ chối phiên này.",
-    "remoteSessionNotFound": "Phiên từ xa đó không còn tồn tại.",
-    "remoteSessionConflict": "Hồ sơ này đang được mở ở nơi khác.",
-    "remoteSyncInProgress": "Hồ sơ này vẫn đang tải lên đồng bộ đám mây. Hãy đợi đồng bộ xong rồi thử lại.",
-    "remoteHoursExhausted": "Bạn đã dùng hết {{used}} trong {{granted}} giờ từ xa của tháng này.",
-    "notTeamMember": "Bạn không thuộc nhóm nào.",
-    "cookieBotNotEntitled": "Gói của bạn không bao gồm Cookie Bot.",
-    "cookieBotNotEnrolled": "Hồ sơ này chưa được thiết lập cho Cookie Bot.",
-    "cookieBotScheduleConflict": "{{email}} đã làm ấm hồ sơ này lúc {{time}}.",
-    "cookieBotRunInProgress": "Đã có một lần chạy đang diễn ra cho hồ sơ này.",
-    "cookieBotRunNotFound": "Lần chạy đó không còn tồn tại.",
-    "cookieBotInvalidSchedule": "Lịch chạy đó không hợp lệ. Hãy kiểm tra giờ chạy, các ngày và thời lượng.",
-    "cookieBotInvalidTimezone": "{{timezone}} không phải múi giờ mà máy chủ nhận diện được.",
-    "cookieBotInvalidPeriod": "Kỳ đó không hợp lệ. Hãy dùng dạng tháng như 2026-08.",
-    "cookieBotSiteLimit": "Nhập từ {{min}} đến {{max}} trang, mỗi trang là một địa chỉ http hoặc https đầy đủ.",
-    "cookieBotRequiresCloudSync": "Hãy bật đồng bộ đám mây cho hồ sơ này trước: máy từ xa không có cách nào khác để lấy hồ sơ.",
-    "cookieBotEncryptedSyncUnsupported": "Hồ sơ này dùng đồng bộ mã hóa đầu cuối mà máy từ xa không giải mã được. Hãy chuyển sang đồng bộ thường.",
-    "cookieBotUnknownPlatform": "Hồ sơ này chưa ghi nhận hệ điều hành nên không thể ghép với máy nào.",
-    "cookieBotUnsupportedPlatform": "Cookie Bot không chạy được hồ sơ {{platform}}. Chỉ hỗ trợ hồ sơ Windows và macOS.",
-    "cookieBotRequiresExitNode": "Hãy gán proxy hoặc VPN trước. Nếu không, lần chạy sẽ đi ra từ địa chỉ trung tâm dữ liệu, gây hại cho danh tính hồ sơ.",
-    "cookieBotRequiresRemoteExitNode": "Proxy của hồ sơ này chỉ hoạt động trên máy tính này (ví dụ 127.0.0.1 hoặc địa chỉ mạng nội bộ). Cookie Bot chạy trên máy chủ của chúng tôi nên cần proxy có địa chỉ công khai.",
     "unknownCode": "Đã xảy ra lỗi: {{code}}",
-    "cookieBotTouchFingerprintUnsupported": "Hồ sơ này khai báo là thiết bị cảm ứng, bot không điều khiển được. Hãy dùng vân tay máy tính để bàn.",
-    "profileRunningRemotely": "Hồ sơ này đang chạy trên máy từ xa. Hãy dừng phiên từ xa trước.",
-    "profileRemoteSyncPending": "Một phiên từ xa vừa kết thúc. Đang chờ tải các thay đổi về trước khi mở hồ sơ này tại đây.",
-    "profileLockedByMember": "Hồ sơ này đang được {{email}} sử dụng.",
-    "profileLockedElsewhere": "Hồ sơ này đang được sử dụng trên thiết bị khác.",
-    "profileLockUnavailable": "Không thể kiểm tra hồ sơ này có đang được dùng ở nơi khác hay không. Hãy kiểm tra kết nối và thử lại.",
     "fingerprintExitMismatch": "Nút thoát của proxy không khớp với dấu vân tay của hồ sơ này.",
     "launchConsentExpired": "Xác nhận đó không còn hiệu lực. Hãy thử khởi chạy lại.",
     "vpnWorkerStartFailed": "Không thể khởi động kết nối VPN: {{detail}}",
     "exitProbeFailed": "Không thể kết nối tới nút thoát của proxy để kiểm tra vị trí.",
     "vlessUnsupported": {
-      "security": "Máy chủ VLESS này không dùng REALITY. Donut chỉ hỗ trợ VLESS kèm REALITY.",
-      "flow": "Máy chủ VLESS này không dùng luồng XTLS Vision mà Donut yêu cầu.",
-      "transport": "Donut chỉ hỗ trợ VLESS trên TCP thuần — máy chủ này dùng phương thức truyền khác (như WebSocket hoặc gRPC).",
-      "encryption": "Máy chủ VLESS này dùng thiết lập mã hóa mà Donut không hỗ trợ.",
-      "headerType": "Máy chủ VLESS này dùng cách che giấu tiêu đề mà Donut không hỗ trợ.",
-      "fingerprint": "URI VLESS này yêu cầu một dấu vân tay TLS mà Donut không hỗ trợ.",
+      "security": "Máy chủ VLESS này không dùng REALITY. Salamander chỉ hỗ trợ VLESS kèm REALITY.",
+      "flow": "Máy chủ VLESS này không dùng luồng XTLS Vision mà Salamander yêu cầu.",
+      "transport": "Salamander chỉ hỗ trợ VLESS trên TCP thuần — máy chủ này dùng phương thức truyền khác (như WebSocket hoặc gRPC).",
+      "encryption": "Máy chủ VLESS này dùng thiết lập mã hóa mà Salamander không hỗ trợ.",
+      "headerType": "Máy chủ VLESS này dùng cách che giấu tiêu đề mà Salamander không hỗ trợ.",
+      "fingerprint": "URI VLESS này yêu cầu một dấu vân tay TLS mà Salamander không hỗ trợ.",
       "sni": "URI VLESS thiếu SNI (sni) cần cho REALITY.",
       "publicKey": "URI VLESS thiếu khóa công khai REALITY (pbk).",
       "scheme": "Đây không phải liên kết VLESS. Nó phải bắt đầu bằng vless://.",
-      "parameter": "URI VLESS chứa một tùy chọn mà Donut không hỗ trợ.",
-      "malformed": "URI VLESS không hợp lệ."
+      "parameter": "URI VLESS chứa một tùy chọn mà Salamander không hỗ trợ.",
+      "malformed": "URI VLESS không hợp lệ.",
+      "alpn": "Máy chủ VLESS này yêu cầu danh sách giao thức ALPN mà Salamander không hỗ trợ.",
+      "network": "Không thể kết nối đến máy chủ để hoàn tất yêu cầu này."
     },
-    "camoufoxRemoved": "Camoufox không còn được hỗ trợ. Hãy tạo lại hồ sơ này bằng Wayfern.",
-    "noE2ePasswordSet": "Chưa đặt mật khẩu mã hóa đầu cuối. Hãy đặt trước khi đồng bộ dữ liệu đã mã hóa.",
     "importSourceNotChromium": "Thư mục này không phải hồ sơ trình duyệt Chromium",
     "importSourceNotChromiumNamed": "Không thể nhập hồ sơ {{family}}; chỉ hỗ trợ các trình duyệt nền Chromium",
-    "importSourceBrowserRunning": "Hãy đóng {{browser}} trước, hoặc chọn vẫn nhập"
+    "importSourceBrowserRunning": "Hãy đóng {{browser}} trước, hoặc chọn vẫn nhập",
+    "vlessSubscriptionFetchFailed": "Không thể lấy gói đăng ký đó. Kiểm tra URL và kết nối của bạn rồi thử lại."
   },
   "rail": {
     "profiles": "Profile",
@@ -2133,14 +1748,10 @@
       "importProfileHint": "Đưa profile từ công cụ khác",
       "keyboardShortcuts": "Phím tắt",
       "keyboardShortcutsHint": "Xem tất cả phím tắt",
-      "about": "Giới thiệu về Donut Browser",
+      "about": "Giới thiệu về Salamander Browser",
       "aboutHint": "Phiên bản và thông tin ứng dụng"
     },
-    "network": "Mạng",
-    "integrations": "Tích hợp",
-    "account": "Tài khoản",
-    "cookieBot": "Cookie Bot",
-    "cookieBotRunning": "Cookie Bot — đang chạy"
+    "network": "Mạng"
   },
   "pageTitle": {
     "proxies": "Mạng",
@@ -2148,69 +1759,8 @@
     "groups": "Nhóm",
     "vpns": "Mạng",
     "settings": "Cài đặt",
-    "integrations": "Tích hợp",
-    "account": "Tài khoản",
     "import": "Nhập profile",
-    "shortcuts": "Phím tắt",
-    "cookieBot": "Cookie Bot"
-  },
-  "encryption": {
-    "required": {
-      "title": "Đồng bộ tạm dừng — cần mật khẩu",
-      "description": "Dữ liệu mã hóa đã được tải xuống nhưng chưa đặt mật khẩu E2E trên thiết bị này. Mở Cài đặt → Mã hóa và nhập mật khẩu để tiếp tục đồng bộ.",
-      "openSettings": "Mở cài đặt"
-    },
-    "rollover": {
-      "startedTitle": "Đang mã hóa lại dữ liệu",
-      "startedDescription": "Chúng tôi đang tải lại mọi mục đồng bộ dưới mật khẩu mới. Profile trước, sau đó là proxy, nhóm, VPN và tiện ích.",
-      "progressTitle": "Đang mã hóa lại {{stage}}",
-      "progressDescription": "{{done}}/{{total}}",
-      "completedTitle": "Mã hóa lại hoàn tất",
-      "completedDescription": "Tất cả dữ liệu đồng bộ đã được đóng gói bằng mật khẩu mới.",
-      "stage": {
-        "profiles": "profile",
-        "proxies": "proxy",
-        "groups": "nhóm",
-        "vpns": "VPN",
-        "extensions": "tiện ích",
-        "extension_groups": "nhóm tiện ích"
-      }
-    }
-  },
-  "account": {
-    "refreshed": "Đã làm mới tài khoản",
-    "loggedOut": "Đã đăng xuất",
-    "signedOut": "Đã đăng xuất",
-    "signedOutDescription": "Đăng nhập để bật đồng bộ đám mây, profile mã hóa và tính năng nhóm.",
-    "plan": "Gói: {{plan}} · {{period}}",
-    "refresh": "Làm mới",
-    "logout": "Đăng xuất",
-    "signIn": "Đăng nhập",
-    "fields": {
-      "plan": "Gói",
-      "status": "Trạng thái",
-      "teamRole": "Vai trò nhóm",
-      "period": "Chu kỳ thanh toán",
-      "device": "Thiết bị"
-    },
-    "tabs": {
-      "account": "Tài khoản",
-      "selfHosted": "Tự lưu trữ",
-      "teamUsage": "Mức dùng của nhóm"
-    },
-    "selfHosted": {
-      "title": "Máy chủ đồng bộ tự lưu trữ",
-      "description": "Trỏ Donut đến máy chủ donut-sync của riêng bạn để đồng bộ profile, proxy, nhóm và tiện ích mà không cần sử dụng đám mây.",
-      "disabledWhileLoggedIn": "Đồng bộ tự lưu trữ không khả dụng khi bạn đã đăng nhập vào tài khoản Donut. Đăng xuất để sử dụng máy chủ tùy chỉnh.",
-      "connectionStatus": "Kết nối:",
-      "statusUnknown": "Chưa kiểm tra",
-      "testConnection": "Kiểm tra kết nối",
-      "disconnect": "Ngắt kết nối"
-    },
-    "deviceOrdinal": "{{ordinal}} trên {{count}}",
-    "automationPrimaryOnly": "Tự động hóa trình duyệt chỉ chạy trên thiết bị chính của bạn (Thiết bị 1). Đăng xuất ở đó để sử dụng tại đây.",
-    "automationActiveHere": "Tự động hóa trình duyệt đang hoạt động trên thiết bị này.",
-    "viewTeamUsage": "Xem mức dùng của nhóm"
+    "shortcuts": "Phím tắt"
   },
   "shortcutsPage": {
     "title": "Phím tắt",
@@ -2230,7 +1780,7 @@
       "stopProfile": "Dừng {{name}}",
       "profileInfo": "Thông tin — {{name}}",
       "createProfile": "Tạo hồ sơ",
-      "about": "Giới thiệu về Donut Browser"
+      "about": "Giới thiệu về Salamander Browser"
     }
   },
   "shortcuts": {
@@ -2241,26 +1791,23 @@
     "goProxies": "Đi đến Mạng",
     "goExtensions": "Đi đến Tiện ích",
     "goGroups": "Đi đến Nhóm",
-    "goIntegrations": "Đi đến Tích hợp",
-    "goAccount": "Đi đến Tài khoản",
-    "goSettings": "Đi đến Cài đặt",
-    "goCookieBot": "Cookie Bot"
+    "goSettings": "Đi đến Cài đặt"
   },
   "closeConfirm": {
-    "title": "Đóng Donut Browser?",
+    "title": "Đóng Salamander Browser?",
     "description": "Bạn muốn thu nhỏ ứng dụng vào khay hệ thống hay thoát?",
     "minimize": "Thu nhỏ vào khay",
     "quit": "Thoát"
   },
   "tray": {
-    "show": "Hiển thị Donut Browser",
+    "show": "Hiển thị Salamander Browser",
     "quit": "Thoát"
   },
   "onboarding": {
     "steps": {
       "createProfile": {
         "title": "Tạo hồ sơ đầu tiên của bạn",
-        "content": "Nhấn vào đây để tạo hồ sơ đầu tiên của bạn. Chọn Wayfern làm trình duyệt — Chromium được khuyến nghị, có bảo vệ vân tay."
+        "content": "Nhấn vào đây để tạo hồ sơ đầu tiên của bạn. Camoufox, trình duyệt có bảo vệ vân tay, được sử dụng tự động."
       },
       "dnsBlocking": {
         "title": "Chặn DNS",
@@ -2274,13 +1821,13 @@
       "finish": "Hoàn tất"
     },
     "thankYou": {
-      "title": "Cảm ơn bạn đã chọn Donut Browser",
+      "title": "Cảm ơn bạn đã chọn Salamander Browser",
       "body": "Hy vọng nó giúp việc duyệt web của bạn riêng tư hơn — mỗi danh tính được giữ riêng, và không có gì rời khỏi máy của bạn. Chúc bạn duyệt web vui vẻ.",
       "cta": "Bắt đầu duyệt web"
     }
   },
   "welcome": {
-    "title": "Chào mừng đến với Donut Browser",
+    "title": "Chào mừng đến với Salamander Browser",
     "tagline": "Trình duyệt chống phát hiện mã nguồn mở để quản lý nhiều danh tính cùng lúc.",
     "skip": "Bỏ qua",
     "next": "Tiếp theo",
@@ -2293,7 +1840,7 @@
     },
     "ready": {
       "title": "Đang thiết lập",
-      "descDownloading": "Đang tải trình duyệt đầu tiên của bạn (Wayfern). Quá trình thiết lập một lần này chạy ngầm — vui lòng chờ.",
+      "descDownloading": "Đang tải trình duyệt đầu tiên của bạn (Camoufox). Quá trình thiết lập một lần này chạy ngầm — vui lòng chờ.",
       "descReady": "Trình duyệt của bạn đã sẵn sàng. Hãy tạo hồ sơ đầu tiên của bạn.",
       "cta": "Tạo hồ sơ đầu tiên của tôi",
       "downloading": "Đang tải xuống…",
@@ -2316,44 +1863,17 @@
         "proxy": "Hỗ trợ Proxy (HTTP/SOCKS5)",
         "vpn": "Hỗ trợ VPN (WireGuard)",
         "profiles": "Hồ sơ cục bộ không giới hạn",
-        "api": "API quản lý hồ sơ & MCP",
         "openSource": "Mã nguồn mở",
         "groups": "Nhóm hồ sơ",
         "cookies": "Nhập & xuất cookie"
       }
-    },
-    "license": {
-      "title": "Cấp phép",
-      "body": "Donut Browser là mã nguồn mở và miễn phí sử dụng.",
-      "agree": "Tôi hiểu",
-      "personalTitle": "Sử dụng cá nhân",
-      "personalDesc": "Miễn phí vĩnh viễn.",
-      "commercialTitle": "Sử dụng thương mại",
-      "trialBadge": "2 tuần miễn phí",
-      "commercialDesc": "Miễn phí dùng thử 2 tuần. Sau đó, gói trả phí giúp dự án được duy trì và phát triển."
     }
-  },
-  "wayfernBlocked": {
-    "title": "Tự động hóa trình duyệt đã tạm dừng",
-    "description": "Tự động hóa trình duyệt chỉ chạy trên một thiết bị tại một thời điểm và một thiết bị khác đang đăng nhập hiện đang sử dụng nó. Hãy đăng xuất trên thiết bị đó, rồi khởi chạy lại cấu hình."
-  },
-  "wayfernConfigDialog": {
-    "titleView": "Xem cài đặt vân tay - {{name}} ({{browser}})",
-    "titleConfigure": "Cấu hình cài đặt vân tay - {{name}} ({{browser}})",
-    "invalidFingerprint": "Cấu hình vân tay không hợp lệ",
-    "invalidFingerprintDescription": "Cấu hình vân tay chứa JSON không hợp lệ. Vui lòng kiểm tra cài đặt nâng cao.",
-    "saveFailed": "Lưu cấu hình thất bại",
-    "unknownError": "Đã xảy ra lỗi không xác định"
-  },
-  "cookieCopy": {
-    "noOtherTargets": "Chưa chọn profile Wayfern nào khác"
   },
   "about": {
     "title": "Giới thiệu",
     "version": "Phiên bản {{version}}",
     "portableBadge": "bản portable",
     "licenseNotice": "Trình duyệt chống phát hiện mã nguồn mở.",
-    "website": "Trang web",
     "github": "GitHub",
     "licenses": "Giấy phép",
     "searchLicenses": "Tìm kiếm giấy phép…",
@@ -2372,323 +1892,6 @@
     "matching": "Đang khớp…",
     "matchSuccess": "Đã cập nhật vân tay để khớp với proxy. Khởi động lại hồ sơ để áp dụng."
   },
-  "cookieBot": {
-    "title": "Cookie Bot",
-    "description": "Làm ấm hồ sơ qua đêm trên máy từ xa.",
-    "tabs": {
-      "overview": "Tổng quan",
-      "schedule": "Lịch chạy",
-      "activity": "Hoạt động",
-      "team": "Nhóm"
-    },
-    "locked": {
-      "title": "Cookie Bot",
-      "hint": "Cookie Bot làm ấm hồ sơ của bạn qua đêm trên máy từ xa, giúp chúng giữ được cookie và lịch sử mà không cần bật máy tính của bạn."
-    },
-    "empty": {
-      "title": "Chưa có hồ sơ nào được đăng ký",
-      "hint": "Chọn một hồ sơ và bot sẽ làm ấm nó qua đêm trên máy từ xa. Máy tính của bạn có thể tắt.",
-      "cta": "Đăng ký một hồ sơ"
-    },
-    "tonight": {
-      "label": "Đêm nay",
-      "nextRun": "Lần chạy tới lúc {{time}}",
-      "dueCount_one": "{{count}} hồ sơ đến hạn",
-      "dueCount_other": "{{count}} hồ sơ đến hạn",
-      "nothingScheduled": "Chưa lên lịch gì"
-    },
-    "lastDay": {
-      "label": "24 giờ qua",
-      "none": "Chưa có lần chạy nào",
-      "ran_one": "{{count}} đã chạy",
-      "ran_other": "{{count}} đã chạy",
-      "partial_one": "{{count}} một phần",
-      "partial_other": "{{count}} một phần",
-      "failed_one": "{{count}} thất bại",
-      "failed_other": "{{count}} thất bại"
-    },
-    "chart": {
-      "machineTime": "Thời gian máy mỗi đêm",
-      "minutes": "{{minutes}} phút"
-    },
-    "hours": {
-      "label": "Giờ từ xa",
-      "remaining": "Còn {{remaining}} giờ trong {{total}}",
-      "remainingOf": "trên {{total}} giờ",
-      "used": "Đã dùng {{used}} trong {{total}} giờ",
-      "resets": "Đặt lại vào {{date}}",
-      "exhausted": "Đã hết giờ từ xa. Các lịch chạy vẫn được giữ và sẽ tiếp tục ở chu kỳ sau.",
-      "exhaustedOn": "Đã hết giờ từ xa. Các lịch chạy vẫn được giữ và sẽ tiếp tục vào {{date}}.",
-      "estimate": "Khoảng {{hours}} giờ mỗi tuần · còn {{remaining}} giờ trong chu kỳ này",
-      "estimateOverBudget": "Cần khoảng {{hours}} giờ mỗi tuần — chỉ còn {{remaining}} giờ",
-      "estimateOnly": "Khoảng {{hours}} giờ mỗi tuần"
-    },
-    "enrolled": {
-      "columnProfile": "Hồ sơ",
-      "columnCadence": "Tần suất",
-      "columnTime": "Giờ",
-      "columnNextRun": "Lần chạy tới",
-      "columnLastRun": "Lần chạy trước",
-      "enrolProfiles": "Đăng ký hồ sơ",
-      "edit": "Sửa lịch chạy",
-      "neverRun": "Chưa bao giờ",
-      "pausedNoHours": "Tạm dừng — hết giờ",
-      "profileMissing": "Hồ sơ đó không có trên máy tính này."
-    },
-    "schedule": {
-      "empty": "Chưa có gì được lên lịch.",
-      "quietHours_one": "{{count}} giờ trống",
-      "quietHours_other": "{{count}} giờ trống",
-      "crowded_one": "{{count}} hồ sơ khởi động cùng lúc",
-      "crowded_other": "{{count}} hồ sơ khởi động cùng lúc",
-      "unenrol": "Gỡ khỏi Cookie Bot",
-      "unenrolTitle": "Gỡ {{name}} khỏi Cookie Bot?",
-      "unenrolDescription": "Việc làm ấm sẽ dừng ngay đêm nay. Các lần chạy trước vẫn nằm trong tab Hoạt động.",
-      "unenrolled": "Đã gỡ khỏi Cookie Bot"
-    },
-    "status": {
-      "provisioning": "Đang chuẩn bị máy",
-      "ready": "Đang tải hồ sơ",
-      "warming": "Đang làm ấm",
-      "finished": "Đang kết thúc",
-      "failed": "Thất bại"
-    },
-    "runStatus": {
-      "pending": "Trong hàng đợi",
-      "running": "Đang chạy",
-      "succeeded": "Hoàn tất",
-      "partial": "Một phần",
-      "failed": "Thất bại",
-      "skipped": "Đã bỏ qua",
-      "cancelled": "Đã dừng"
-    },
-    "running": {
-      "label": "Đang chạy",
-      "more": "+{{count}} nữa",
-      "stop": "Dừng lần chạy",
-      "stopped": "Đã dừng lần chạy"
-    },
-    "live": {
-      "idle": "Hiện không có gì đang chạy",
-      "streamOffline": "Cập nhật trực tiếp đang ngoại tuyến",
-      "streamOfflineDetail": "Cập nhật trực tiếp đang ngoại tuyến — đang kết nối lại. Các lần chạy bên dưới có thể đã cũ.",
-      "unnamedSession": "Phiên từ xa",
-      "notStartedYet": "Máy chưa báo về thời điểm bắt đầu.",
-      "sitesProgress": "{{visited}} trong {{total}} trang",
-      "sitesUnknown": "Chưa có báo cáo về các trang",
-      "consentHandled_one": "Đã xử lý {{count}} hộp thoại đồng ý",
-      "consentHandled_other": "Đã xử lý {{count}} hộp thoại đồng ý",
-      "consentUnknown": "Chưa có báo cáo về hộp thoại đồng ý",
-      "billed": "Đã tính {{duration}}",
-      "billedUnknown": "Chưa có báo cáo về thời gian tính phí",
-      "chunk": "Phần {{index}} trên {{total}}"
-    },
-    "history": {
-      "title": "Lần chạy",
-      "allProfiles": "Tất cả hồ sơ",
-      "searchPlaceholder": "Tìm hồ sơ…",
-      "filterAll": "Tất cả lần chạy",
-      "filterComplete": "Hoàn tất",
-      "filterPartial": "Một phần",
-      "filterFailed": "Thất bại",
-      "columnStarted": "Bắt đầu",
-      "columnProfile": "Hồ sơ",
-      "columnDuration": "Thời lượng",
-      "columnSites": "Trang",
-      "columnStatus": "Trạng thái",
-      "columnOperator": "Người vận hành",
-      "empty": "Chưa có lần chạy nào.",
-      "noMatch": "Không có lần chạy nào khớp bộ lọc này.",
-      "unknownProfile": "Hồ sơ không xác định",
-      "outcome": "Lý do: {{reason}}",
-      "sitesVisited": "{{visited}}/{{total}}",
-      "sitesFailed_one": "Không truy cập được {{count}} trang",
-      "sitesFailed_other": "Không truy cập được {{count}} trang",
-      "consentHandled_one": "Đã xử lý {{count}} hộp thoại đồng ý",
-      "consentHandled_other": "Đã xử lý {{count}} hộp thoại đồng ý",
-      "sitesUnknown": "Chưa có số liệu"
-    },
-    "duration": {
-      "hm": "{{hours}} giờ {{minutes}} phút",
-      "ms": "{{minutes}} phút {{seconds}} giây",
-      "s": "{{seconds}} giây"
-    },
-    "picker": {
-      "title": "Đăng ký hồ sơ",
-      "description": "Chọn các hồ sơ mà bot sẽ làm ấm qua đêm.",
-      "searchPlaceholder": "Tìm hồ sơ…",
-      "noProfiles": "Không có hồ sơ nào khớp.",
-      "alreadyEnrolled": "Đã đăng ký",
-      "continue_one": "Tiếp tục với {{count}}",
-      "continue_other": "Tiếp tục với {{count}}"
-    },
-    "enrol": {
-      "titleOne": "Đăng ký {{name}}",
-      "titleCount_one": "Đăng ký {{count}} hồ sơ",
-      "titleCount_other": "Đăng ký {{count}} hồ sơ",
-      "editTitle": "Sửa lịch chạy",
-      "description": "Bot mở hồ sơ trên máy từ xa và duyệt các trang bạn liệt kê. Máy tính của bạn có thể tắt.",
-      "summaryNightly": "Chạy mỗi đêm lúc {{time}}, tối đa {{minutes}} phút mỗi lần.",
-      "summaryWeeknights": "Chạy từ thứ Hai đến thứ Sáu lúc {{time}}, tối đa {{minutes}} phút mỗi lần.",
-      "summaryAlternate": "Chạy cách đêm lúc {{time}}, tối đa {{minutes}} phút mỗi lần.",
-      "summaryCustom_one": "Chạy {{count}} đêm mỗi tuần lúc {{time}}, tối đa {{minutes}} phút mỗi lần.",
-      "summaryCustom_other": "Chạy {{count}} đêm mỗi tuần lúc {{time}}, tối đa {{minutes}} phút mỗi lần.",
-      "confirm": "Đăng ký cho đêm nay",
-      "confirmSome": "Đăng ký {{eligible}} trong {{total}} cho đêm nay",
-      "fixFirst": "Hãy khắc phục những mục này trước",
-      "saving": "Đang đăng ký…",
-      "saved": "Đã lưu lịch chạy",
-      "enrolled_one": "Đã đăng ký {{count}} hồ sơ",
-      "enrolled_other": "Đã đăng ký {{count}} hồ sơ",
-      "adjust": "Điều chỉnh lịch chạy",
-      "cadenceLabel": "Tần suất",
-      "cadenceNightly": "Mỗi đêm",
-      "cadenceWeeknights": "Đêm trong tuần",
-      "cadenceAlternate": "Cách đêm",
-      "cadenceCustom_one": "{{count}} đêm mỗi tuần",
-      "cadenceCustom_other": "{{count}} đêm mỗi tuần",
-      "timeLabel": "Giờ bắt đầu",
-      "timeHint": "Theo múi giờ trong dấu vân tay của từng hồ sơ.",
-      "maxMinutesLabel": "Số phút tối đa",
-      "intensityLabel": "Độ sâu",
-      "sitesLabel": "Trang web",
-      "sitesPlaceholder": "Mỗi dòng một địa chỉ",
-      "sitesHint_one": "{{count}} trang. Chỉ những trang bạn liệt kê ở đây mới được truy cập.",
-      "sitesHint_other": "{{count}} trang. Chỉ những trang bạn liệt kê ở đây mới được truy cập.",
-      "sitesTooMany": "Tối đa {{max}} trang.",
-      "presetsUnavailable": "Không tải được các mức độ sâu định sẵn. Hãy thử lại sau giây lát.",
-      "confirmBulkTitle_one": "Đăng ký {{count}} hồ sơ vào Cookie Bot?",
-      "confirmBulkTitle_other": "Đăng ký {{count}} hồ sơ vào Cookie Bot?",
-      "confirmBulkDescription_one": "Việc này đặt trước một lần chạy đêm, trừ vào quỹ giờ từ xa dùng chung. Bạn sẽ chọn giờ và các trang ở bước tiếp theo.",
-      "confirmBulkDescription_other": "Việc này đặt trước {{count}} lần chạy đêm, trừ vào quỹ giờ từ xa dùng chung. Bạn sẽ chọn giờ và các trang ở bước tiếp theo.",
-      "confirmBulkButton_one": "Tiếp tục với {{count}} hồ sơ",
-      "confirmBulkButton_other": "Tiếp tục với {{count}} hồ sơ",
-      "sitesRequired": "Hãy thêm ít nhất một trang.",
-      "addSitesFirst": "Hãy thêm một trang trước",
-      "presetsMissing": "Không có cài đặt sẵn về độ sâu",
-      "sourceOwn": "Danh sách của tôi",
-      "sourceCurated": "Tuyển chọn",
-      "sourceSaved": "Đã lưu",
-      "curatedEmpty": "Hiện không có danh sách tuyển chọn nào.",
-      "curatedNote": "Danh sách tuyển chọn do chúng tôi cập nhật. Mỗi hồ sơ lấy một mẫu riêng từ đó, nên không hồ sơ nào duyệt cùng một tập trang — chính điều này khiến danh sách không trở thành dấu hiệu nhận dạng. Các địa chỉ vẫn nằm ở phía chúng tôi.",
-      "savedEmpty": "Chưa lưu gì cả. Hãy nhập danh sách ở mục Danh sách của tôi rồi lưu từ đó.",
-      "savedNote": "Các trang được sao chép vào lịch khi bạn lưu, nên sửa danh sách sau này không ảnh hưởng tới các lịch đã có.",
-      "savedUnavailable": "Không tải được các danh sách đã lưu của bạn.",
-      "saveAsList": "Lưu thành danh sách",
-      "listNamePlaceholder": "Đặt tên cho danh sách",
-      "listSaved": "Đã lưu danh sách",
-      "listRenamed": "Đã đổi tên danh sách",
-      "listDeleted": "Đã xóa danh sách",
-      "listRename": "Đổi tên",
-      "listDeleteConfirm": "Xóa?",
-      "templateMissing": "Danh sách đã lưu đó không còn nữa. Hãy chọn danh sách khác.",
-      "templateNameTaken": "Bạn đã có một danh sách trùng tên.",
-      "templateNameInvalid": "Đặt tên danh sách tối đa {{max}} ký tự.",
-      "calendarLabel": "Thời điểm chạy",
-      "daysLabel": "Các ngày trong tuần",
-      "addSlot": "Thêm một giờ",
-      "slotsFull": "Tối đa {{max}} giờ bắt đầu.",
-      "removeSlot": "Bỏ giờ này",
-      "pickListFirst": "Chọn một danh sách trước",
-      "finishCalendarFirst": "Hoàn tất lịch trước",
-      "duplicateSlot": "Hai hàng có cùng ngày và giờ",
-      "listSites_one": "{{count}} trang",
-      "listSites_other": "{{count}} trang",
-      "summarySlots_one": "Chạy {{count}} lần mỗi tuần, tối đa {{minutes}} phút mỗi lần.",
-      "summarySlots_other": "Chạy {{count}} lần mỗi tuần, tối đa {{minutes}} phút mỗi lần.",
-      "templateNameInvalidNoMax": "Không thể dùng tên đó cho danh sách đã lưu."
-    },
-    "preset": {
-      "light": "Nhẹ",
-      "balanced": "Tiêu chuẩn",
-      "deep": "Sâu"
-    },
-    "template": {
-      "lowIntentPurchaser": "Người mua ít ý định",
-      "lowIntentPurchaserHint": "Định vị hồ sơ như một người mua nhạy cảm về giá: các trang so sánh, mã giảm giá, hoàn tiền và mua bán lại, đến với người bán qua trang tổng hợp thay vì trực tiếp."
-    },
-    "preflight": {
-      "ineligible_one": "{{count}} hồ sơ không chạy từ xa được",
-      "ineligible_other": "{{count}} hồ sơ không chạy từ xa được",
-      "reasonSync": "Đồng bộ đang tắt",
-      "reasonEncrypted": "Mã hóa đầu cuối",
-      "reasonNoFingerprint": "Chưa ghi nhận hệ điều hành",
-      "reasonCrossOs": "Tạo cho {{os}} — không có máy từ xa phù hợp",
-      "reasonNoExitNode": "Không có proxy hoặc VPN",
-      "fixSync": "Bật đồng bộ",
-      "fixEncrypted": "Mở cài đặt đồng bộ",
-      "fixProxy": "Gán một proxy",
-      "fixFailed": "Không áp dụng được cách khắc phục đó.",
-      "exitNodeHint": "Không có proxy hoặc VPN, lần chạy sẽ đi ra từ chính địa chỉ trung tâm dữ liệu của hệ thống máy. Nhiều giờ lưu lượng từ một mạng lưu trữ gây hại cho danh tính hồ sơ hơn cả việc không làm ấm."
-    },
-    "conflict": {
-      "title": "{{email}} đã làm ấm hồ sơ này lúc {{time}}",
-      "detail": "Hai lịch chạy trên cùng một hồ sơ tiêu tốn giờ gấp đôi và có thể xung đột giữa chừng.",
-      "keepTheirs": "Dùng lịch của họ",
-      "replace": "Thay bằng lịch của tôi",
-      "replaceForbidden": "Chỉ chủ sở hữu hoặc quản trị viên nhóm mới đổi được lịch của người khác.",
-      "askThem": "Sao chép {{email}}",
-      "emailCopied": "Đã sao chép email",
-      "copyFailed": "Không sao chép được địa chỉ."
-    },
-    "actionBar": {
-      "enrol": "Đăng ký vào Cookie Bot",
-      "proRequired": "Cookie Bot cần gói trả phí",
-      "noneEligible": "Không hồ sơ nào đã chọn có thể làm ấm từ xa"
-    },
-    "actions": {
-      "enrol": "Đăng ký vào Cookie Bot",
-      "editSchedule": "Sửa lịch chạy",
-      "runNow": "Chạy ngay",
-      "runStarted": "Đã bắt đầu chạy",
-      "viewActivity": "Xem hoạt động",
-      "runNotStarted": "Lượt chạy chưa bắt đầu: {{reason}}"
-    },
-    "state": {
-      "enrolled": "Đã đăng ký",
-      "notEnrolled": "Chưa đăng ký",
-      "paused": "Tạm dừng",
-      "summary": "{{cadence}} lúc {{time}}",
-      "rowMenu": "Tùy chọn Cookie Bot cho {{name}}",
-      "blocked": "Không thể chạy: {{reason}}"
-    },
-    "team": {
-      "title": "Mức dùng của nhóm",
-      "pooled_one": "{{used}} trong {{total}} giờ, {{count}} chỗ",
-      "pooled_other": "{{used}} trong {{total}} giờ dùng chung cho {{count}} chỗ",
-      "hours": "{{hours}} giờ",
-      "legendBot": "Cookie Bot",
-      "legendInteractive": "Tương tác",
-      "columnMember": "Thành viên",
-      "columnRuns": "Lần chạy",
-      "columnHours": "Giờ",
-      "columnShare": "Tỷ lệ",
-      "noActivity": "Không có phiên từ xa nào trong kỳ này.",
-      "soloNote": "Hiện chỉ có mức dùng của bạn. Mời đồng đội để xem quỹ giờ chia theo từng thành viên.",
-      "runsFailed": "· {{n}} thất bại"
-    },
-    "closeReason": {
-      "stoppedByUser": "Đã dừng thủ công",
-      "maxDuration": "Đã đạt giới hạn thời gian",
-      "other": "Đã kết thúc: {{reason}}"
-    },
-    "outcome": {
-      "notEntitled": "Không có trong gói của bạn",
-      "syncDisabled": "Hồ sơ này đang tắt đồng bộ đám mây",
-      "encryptedSync": "Không hỗ trợ đồng bộ mã hoá đầu cuối",
-      "proxyRequired": "Chưa gắn proxy hoặc VPN",
-      "touchFingerprint": "Không hỗ trợ vân tay thiết bị cảm ứng",
-      "platformUnsupported": "Không có máy nào chạy hệ điều hành của hồ sơ này",
-      "noSites": "Không có trang nào để truy cập",
-      "quotaExhausted": "Đã dùng hết số giờ từ xa",
-      "profileLocked": "Hồ sơ đang mở ở nơi khác",
-      "noCapacity": "Không có máy nào rảnh",
-      "managerError": "Cụm máy không khởi động được trình duyệt",
-      "budgetExceeded": "Đã hết thời lượng dành cho đêm nay",
-      "cancelledByUser": "Đã dừng thủ công",
-      "unknown": "Lý do không xác định ({{code}})"
-    }
-  },
   "prelaunchGate": {
     "titleBlocked": "Đã chặn khởi chạy",
     "titleWarning": "Trước khi khởi chạy",
@@ -2699,16 +1902,16 @@
     "vpnExtensionConfirmed": "Công cụ VPN hoặc proxy đã biết",
     "vpnExtensionLikely": "Có vẻ là công cụ VPN hoặc proxy",
     "vpnExtensionCapability": "Có quyền proxy",
-    "vpnExtensionExplainer": "Nếu một trong số đó chuyển lưu lượng của bạn đi nơi khác, vị trí thực của trình duyệt sẽ không còn khớp với múi giờ, ngôn ngữ và vị trí địa lý mà hồ sơ này được tạo ra, và Donut không thể phát hiện điều đó từ bên ngoài.",
+    "vpnExtensionExplainer": "Nếu một trong số đó chuyển lưu lượng của bạn đi nơi khác, vị trí thực của trình duyệt sẽ không còn khớp với múi giờ, ngôn ngữ và vị trí địa lý mà hồ sơ này được tạo ra, và Salamander không thể phát hiện điều đó từ bên ngoài.",
     "proxyCapableHeading": "Các tiện ích có thể thay đổi proxy",
-    "proxyCapableIntro": "Chúng không giống VPN, nhưng có quyền proxy của Chromium, thứ mà trình quản lý tải xuống và công cụ gỡ lỗi cũng cần. Donut không thể biết liệu có tiện ích nào đang dùng quyền đó hay không:",
-    "sourceDonut": "Do Donut quản lý",
+    "proxyCapableIntro": "Chúng không giống VPN, nhưng có quyền proxy của Chromium, thứ mà trình quản lý tải xuống và công cụ gỡ lỗi cũng cần. Salamander không thể biết liệu có tiện ích nào đang dùng quyền đó hay không:",
+    "sourceSalamander": "Do Salamander quản lý",
     "sourceBrowser": "Đã cài trong hồ sơ",
     "measurementUnreliable": "Một tiện ích trong hồ sơ này có quyền proxy, nên kết quả kiểm tra điểm ra có thể không phản ánh tuyến đường mà trình duyệt thực sự dùng.",
-    "scanIncompleteEncrypted": "Hồ sơ này được mã hóa nên chỉ có thể kiểm tra các tiện ích do Donut quản lý.",
-    "scanIncompleteEphemeral": "Hồ sơ này chưa có dữ liệu nên chỉ có thể kiểm tra các tiện ích do Donut quản lý.",
+    "scanIncompleteEncrypted": "Hồ sơ này được mã hóa nên chỉ có thể kiểm tra các tiện ích do Salamander quản lý.",
+    "scanIncompleteEphemeral": "Hồ sơ này chưa có dữ liệu nên chỉ có thể kiểm tra các tiện ích do Salamander quản lý.",
     "scanIncompletePartial": "Quá trình quét tiện ích bị ngắt giữa chừng nên có thể thiếu một số tiện ích.",
-    "probePending": "Điểm ra của proxy chưa được đo. Donut sẽ kiểm tra trong lúc khởi động và dừng lại nếu không khớp.",
+    "probePending": "Điểm ra của proxy chưa được đo. Salamander sẽ kiểm tra trong lúc khởi động và dừng lại nếu không khớp.",
     "launchAnyway": "Vẫn khởi chạy",
     "dontBlockAgain": "Không chặn lại với đúng sai lệch này",
     "dontWarnExtensions": "Không cảnh báo lại về các tiện ích này",
@@ -2716,6 +1919,6 @@
     "cancelledSummary": "Đã hủy {{cancelled}} trên {{total}} lượt khởi chạy",
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
-    "scanIncompleteMissing": "Hồ sơ này chưa từng được khởi chạy nên chỉ có thể kiểm tra các tiện ích do Donut quản lý."
+    "scanIncompleteMissing": "Hồ sơ này chưa từng được khởi chạy nên chỉ có thể kiểm tra các tiện ích do Salamander quản lý."
   }
 }

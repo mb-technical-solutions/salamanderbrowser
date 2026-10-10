@@ -103,9 +103,9 @@ test("two isolated sessions run concurrently and do not share frontend or backen
     assert.equal(secondSettings.theme, "system");
     assert.notEqual(secondSettings.theme, "dark");
 
-    await first.execute("localStorage.setItem('donut-e2e-only-a', 'yes');");
+    await first.execute("localStorage.setItem('salamander-e2e-only-a', 'yes');");
     assert.equal(
-      await second.execute("return localStorage.getItem('donut-e2e-only-a');"),
+      await second.execute("return localStorage.getItem('salamander-e2e-only-a');"),
       null,
       "native WebView data leaked across sessions",
     );
@@ -159,8 +159,8 @@ test("tray labels, hide-to-tray, and confirmed quit follow the native lifecycle"
   try {
     await app.start();
     await app.invoke("update_tray_menu", {
-      showLabel: "Show Donut E2E",
-      quitLabel: "Quit Donut E2E",
+      showLabel: "Show Salamander E2E",
+      quitLabel: "Quit Salamander E2E",
     });
     await app.invoke("hide_to_tray");
     assert.equal(

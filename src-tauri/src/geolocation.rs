@@ -77,6 +77,25 @@ impl Locale {
       self.language.clone()
     }
   }
+
+  /// Convert to the flat dotted-key config format Camoufox expects.
+  pub fn as_config(&self) -> HashMap<String, serde_json::Value> {
+    let mut config = HashMap::new();
+
+    if let Some(region) = &self.region {
+      config.insert(
+        "locale:region".to_string(),
+        serde_json::json!(region.to_uppercase()),
+      );
+    }
+
+    config.insert(
+      "locale:language".to_string(),
+      serde_json::json!(self.language.clone()),
+    );
+
+    config
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -85,6 +104,25 @@ pub struct Geolocation {
   pub longitude: f64,
   pub latitude: f64,
   pub timezone: String,
+}
+
+impl Geolocation {
+  /// Convert to the flat dotted-key config format Camoufox expects.
+  pub fn as_config(&self) -> HashMap<String, serde_json::Value> {
+    let mut config = self.locale.as_config();
+
+    config.insert(
+      "geolocation:longitude".to_string(),
+      serde_json::json!(self.longitude),
+    );
+    config.insert(
+      "geolocation:latitude".to_string(),
+      serde_json::json!(self.latitude),
+    );
+    config.insert("timezone".to_string(), serde_json::json!(self.timezone));
+
+    config
+  }
 }
 
 struct LanguagePopulation {
@@ -181,7 +219,7 @@ impl LocaleSelector {
   /// this country", not "is this the country's main language": `from_region`
   /// samples the whole listed distribution weighted by speaker share, so every
   /// listed language is one this selector itself can emit. Anything stricter
-  /// would flag fingerprints Donut generated on purpose — CLDR puts `es` at
+  /// would flag fingerprints Salamander generated on purpose — CLDR puts `es` at
   /// 9.6% in the US and `fr` at 30% in Canada, and those get picked.
   pub fn region_speaks(&self, region: &str, language: &str) -> Option<bool> {
     let languages = self.territories.get(&region.to_uppercase())?;
@@ -252,7 +290,7 @@ fn normalize_locale(locale: &str) -> Locale {
 
   for part in parts.iter().skip(1) {
     if part.len() == 4 && part.chars().all(|c| c.is_ascii_alphabetic()) {
-      // Script subtag (e.g. Hans/Hant) — ignored; Wayfern fingerprint uses language+region only.
+      // Script subtag (e.g. Hans/Hant) — ignored; Camoufox fingerprint uses language+region only.
       continue;
     }
     region = Some(part.to_uppercase());

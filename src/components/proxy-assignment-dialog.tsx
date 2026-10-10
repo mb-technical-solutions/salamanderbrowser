@@ -234,10 +234,6 @@ export function ProxyAssignmentDialog({
                         {t("proxyAssignment.noneOption")}
                       </CommandItem>
                       {storedProxies
-                        .filter(
-                          (proxy) =>
-                            !proxy.is_cloud_managed && !proxy.is_cloud_derived,
-                        )
                         .map((proxy) => (
                           <CommandItem
                             key={proxy.id}

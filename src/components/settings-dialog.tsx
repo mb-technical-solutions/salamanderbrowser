@@ -12,7 +12,6 @@ import { LoadingButton } from "@/components/loading-button";
 import { useTheme } from "@/components/theme-provider";
 import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ColorPicker,
@@ -26,12 +25,10 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -45,8 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCloudAuth } from "@/hooks/use-cloud-auth";
-import { useCommercialTrial } from "@/hooks/use-commercial-trial";
 import { useLanguage } from "@/hooks/use-language";
 import type { PermissionType } from "@/hooks/use-permissions";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -69,9 +64,6 @@ interface AppSettings {
   set_as_default_browser: boolean;
   theme: string;
   custom_theme?: Record<string, string>;
-  api_enabled: boolean;
-  api_port: number;
-  api_token?: string;
   disable_auto_updates?: boolean;
   keep_decrypted_profiles_in_ram?: boolean;
   fingerprint_gate_disabled?: boolean;
@@ -94,31 +86,23 @@ interface PermissionInfo {
 interface SettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onIntegrationsOpen?: () => void;
   subPage?: boolean;
 }
 
 export function SettingsDialog({
   isOpen,
   onClose,
-  onIntegrationsOpen,
   subPage,
 }: SettingsDialogProps) {
   const [settings, setSettings] = useState<AppSettings>({
     set_as_default_browser: false,
     theme: "system",
     custom_theme: undefined,
-    api_enabled: false,
-    api_port: 10108,
-    api_token: undefined,
   });
   const [originalSettings, setOriginalSettings] = useState<AppSettings>({
     set_as_default_browser: false,
     theme: "system",
     custom_theme: undefined,
-    api_enabled: false,
-    api_port: 10108,
-    api_token: undefined,
   });
   const [customThemeState, setCustomThemeState] = useState<CustomThemeState>({
     selectedThemeId: null,
@@ -135,15 +119,6 @@ export function SettingsDialog({
   const [requestingPermission, setRequestingPermission] =
     useState<PermissionType | null>(null);
   const [dnsBlocklistDialogOpen, setDnsBlocklistDialogOpen] = useState(false);
-  const [hasE2ePassword, setHasE2ePassword] = useState(false);
-  const [e2ePassword, setE2ePassword] = useState("");
-  const [e2ePasswordConfirm, setE2ePasswordConfirm] = useState("");
-  const [e2eError, setE2eError] = useState("");
-  const [isSavingE2e, setIsSavingE2e] = useState(false);
-  const [isRemovingE2e, setIsRemovingE2e] = useState(false);
-  const [isVerifyE2eOpen, setIsVerifyE2eOpen] = useState(false);
-  const [verifyE2ePassword, setVerifyE2ePassword] = useState("");
-  const [isVerifyingE2e, setIsVerifyingE2e] = useState(false);
   // Theme-restore guards: settings load asynchronously, and the dialog can be
   // unmounted directly by rail navigation (bypassing handleClose). Refs mirror
   // the loaded state so the unmount cleanup can restore the persisted theme.
@@ -167,13 +142,6 @@ export function SettingsDialog({
   } = usePermissions(isOpen);
   const isMacOS = currentOS === "macos";
   const isLinux = currentOS === "linux";
-  const { trialStatus } = useCommercialTrial();
-  const { user: cloudUser } = useCloudAuth();
-  // Encryption is available to everyone except team members who aren't owners
-  const canUseEncryption =
-    cloudUser == null ||
-    cloudUser.plan !== "team" ||
-    cloudUser.teamRole === "owner";
   const {
     currentLanguage,
     changeLanguage,
@@ -317,13 +285,6 @@ export function SettingsDialog({
           colors: tokyoNightTheme.colors,
         });
       }
-      // Check E2E password status
-      try {
-        const hasPassword = await invoke<boolean>("check_has_e2e_password");
-        setHasE2ePassword(hasPassword);
-      } catch {
-        setHasE2ePassword(false);
-      }
       // Load system info
       try {
         const info = await invoke<{
@@ -403,7 +364,7 @@ export function SettingsDialog({
     setIsSettingDefault(true);
     try {
       // Windows keeps the final choice for its own settings page, so a call
-      // that succeeded does not always mean Donut is the default yet. Say which
+      // that succeeded does not always mean Salamander is the default yet. Say which
       // of the two happened. Saying nothing at all is what left the user
       // watching the badge stay "Inactive" with no explanation.
       const outcome = await invoke<SetDefaultBrowserOutcome>(
@@ -761,7 +722,6 @@ export function SettingsDialog({
   // Check if settings have changed (excluding default browser setting)
   const hasChanges =
     settings.theme !== originalSettings.theme ||
-    settings.api_enabled !== originalSettings.api_enabled ||
     selectedLanguage !== originalLanguage ||
     (settings.theme === "custom" &&
       JSON.stringify(customThemeState.colors) !==
@@ -1111,23 +1071,6 @@ export function SettingsDialog({
                 </div>
               )}
 
-              {/* Integrations Section */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">
-                  {t("settings.integrations.title")}
-                </Label>
-                <p className="text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                  {t("settings.integrations.description")}
-                </p>
-                <RippleButton
-                  variant="outline"
-                  className="w-full"
-                  onClick={onIntegrationsOpen}
-                >
-                  {t("integrations.openSettings")}
-                </RippleButton>
-              </div>
-
               {/* DNS Blocklist Section */}
               <div className="space-y-4">
                 <Label className="text-base font-medium">
@@ -1143,219 +1086,6 @@ export function SettingsDialog({
                 >
                   {t("dnsBlocklist.manageLists")}
                 </RippleButton>
-              </div>
-
-              {/* Sync Encryption Section */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">
-                  {t("settings.encryption.title")}
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("settings.encryption.description")}
-                </p>
-
-                {!canUseEncryption ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t("settings.encryption.requiresProOrOwner")}
-                  </p>
-                ) : hasE2ePassword ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default">
-                        {t("settings.encryption.passwordSet")}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {t("settings.encryption.passwordSetDescription")}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isRemovingE2e}
-                        onClick={() => {
-                          setVerifyE2ePassword("");
-                          setIsVerifyE2eOpen(true);
-                        }}
-                      >
-                        {t("settings.encryption.validatePassword")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isRemovingE2e}
-                        onClick={() => {
-                          setHasE2ePassword(false);
-                          setE2ePassword("");
-                          setE2ePasswordConfirm("");
-                          setE2eError("");
-                        }}
-                      >
-                        {t("settings.encryption.changePassword")}
-                      </Button>
-                      <LoadingButton
-                        variant="destructive"
-                        size="sm"
-                        isLoading={isRemovingE2e}
-                        onClick={async () => {
-                          setIsRemovingE2e(true);
-                          try {
-                            // Await the rollover so the user sees an error if
-                            // re-syncing fails. Previously the rollover was
-                            // fire-and-forget (`void invoke(...)`) which left
-                            // half-removed state on screen with no feedback.
-                            await invoke("delete_e2e_password");
-                            setHasE2ePassword(false);
-                            try {
-                              await invoke(
-                                "rollover_encryption_for_all_entities",
-                              );
-                            } catch (rolloverErr) {
-                              console.error(
-                                "Rollover after password removal failed:",
-                                rolloverErr,
-                              );
-                              showErrorToast(String(rolloverErr));
-                            }
-                            showSuccessToast(t("settings.encryption.removed"));
-                          } catch (error) {
-                            showErrorToast(String(error));
-                          } finally {
-                            setIsRemovingE2e(false);
-                          }
-                        }}
-                      >
-                        {t("settings.encryption.removePassword")}
-                      </LoadingButton>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <Input
-                      type="password"
-                      placeholder={t("settings.encryption.passwordPlaceholder")}
-                      value={e2ePassword}
-                      onChange={(e) => {
-                        setE2ePassword(e.target.value);
-                        setE2eError("");
-                      }}
-                    />
-                    <Input
-                      type="password"
-                      placeholder={t("settings.encryption.confirmPlaceholder")}
-                      value={e2ePasswordConfirm}
-                      onChange={(e) => {
-                        setE2ePasswordConfirm(e.target.value);
-                        setE2eError("");
-                      }}
-                    />
-                    {e2eError && (
-                      <p className="text-sm text-destructive-text">
-                        {e2eError}
-                      </p>
-                    )}
-                    <LoadingButton
-                      variant="default"
-                      size="sm"
-                      isLoading={isSavingE2e}
-                      onClick={async () => {
-                        if (e2ePassword.length < 8) {
-                          setE2eError(
-                            t("settings.encryption.passwordTooShort"),
-                          );
-                          return;
-                        }
-                        if (e2ePassword !== e2ePasswordConfirm) {
-                          setE2eError(
-                            t("settings.encryption.passwordMismatch"),
-                          );
-                          return;
-                        }
-                        setIsSavingE2e(true);
-                        try {
-                          await invoke("set_e2e_password", {
-                            password: e2ePassword,
-                          });
-                          setHasE2ePassword(true);
-                          setE2ePassword("");
-                          setE2ePasswordConfirm("");
-                          try {
-                            // Await rollover so any failure surfaces to the
-                            // user instead of being lost via fire-and-forget.
-                            // Without this, "change password" leaves entities
-                            // half-re-encrypted with no visible error.
-                            await invoke(
-                              "rollover_encryption_for_all_entities",
-                            );
-                          } catch (rolloverErr) {
-                            console.error(
-                              "Rollover after password set failed:",
-                              rolloverErr,
-                            );
-                            showErrorToast(String(rolloverErr));
-                          }
-                          showSuccessToast(
-                            t("settings.encryption.passwordSaved"),
-                          );
-                        } catch (error) {
-                          showErrorToast(String(error));
-                        } finally {
-                          setIsSavingE2e(false);
-                        }
-                      }}
-                    >
-                      {t("settings.encryption.setPassword")}
-                    </LoadingButton>
-                  </div>
-                )}
-              </div>
-
-              {/* Commercial License Section */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">
-                  {t("settings.commercial.title")}
-                </Label>
-
-                <div className="flex items-center justify-between rounded-md border bg-muted/40 p-3">
-                  {cloudUser != null && cloudUser.plan !== "free" ? (
-                    // Paid Donut plan supersedes the local commercial trial —
-                    // the trial only exists to gate commercial use until the
-                    // user subscribes. Showing "Trial expired" to a paying
-                    // customer reads like a billing error, so swap in a
-                    // subscription-active badge instead.
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-success-text">
-                        {t("settings.commercial.subscriptionActive", {
-                          plan: cloudUser.plan,
-                        })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.commercial.subscriptionActiveDescription")}
-                      </p>
-                    </div>
-                  ) : trialStatus?.type === "Active" ? (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">
-                        {t("settings.commercial.trialActive", {
-                          days: trialStatus.days_remaining,
-                          hours: trialStatus.hours_remaining,
-                        })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.commercial.trialActiveDescription")}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-warning-text">
-                        {t("settings.commercial.trialExpired")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.commercial.trialExpiredDescription")}
-                      </p>
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Advanced Section */}
@@ -1531,7 +1261,7 @@ export function SettingsDialog({
               {systemInfo && (
                 <div className="border-t pt-2">
                   <p className="font-mono text-xs whitespace-pre-line text-muted-foreground select-all">
-                    {`Donut Browser ${systemInfo.app_version}\n${systemInfo.os} ${systemInfo.arch}${systemInfo.portable ? " (portable)" : ""}`}
+                    {`Salamander Browser ${systemInfo.app_version}\n${systemInfo.os} ${systemInfo.arch}${systemInfo.portable ? " (portable)" : ""}`}
                   </p>
                 </div>
               )}
@@ -1577,104 +1307,6 @@ export function SettingsDialog({
         isOpen={dnsBlocklistDialogOpen}
         onClose={() => setDnsBlocklistDialogOpen(false)}
       />
-      <Dialog
-        open={isVerifyE2eOpen}
-        onOpenChange={(open) => {
-          if (!isVerifyingE2e) {
-            setIsVerifyE2eOpen(open);
-            if (!open) setVerifyE2ePassword("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {t("settings.encryption.validateDialog.title")}
-            </DialogTitle>
-            <DialogDescription>
-              {t("settings.encryption.validateDialog.description")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              type="password"
-              placeholder={t("settings.encryption.passwordPlaceholder")}
-              value={verifyE2ePassword}
-              autoFocus
-              onChange={(e) => setVerifyE2ePassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && verifyE2ePassword.length > 0) {
-                  e.preventDefault();
-                  void (async () => {
-                    setIsVerifyingE2e(true);
-                    try {
-                      const ok = await invoke<boolean>("verify_e2e_password", {
-                        password: verifyE2ePassword,
-                      });
-                      if (ok) {
-                        showSuccessToast(
-                          t("settings.encryption.validateDialog.matchToast"),
-                        );
-                        setIsVerifyE2eOpen(false);
-                        setVerifyE2ePassword("");
-                      } else {
-                        showErrorToast(
-                          t("settings.encryption.validateDialog.mismatchToast"),
-                        );
-                      }
-                    } catch (error) {
-                      showErrorToast(String(error));
-                    } finally {
-                      setIsVerifyingE2e(false);
-                    }
-                  })();
-                }
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={isVerifyingE2e}
-              onClick={() => {
-                setIsVerifyE2eOpen(false);
-                setVerifyE2ePassword("");
-              }}
-            >
-              {t("common.buttons.cancel")}
-            </Button>
-            <LoadingButton
-              isLoading={isVerifyingE2e}
-              disabled={verifyE2ePassword.length === 0}
-              onClick={async () => {
-                setIsVerifyingE2e(true);
-                try {
-                  const ok = await invoke<boolean>("verify_e2e_password", {
-                    password: verifyE2ePassword,
-                  });
-                  if (ok) {
-                    showSuccessToast(
-                      t("settings.encryption.validateDialog.matchToast"),
-                    );
-                    setIsVerifyE2eOpen(false);
-                    setVerifyE2ePassword("");
-                  } else {
-                    showErrorToast(
-                      t("settings.encryption.validateDialog.mismatchToast"),
-                    );
-                  }
-                } catch (error) {
-                  showErrorToast(String(error));
-                } finally {
-                  setIsVerifyingE2e(false);
-                }
-              }}
-            >
-              {t("settings.encryption.validateDialog.submit")}
-            </LoadingButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

@@ -21,11 +21,9 @@ import {
   LuGroup,
   LuKey,
   LuLink,
-  LuLock,
   LuLockOpen,
   LuPlus,
   LuPuzzle,
-  LuRefreshCw,
   LuSettings,
   LuShield,
   LuShieldCheck,
@@ -35,9 +33,9 @@ import {
   LuUsers,
   LuX,
 } from "react-icons/lu";
-import { SharedFingerprintConfigForm } from "@/components/shared-fingerprint-config-form";
 import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ColorPicker,
   ColorPickerEyeDropper,
@@ -61,6 +59,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -78,14 +77,15 @@ import { translateBackendError } from "@/lib/backend-errors";
 import { getProfileIcon } from "@/lib/browser-utils";
 import { DNS_BLOCKLIST_LEVELS } from "@/lib/dns-blocklist-levels";
 import { formatRelativeTime } from "@/lib/flag-utils";
+import { PRESET_TAB_OPTIONS } from "@/lib/preset-tabs";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import type {
   BrowserProfile,
+  CamoufoxConfig,
   ProfileGroup,
   StoredProxy,
   VpnConfig,
-  WayfernConfig,
 } from "@/types";
 
 interface ProfileInfoDialogProps {
@@ -95,9 +95,7 @@ interface ProfileInfoDialogProps {
   storedProxies: StoredProxy[];
   vpnConfigs: VpnConfig[];
   onOpenTrafficDialog?: (profileId: string) => void;
-  onOpenProfileSyncDialog?: (profile: BrowserProfile) => void;
   onAssignProfilesToGroup?: (profileIds: string[]) => void;
-  onConfigureWayfern?: (profile: BrowserProfile) => void;
   onCopyCookiesToProfile?: (profile: BrowserProfile) => void;
   onOpenCookieManagement?: (profile: BrowserProfile) => void;
   onAssignExtensionGroup?: (profileIds: string[]) => void;
@@ -106,7 +104,6 @@ interface ProfileInfoDialogProps {
   onOpenLaunchHook?: (profile: BrowserProfile) => void;
   onCloneProfile?: (profile: BrowserProfile) => void;
   onDeleteProfile?: (profile: BrowserProfile) => void;
-  onLaunchWithSync?: (profile: BrowserProfile) => void;
   onSetPassword?: (profile: BrowserProfile) => void;
   onChangePassword?: (profile: BrowserProfile) => void;
   onRemovePassword?: (profile: BrowserProfile) => void;
@@ -114,7 +111,6 @@ interface ProfileInfoDialogProps {
   isRunning?: boolean;
   isDisabled?: boolean;
   isCrossOs?: boolean;
-  syncStatuses: Record<string, { status: string; error?: string }>;
 }
 
 function _OSIcon({ os }: { os: string }) {
@@ -199,8 +195,8 @@ function formatBytes(bytes: number): string {
 }
 
 /**
- * Shows the total bytes routed through Donut's local proxy worker for this
- * profile. Only counts traffic flowing through the donut-proxy binary — not
+ * Shows the total bytes routed through Salamander's local proxy worker for this
+ * profile. Only counts traffic flowing through the salamander-proxy binary — not
  * the browser's full network usage, hence the "Local" qualifier.
  */
 function LocalDataTransferCard({
@@ -321,9 +317,7 @@ export function ProfileInfoDialog({
   storedProxies,
   vpnConfigs,
   onOpenTrafficDialog,
-  onOpenProfileSyncDialog,
   onAssignProfilesToGroup,
-  onConfigureWayfern,
   onCopyCookiesToProfile,
   onOpenCookieManagement,
   onAssignExtensionGroup,
@@ -332,7 +326,6 @@ export function ProfileInfoDialog({
   onOpenLaunchHook,
   onCloneProfile,
   onDeleteProfile,
-  onLaunchWithSync,
   onSetPassword,
   onChangePassword,
   onRemovePassword,
@@ -340,7 +333,6 @@ export function ProfileInfoDialog({
   isRunning = false,
   isDisabled = false,
   isCrossOs = false,
-  syncStatuses,
 }: ProfileInfoDialogProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = React.useState(false);
@@ -392,7 +384,7 @@ export function ProfileInfoDialog({
   if (!profile) return null;
 
   const ProfileIcon = getProfileIcon(profile);
-  const isWayfern = profile.browser === "wayfern";
+  const isCamoufox = profile.browser === "camoufox";
   const isDeleteDisabled = isRunning;
 
   const proxyName = profile.proxy_id
@@ -406,9 +398,6 @@ export function ProfileInfoDialog({
     : proxyName
       ? t("profileInfo.network.proxyLabel", { name: proxyName })
       : t("profileInfo.values.none");
-
-  const syncStatus = syncStatuses[profile.id];
-  const syncMode = profile.sync_mode ?? "Disabled";
 
   const handleCopyId = async () => {
     try {
@@ -463,16 +452,6 @@ export function ProfileInfoDialog({
       disabled: isCrossOs,
     },
     {
-      id: "sync",
-      icon: <LuRefreshCw className="size-4" />,
-      label: t("profiles.actions.syncSettings"),
-      onClick: () => {
-        handleAction(() => onOpenProfileSyncDialog?.(profile));
-      },
-      disabled: isCrossOs,
-      hidden: profile.ephemeral === true,
-    },
-    {
       icon: <LuGroup className="size-4" />,
       label: t("profiles.actions.assignToGroup"),
       onClick: () => {
@@ -486,23 +465,13 @@ export function ProfileInfoDialog({
       icon: <LuFingerprint className="size-4" />,
       label: t("profiles.actions.changeFingerprint"),
       onClick: () => {
-        handleAction(() => onConfigureWayfern?.(profile));
+        /* Selecting the sidebar section itself renders FingerprintSectionInline. */
       },
       // Viewing and editing fingerprints both require an active paid plan.
       disabled: isDisabled || !crossOsUnlocked,
       proBadge: !crossOsUnlocked,
       runningBadge: isRunning,
-      hidden: !isWayfern || !onConfigureWayfern,
-    },
-    {
-      icon: <LuUsers className="size-4" />,
-      label: t("profiles.synchronizer.launchWithSync"),
-      onClick: () => {
-        handleAction(() => onLaunchWithSync?.(profile));
-      },
-      disabled: isDisabled || isRunning || !crossOsUnlocked,
-      proBadge: !crossOsUnlocked,
-      hidden: profile.browser !== "wayfern" || !onLaunchWithSync,
+      hidden: !isCamoufox,
     },
     {
       id: "cookiesCopy",
@@ -514,7 +483,7 @@ export function ProfileInfoDialog({
       disabled: isDisabled,
       runningBadge: isRunning,
       hidden:
-        !isWayfern || profile.ephemeral === true || !onCopyCookiesToProfile,
+        !isCamoufox || profile.ephemeral === true || !onCopyCookiesToProfile,
     },
     {
       id: "cookiesManage",
@@ -526,7 +495,7 @@ export function ProfileInfoDialog({
       disabled: isDisabled,
       runningBadge: isRunning,
       hidden:
-        !isWayfern || profile.ephemeral === true || !onOpenCookieManagement,
+        !isCamoufox || profile.ephemeral === true || !onOpenCookieManagement,
     },
     {
       icon: <LuSettings className="size-4" />,
@@ -642,8 +611,6 @@ export function ProfileInfoDialog({
           networkLabel={networkLabel}
           groupName={groupName}
           extensionGroupName={extensionGroupName}
-          syncMode={syncMode}
-          syncStatus={syncStatus}
           storedProxies={storedProxies}
           vpnConfigs={vpnConfigs}
           hasTags={hasTags}
@@ -669,8 +636,6 @@ interface ProfileInfoLayoutProps {
   networkLabel: string;
   groupName: string | null;
   extensionGroupName: string | null;
-  syncMode: string;
-  syncStatus: { status: string; error?: string } | undefined;
   hasTags: boolean | undefined;
   hasNote: boolean;
   copied: boolean;
@@ -699,7 +664,6 @@ type ProfileSection =
   | "network"
   | "cookies"
   | "extensions"
-  | "sync"
   | "automation"
   | "security"
   | "delete";
@@ -712,8 +676,6 @@ function ProfileInfoLayout({
   networkLabel,
   groupName,
   extensionGroupName,
-  syncMode,
-  syncStatus,
   storedProxies,
   vpnConfigs,
   hasTags,
@@ -741,7 +703,7 @@ function ProfileInfoLayout({
   // hidden outright, which left no way to discover that and read as the app
   // being broken or the plan lacking the feature. Keep them listed and explain.
   const isEphemeral = profile.ephemeral === true;
-  const isWayfernProfile = profile.browser === "wayfern";
+  const isCamoufoxProfile = profile.browser === "camoufox";
 
   const deleteAction = findAction("delete");
   const fingerprintAction = findAction("fingerprint");
@@ -749,7 +711,6 @@ function ProfileInfoLayout({
   const cookiesCopyAction = findAction("cookiesCopy");
   const cookiesAction = cookiesManageAction ?? cookiesCopyAction;
   const extensionAction = findAction("extension");
-  const syncAction = findAction("sync");
   const _launchHookAction = findAction("hook");
   const _networkAction = findAction("network");
   // Password actions are no longer routed via the legacy action handlers —
@@ -822,7 +783,7 @@ function ProfileInfoLayout({
         cookieCount !== null && cookieCount > 0
           ? cookieCount.toLocaleString()
           : undefined,
-      hidden: !cookiesAction && !(isEphemeral && isWayfernProfile),
+      hidden: !cookiesAction && !(isEphemeral && isCamoufoxProfile),
     },
     {
       id: "extensions",
@@ -830,12 +791,6 @@ function ProfileInfoLayout({
       label: t("profileInfo.sections.extensions"),
       badge: extensionGroupName ?? undefined,
       hidden: !extensionAction && !isEphemeral,
-    },
-    {
-      id: "sync",
-      icon: <LuRefreshCw className="size-3.5" />,
-      label: t("profileInfo.sections.sync"),
-      hidden: !syncAction && !isEphemeral,
     },
     {
       id: "automation",
@@ -1040,19 +995,6 @@ function ProfileInfoLayout({
               {!profile.ephemeral && !profile.password_protected && (
                 <ClearOnCloseToggle profile={profile} isDisabled={isDisabled} />
               )}
-
-              {profile.created_by_email && (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2">
-                  <p className="text-[10px] tracking-wide text-muted-foreground uppercase">
-                    {t("sync.team.title")}
-                  </p>
-                  <p className="mt-0.5 text-sm">
-                    {t("sync.team.createdBy", {
-                      email: profile.created_by_email,
-                    })}
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
@@ -1109,23 +1051,6 @@ function ProfileInfoLayout({
             ) : (
               <ExtensionsSectionInline
                 profile={profile}
-                isDisabled={isDisabled}
-                t={t}
-              />
-            ))}
-
-          {section === "sync" &&
-            (isEphemeral ? (
-              <EphemeralSectionNotice
-                title={t("profileInfo.sections.sync")}
-                description={t("profileInfo.ephemeral.syncUnavailable")}
-                t={t}
-              />
-            ) : (
-              <SyncSectionInline
-                profile={profile}
-                syncMode={syncMode}
-                syncStatus={syncStatus}
                 isDisabled={isDisabled}
                 t={t}
               />
@@ -1313,89 +1238,6 @@ function LaunchHookEditor({
           </Button>
         )}
       </div>
-    </div>
-  );
-}
-
-function SyncSectionInline({
-  profile,
-  syncMode,
-  syncStatus,
-  isDisabled,
-  t,
-}: {
-  profile: BrowserProfile;
-  syncMode: string;
-  syncStatus: { status: string; error?: string } | undefined;
-  isDisabled: boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const onChangeMode = async (mode: string) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await invoke("set_profile_sync_mode", {
-        profileId: profile.id,
-        syncMode: mode,
-      });
-    } catch (e) {
-      setError(translateBackendError(t as never, e));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <LuRefreshCw className="size-4" />
-        {t("profileInfo.sections.sync")}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {t("profileInfo.sectionDesc.sync")}
-      </p>
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[10px] tracking-wide text-muted-foreground uppercase">
-          {t("profileInfo.fields.syncMode")}
-        </span>
-        <Select
-          value={syncMode}
-          disabled={isDisabled || isSaving}
-          onValueChange={(v) => {
-            void onChangeMode(v);
-          }}
-        >
-          <SelectTrigger className="h-7 flex-1 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Disabled">{t("sync.mode.disabled")}</SelectItem>
-            <SelectItem value="Regular">{t("sync.mode.regular")}</SelectItem>
-            <SelectItem value="Encrypted">
-              {t("sync.mode.encrypted")}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {syncStatus && (
-        <div className="rounded-md border border-border bg-muted/40 px-3 py-2">
-          <p className="text-[10px] tracking-wide text-muted-foreground uppercase">
-            {t("profileInfo.fields.syncStatus")}
-          </p>
-          <p className="mt-0.5 text-sm">
-            {t(`profileInfo.syncStatusValue.${syncStatus.status}`)}
-          </p>
-          {syncStatus.error && (
-            <p className="mt-1 text-xs text-destructive-text">
-              {syncStatus.error}
-            </p>
-          )}
-        </div>
-      )}
-      {error && <p className="text-xs text-destructive-text">{error}</p>}
     </div>
   );
 }
@@ -1878,12 +1720,130 @@ function CookiesSectionInline({
 // Inline password set / change / remove form. Replaces three separate
 // nested modal dialogs with one in-page form that branches on the current
 // `password_protected` state of the profile.
-// Inline fingerprint editor. Reuses SharedFingerprintConfigForm so the same
-// field set as the standalone dialog is available without opening a nested modal.
+/**
+ * Camoufox generates fingerprints locally via a Bayesian-network model (no
+ * headless-launch device synthesis, no cloud identity concept), so
+ * there is nothing to edit field-by-field here yet — only whether a stored
+ * fingerprint is kept or cleared so the next launch generates a fresh one.
+ */
+function CamoufoxFingerprintSection({
+  profile,
+  onSaved,
+  t,
+}: {
+  profile: BrowserProfile;
+  onSaved: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+
+  const hasFingerprint = Boolean(profile.camoufox_config?.fingerprint);
+  const [presetTabs, setPresetTabs] = React.useState<string[]>(
+    profile.camoufox_config?.preset_tabs ?? [],
+  );
+  const [isSavingPresets, setIsSavingPresets] = React.useState(false);
+  const [presetError, setPresetError] = React.useState<string | null>(null);
+
+  const togglePresetTab = async (url: string, checked: boolean) => {
+    const next = checked
+      ? [...presetTabs, url]
+      : presetTabs.filter((u) => u !== url);
+    setPresetTabs(next);
+    setIsSavingPresets(true);
+    setPresetError(null);
+    try {
+      const nextConfig: CamoufoxConfig = {
+        ...(profile.camoufox_config ?? {}),
+        preset_tabs: next,
+      };
+      await invoke("update_camoufox_config", {
+        profileId: profile.id,
+        config: nextConfig,
+      });
+      onSaved();
+    } catch (e) {
+      setPresetTabs(presetTabs);
+      setPresetError(translateBackendError(t as never, e));
+    } finally {
+      setIsSavingPresets(false);
+    }
+  };
+
+  const onRegenerate = async () => {
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const nextConfig: CamoufoxConfig = {
+        ...(profile.camoufox_config ?? {}),
+        fingerprint: undefined,
+      };
+      await invoke("update_camoufox_config", {
+        profileId: profile.id,
+        config: nextConfig,
+      });
+      setSuccess(t("profileInfo.fingerprint.camoufoxRegenerateQueued"));
+      onSaved();
+    } catch (e) {
+      setError(translateBackendError(t as never, e));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <LuFingerprint className="size-4" />
+        {t("profileInfo.sections.fingerprint")}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t("profileInfo.fingerprint.camoufoxDescription")}
+      </p>
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isSaving || !hasFingerprint}
+          onClick={() => void onRegenerate()}
+        >
+          {t("profileInfo.fingerprint.camoufoxRegenerateButton")}
+        </Button>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {success && <p className="text-xs text-muted-foreground">{success}</p>}
+
+      <div className="flex flex-col gap-2 border-t pt-3">
+        <Label className="text-xs font-semibold">
+          {t("createProfile.presetTabs.label")}
+        </Label>
+        {PRESET_TAB_OPTIONS.map((preset) => (
+          <div key={preset.url} className="flex items-center justify-between">
+            <Label htmlFor={`profile-preset-${preset.key}`} className="text-xs">
+              {t(`createProfile.presetTabs.${preset.key}`)}
+            </Label>
+            <Checkbox
+              id={`profile-preset-${preset.key}`}
+              disabled={isSavingPresets}
+              checked={presetTabs.includes(preset.url)}
+              onCheckedChange={(checked) => {
+                void togglePresetTab(preset.url, checked === true);
+              }}
+            />
+          </div>
+        ))}
+        {presetError && (
+          <p className="text-xs text-destructive">{presetError}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FingerprintSectionInline({
   profile,
-  isDisabled,
-  crossOsUnlocked,
   onSaved,
   t,
 }: {
@@ -1893,129 +1853,8 @@ function FingerprintSectionInline({
   onSaved: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const [wayfernConfig, setWayfernConfig] = React.useState<WayfernConfig>(
-    () => profile.wayfern_config ?? {},
-  );
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    setWayfernConfig(profile.wayfern_config ?? {});
-    setError(null);
-    setSuccess(null);
-  }, [profile.wayfern_config]);
-
-  const isWayfern = profile.browser === "wayfern";
-
-  if (!isWayfern) {
-    return (
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <LuFingerprint className="size-4" />
-          {t("profileInfo.sections.fingerprint")}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {t("profileInfo.fingerprint.notSupported")}
-        </p>
-      </div>
-    );
-  }
-
-  if (!crossOsUnlocked) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border p-6 text-center">
-        <LuLock className="size-4 shrink-0 text-muted-foreground" />
-        <h3 className="text-sm font-medium text-foreground">
-          {t("profileInfo.fingerprint.lockedTitle")}
-        </h3>
-        <p className="max-w-[48ch] text-sm text-pretty text-muted-foreground">
-          {t("profileInfo.fingerprint.lockedDescription")}
-        </p>
-      </div>
-    );
-  }
-
-  const onWayfernChange = (key: keyof WayfernConfig, value: unknown) => {
-    setWayfernConfig((prev) => ({ ...prev, [key]: value }));
-    setSuccess(null);
-  };
-
-  const onSave = async () => {
-    setIsSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await invoke("update_wayfern_config", {
-        profileId: profile.id,
-        config: wayfernConfig,
-      });
-      setSuccess(t("common.buttons.saved"));
-      onSaved();
-    } catch (e) {
-      setError(translateBackendError(t as never, e));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const initial = JSON.stringify(profile.wayfern_config ?? {});
-  const current = JSON.stringify(wayfernConfig);
-  const dirty = current !== initial;
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <LuFingerprint className="size-4" />
-        {t("profileInfo.sections.fingerprint")}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {t("profileInfo.sectionDesc.fingerprint")}
-      </p>
-
-      <SharedFingerprintConfigForm
-        config={wayfernConfig}
-        onConfigChange={onWayfernChange}
-        forceAdvanced={true}
-        readOnly={isDisabled}
-        crossOsUnlocked={crossOsUnlocked}
-        limitedMode={false}
-        profileVersion={profile.version}
-        profileBrowser={profile.browser}
-      />
-
-      {error && <p className="text-xs text-destructive-text">{error}</p>}
-      {success && !error && (
-        <p className="text-xs text-success-text">{success}</p>
-      )}
-
-      <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
-        <Button
-          size="sm"
-          className="h-7 text-xs"
-          disabled={!dirty || isSaving || isDisabled}
-          onClick={() => {
-            void onSave();
-          }}
-        >
-          {isSaving ? t("common.buttons.saving") : t("common.buttons.save")}
-        </Button>
-        {dirty && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={() => {
-              setWayfernConfig(profile.wayfern_config ?? {});
-              setError(null);
-              setSuccess(null);
-            }}
-          >
-            {t("common.buttons.cancel")}
-          </Button>
-        )}
-      </div>
-    </div>
+    <CamoufoxFingerprintSection profile={profile} onSaved={onSaved} t={t} />
   );
 }
 

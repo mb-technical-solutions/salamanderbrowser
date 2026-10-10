@@ -86,12 +86,12 @@ export function windowsExtractionInvocation(archive, destinationDir) {
       "-NoProfile",
       "-NonInteractive",
       "-Command",
-      "Expand-Archive -LiteralPath $env:DONUT_XRAY_ARCHIVE -DestinationPath $env:DONUT_XRAY_DESTINATION -Force",
+      "Expand-Archive -LiteralPath $env:SALAMANDER_XRAY_ARCHIVE -DestinationPath $env:SALAMANDER_XRAY_DESTINATION -Force",
     ],
     env: {
       ...process.env,
-      DONUT_XRAY_ARCHIVE: archive,
-      DONUT_XRAY_DESTINATION: destinationDir,
+      SALAMANDER_XRAY_ARCHIVE: archive,
+      SALAMANDER_XRAY_DESTINATION: destinationDir,
     },
   };
 }
@@ -207,7 +207,7 @@ export async function downloadXray(target = requestedTarget()) {
   }
 
   mkdirSync(destinationDir, { recursive: true });
-  const scratch = mkdtempSync(join(tmpdir(), "donut-xray-"));
+  const scratch = mkdtempSync(join(tmpdir(), "salamander-xray-"));
   try {
     const archive = join(scratch, basename(asset.name));
     await downloadVerifiedArchive(

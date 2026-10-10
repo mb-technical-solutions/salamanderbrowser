@@ -652,20 +652,16 @@ mod tests {
       launch_hook: None,
       last_launch: None,
       release_type: "stable".to_string(),
-      wayfern_config: None,
+      camoufox_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
-      sync_mode: crate::profile::types::SyncMode::Disabled,
       encryption_salt: None,
-      last_sync: None,
       host_os: None,
       ephemeral: false,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
-      created_by_id: None,
-      created_by_email: None,
       dns_blocklist: None,
       password_protected: false,
       clear_on_close: false,
@@ -718,9 +714,9 @@ mod tests {
   }
 
   #[test]
-  fn test_check_profile_update_picks_newer_wayfern_version() {
+  fn test_check_profile_update_picks_newer_camoufox_version() {
     let updater = AutoUpdater::instance();
-    let profile = create_test_profile("test", "wayfern", "138.0.7204.49");
+    let profile = create_test_profile("test", "camoufox", "138.0.7204.49");
     let versions = vec![
       create_test_version_info("138.0.7204.50"),
       create_test_version_info("138.0.7204.48"),
@@ -734,7 +730,7 @@ mod tests {
   #[test]
   fn test_check_profile_update_no_update_available() {
     let updater = AutoUpdater::instance();
-    let profile = create_test_profile("test", "wayfern", "138.0.7204.50");
+    let profile = create_test_profile("test", "camoufox", "138.0.7204.50");
     let versions = vec![
       create_test_version_info("138.0.7204.49"),
       create_test_version_info("138.0.7204.50"),
@@ -749,16 +745,16 @@ mod tests {
     let updater = AutoUpdater::instance();
     let notifications = vec![
       UpdateNotification {
-        id: "wayfern_138.0.7204.49_to_138.0.7204.50_profile1".to_string(),
-        browser: "wayfern".to_string(),
+        id: "camoufox_138.0.7204.49_to_138.0.7204.50_profile1".to_string(),
+        browser: "camoufox".to_string(),
         current_version: "138.0.7204.49".to_string(),
         new_version: "138.0.7204.50".to_string(),
         affected_profiles: vec!["profile1".to_string()],
         timestamp: 1000,
       },
       UpdateNotification {
-        id: "wayfern_138.0.7204.49_to_138.0.7204.50_profile2".to_string(),
-        browser: "wayfern".to_string(),
+        id: "camoufox_138.0.7204.49_to_138.0.7204.50_profile2".to_string(),
+        browser: "camoufox".to_string(),
         current_version: "138.0.7204.49".to_string(),
         new_version: "138.0.7204.50".to_string(),
         affected_profiles: vec!["profile2".to_string()],

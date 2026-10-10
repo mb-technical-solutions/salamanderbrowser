@@ -33,10 +33,6 @@ struct StoredVpnConfig {
   created_at: i64,
   last_used: Option<i64>,
   #[serde(default)]
-  sync_enabled: bool,
-  #[serde(default)]
-  last_sync: Option<u64>,
-  #[serde(default)]
   updated_at: Option<u64>,
 }
 
@@ -244,8 +240,6 @@ impl VpnStorage {
       nonce,
       created_at: config.created_at,
       last_used: config.last_used,
-      sync_enabled: config.sync_enabled,
-      last_sync: config.last_sync,
       updated_at: config.updated_at,
     };
 
@@ -278,8 +272,6 @@ impl VpnStorage {
       config_data,
       created_at: stored.created_at,
       last_used: stored.last_used,
-      sync_enabled: stored.sync_enabled,
-      last_sync: stored.last_sync,
       updated_at: stored.updated_at,
     })
   }
@@ -299,8 +291,6 @@ impl VpnStorage {
           config_data: String::new(), // Don't include config data in list
           created_at: stored.created_at,
           last_used: stored.last_used,
-          sync_enabled: stored.sync_enabled,
-          last_sync: stored.last_sync,
           updated_at: stored.updated_at,
         })
         .collect(),
@@ -347,7 +337,6 @@ impl VpnStorage {
     }
 
     let id = Uuid::new_v4().to_string();
-    let sync_enabled = crate::sync::is_sync_configured();
 
     let config = VpnConfig {
       id,
@@ -356,8 +345,6 @@ impl VpnStorage {
       config_data: config_data.to_string(),
       created_at: Utc::now().timestamp(),
       last_used: None,
-      sync_enabled,
-      last_sync: None,
       updated_at: Some(crate::proxy_manager::now_secs()),
     };
 
@@ -373,24 +360,6 @@ impl VpnStorage {
     config.updated_at = Some(crate::proxy_manager::now_secs());
     self.save_config(&config)?;
     Ok(config)
-  }
-
-  /// Update sync fields on a VPN config
-  pub fn update_sync_fields(
-    &self,
-    id: &str,
-    sync_enabled: bool,
-    last_sync: Option<u64>,
-  ) -> Result<(), VpnError> {
-    let mut storage = self.load_storage()?;
-
-    if let Some(config) = storage.configs.iter_mut().find(|c| c.id == id) {
-      config.sync_enabled = sync_enabled;
-      config.last_sync = last_sync;
-      self.save_storage(&storage)
-    } else {
-      Err(VpnError::NotFound(id.to_string()))
-    }
   }
 
   /// Import a VPN config from raw content
@@ -413,7 +382,6 @@ impl VpnStorage {
       let base = filename.trim_end_matches(".conf");
       format!("{} ({})", base, vpn_type)
     });
-    let sync_enabled = crate::sync::is_sync_configured();
 
     let config = VpnConfig {
       id,
@@ -422,8 +390,6 @@ impl VpnStorage {
       config_data: content.to_string(),
       created_at: Utc::now().timestamp(),
       last_used: None,
-      sync_enabled,
-      last_sync: None,
       updated_at: Some(crate::proxy_manager::now_secs()),
     };
 
@@ -466,8 +432,6 @@ mod tests {
       config_data: "[Interface]\nPrivateKey = test\n[Peer]\nPublicKey = peer".to_string(),
       created_at: 1234567890,
       last_used: None,
-      sync_enabled: false,
-      last_sync: None,
       updated_at: None,
     };
 
@@ -491,8 +455,6 @@ mod tests {
       config_data: "secret1".to_string(),
       created_at: 1000,
       last_used: None,
-      sync_enabled: false,
-      last_sync: None,
       updated_at: None,
     };
 
@@ -503,8 +465,6 @@ mod tests {
       config_data: "secret2".to_string(),
       created_at: 2000,
       last_used: Some(3000),
-      sync_enabled: false,
-      last_sync: None,
       updated_at: None,
     };
 
@@ -530,8 +490,6 @@ mod tests {
       config_data: "data".to_string(),
       created_at: 1000,
       last_used: None,
-      sync_enabled: false,
-      last_sync: None,
       updated_at: None,
     };
 

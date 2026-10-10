@@ -30,7 +30,7 @@ function profile(overrides = {}) {
   return {
     id: "a1b2c3d4-1111-2222-3333-444455556666",
     name: "Shopify EU",
-    browser: "wayfern",
+    browser: "camoufox",
     version: "140.0.3",
     release_type: "stable",
     ...overrides,
@@ -101,11 +101,10 @@ test("field terms match on the resolved name, not the stored id", () => {
   assert.equal(hit("extension:blockers", target), true, "alias");
 });
 
-test("name, note, tag, id, browser, version and email fields", () => {
+test("name, note, tag, id, browser and version fields", () => {
   const target = profile({
     note: "Renew the card",
     tags: ["prod", "eu"],
-    created_by_email: "ops@example.com",
   });
   assert.equal(hit("name:shop", target), true);
   assert.equal(hit("name:renew", target), false, "name must not read the note");
@@ -115,10 +114,8 @@ test("name, note, tag, id, browser, version and email fields", () => {
   assert.equal(hit("tags:eu", target), true, "alias");
   assert.equal(hit("id:a1b2c3d4", target), true);
   assert.equal(hit("id:b2c3", target), false, "id matches by prefix only");
-  assert.equal(hit("browser:wayfern", target), true);
+  assert.equal(hit("browser:camoufox", target), true);
   assert.equal(hit("version:140", target), true);
-  assert.equal(hit("email:ops@example.com", target), true);
-  assert.equal(hit("owner:ops", target), true, "alias");
 });
 
 test("enum fields match a slug by prefix, so a half-typed value narrows", () => {
@@ -129,22 +126,13 @@ test("enum fields match a slug by prefix, so a half-typed value narrows", () => 
   assert.equal(hit("status:stopped", profile()), true);
   assert.equal(hit("os:macos", profile({ host_os: "macos" })), true);
   assert.equal(
-    hit("os:windows", profile({ wayfern_config: { os: "windows" } })),
+    hit("os:windows", profile({ camoufox_config: { os: "windows" } })),
     true,
     "falls back to the fingerprint OS",
   );
   assert.equal(
     hit("dns:pro_plus", profile({ dns_blocklist: "pro_plus" })),
     true,
-  );
-  assert.equal(
-    hit("sync:encrypted", profile({ sync_mode: "Encrypted" })),
-    true,
-  );
-  assert.equal(
-    hit("sync:disabled", profile()),
-    true,
-    "unset reads as disabled",
   );
 });
 

@@ -8,17 +8,70 @@
 
 use crate::events;
 use crate::profile::encryption::{
-  cache_key, decrypt_profile_dir, drop_cached_key, encrypt_profile_dir, fresh_salt, get_cached_key,
-  has_cached_key, rekey_profile_dir, unlock as unlock_dir, verify_key_against_dir,
+  cache_key, decrypt_profile_dir, derive_profile_key, drop_cached_key, encrypt_profile_dir,
+  fresh_salt, get_cached_key, has_cached_key, rekey_profile_dir, unlock as unlock_dir,
+  verify_key_against_dir,
 };
 use crate::profile::ProfileManager;
-use crate::sync::encryption::derive_profile_key;
-use crate::sync::manifest::DEFAULT_EXCLUDE_PATTERNS;
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::SystemTime;
+
+/// Default exclude patterns for volatile browser profile files — cache,
+/// crash reports, lock files, and similar data that shouldn't be encrypted
+/// (or restored) as part of a password-protected profile's persisted state.
+pub const DEFAULT_EXCLUDE_PATTERNS: &[&str] = &[
+  "**/Cache/**",
+  "**/Code Cache/**",
+  "**/GPUCache/**",
+  "**/GrShaderCache/**",
+  "**/ShaderCache/**",
+  "**/DawnCache/**",
+  "**/DawnGraphiteCache/**",
+  "**/Service Worker/CacheStorage/**",
+  "**/Service Worker/ScriptCache/**",
+  "**/Session Storage/**",
+  "**/blob_storage/**",
+  "**/Crashpad/**",
+  "**/Crash Reports/**",
+  "**/BrowserMetrics/**",
+  "**/optimization_guide_model_store/**",
+  "**/Safe Browsing/**",
+  "**/component_crx_cache/**",
+  "**/cache2/**",
+  "**/startupCache/**",
+  "**/safebrowsing/**",
+  "**/storage/temporary/**",
+  "**/storage/default/*/cache/**",
+  "**/datareporting/**",
+  "**/saved-telemetry-pings/**",
+  "**/sessionstore-backups/**",
+  "**/sessions/**",
+  "**/serviceworker.txt",
+  "**/AlternateServices.bin",
+  "**/SiteSecurityServiceState.bin",
+  "**/favicons.sqlite",
+  "**/favicons.sqlite-*",
+  "**/crashes/**",
+  "**/minidumps/**",
+  "*.tmp",
+  "**/LOG",
+  "**/LOG.old",
+  "**/LOCK",
+  "**/*-journal",
+  "**/*-wal",
+  "**/SingletonLock",
+  "**/SingletonSocket",
+  "**/SingletonCookie",
+  "**/Secure Preferences",
+  "**/GraphiteDawnCache/**",
+  "**/DawnWebGPUCache/**",
+  "**/BrowserMetrics*",
+  "**/.DS_Store",
+  ".last-fp-refresh",
+];
 
 /// Build a JSON error payload with just a code.
 fn err_code(code: &'static str) -> String {
@@ -292,7 +345,6 @@ pub async fn set_profile_password(profile_id: String, password: String) -> Resul
     .map_err(err_internal)?;
 
   cache_key(id, key);
-  crate::sync::queue_profile_sync_if_eligible(&profile);
   emit_profiles_changed();
   Ok(())
 }
@@ -431,7 +483,6 @@ pub async fn change_profile_password(
 
   drop_cached_key(&id);
   cache_key(id, new_key);
-  crate::sync::queue_profile_sync_if_eligible(&profile);
   emit_profiles_changed();
   Ok(())
 }
@@ -500,7 +551,6 @@ pub async fn remove_profile_password(profile_id: String, password: String) -> Re
     .map_err(err_internal)?;
 
   drop_cached_key(&id);
-  crate::sync::queue_profile_sync_if_eligible(&profile);
   emit_profiles_changed();
   Ok(())
 }
@@ -679,11 +729,6 @@ pub fn complete_after_quit_blocking(
 /// the ephemeral dir + cached key based on the global setting. Returns the
 /// number of files re-encrypted (`None` when nothing to do or the profile
 /// isn't protected).
-///
-/// Callers that release a queued sync run after a browser quit MUST await
-/// this future — releasing sync while re-encryption is still in-flight
-/// uploads the stale on-disk snapshot and leaves the fresh ciphertext
-/// orphaned until the next scheduler tick.
 pub async fn complete_after_quit_and_wait(
   profile: &crate::profile::BrowserProfile,
 ) -> Option<usize> {
@@ -711,7 +756,7 @@ mod tests {
     BrowserProfile {
       id: uuid::Uuid::new_v4(),
       name: name.to_string(),
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "1.0".to_string(),
       release_type: "stable".to_string(),
       ..Default::default()

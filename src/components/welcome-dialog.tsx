@@ -5,18 +5,15 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LuArrowRight,
-  LuBriefcase,
   LuCamera,
   LuCookie,
   LuFolders,
   LuGithub,
   LuGlobe,
-  LuHeart,
   LuLoaderCircle,
   LuMic,
   LuNetwork,
   LuShieldCheck,
-  LuTerminal,
   LuTriangleAlert,
   LuUsers,
 } from "react-icons/lu";
@@ -28,7 +25,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { getBrowserDisplayName } from "@/lib/browser-utils";
 import { getCurrentOS } from "@/lib/platform";
 
-type WelcomeStep = "intro" | "license" | "permissions" | "setup";
+type WelcomeStep = "intro" | "permissions" | "setup";
 
 const panelSpring = {
   type: "spring",
@@ -61,7 +58,6 @@ const FEATURES = [
   { key: "welcome.features.items.proxy", Icon: LuNetwork },
   { key: "welcome.features.items.vpn", Icon: LuShieldCheck },
   { key: "welcome.features.items.profiles", Icon: LuUsers },
-  { key: "welcome.features.items.api", Icon: LuTerminal },
   { key: "welcome.features.items.openSource", Icon: LuGithub },
   { key: "welcome.features.items.groups", Icon: LuFolders },
   { key: "welcome.features.items.cookies", Icon: LuCookie },
@@ -165,7 +161,6 @@ export function WelcomeDialog({
     (step === "permissions" || !isInitialized || !permissionsGranted);
   const visibleSteps: WelcomeStep[] = [
     "intro",
-    "license",
     ...(showPermissionsStep ? (["permissions"] as const) : []),
     ...(needsSetup ? (["setup"] as const) : []),
   ];
@@ -183,8 +178,8 @@ export function WelcomeDialog({
 
   // Track the required browser's download + extraction the whole time the
   // dialog is open, so progress is live by the time the user reaches setup.
-  const setup = useBrowserSetup("wayfern", isOpen);
-  const browserName = getBrowserDisplayName("wayfern");
+  const setup = useBrowserSetup("camoufox", isOpen);
+  const browserName = getBrowserDisplayName("camoufox");
 
   const requestPermissions = useCallback(async () => {
     setRequesting(true);
@@ -298,73 +293,6 @@ export function WelcomeDialog({
                 <Button
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => setStep("license")}
-                >
-                  {t("welcome.next")}
-                  <LuArrowRight className="size-4 shrink-0" />
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === "license" && (
-            <motion.div
-              key="license"
-              variants={panelVariants}
-              initial="enter"
-              animate="center"
-              transition={panelTransition}
-              className="flex flex-col gap-7"
-            >
-              <div className="flex flex-col gap-2 text-center">
-                <h2 className="text-2xl font-semibold tracking-tight text-balance">
-                  {t("welcome.license.title")}
-                </h2>
-                <p className="mx-auto max-w-[55ch] text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                  {t("welcome.license.body")}
-                </p>
-              </div>
-
-              <dl className="flex flex-col gap-3">
-                <div className="flex items-start gap-3 rounded-lg border p-4">
-                  <LuHeart className="mt-0.5 size-4 shrink-0 text-success-text" />
-                  <div className="flex flex-col gap-0.5 text-left">
-                    <dt className="text-base/7 font-medium text-foreground sm:text-sm/6">
-                      {t("welcome.license.personalTitle")}
-                    </dt>
-                    <dd className="text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                      {t("welcome.license.personalDesc")}
-                    </dd>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-lg border p-4">
-                  <LuBriefcase className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="flex flex-col gap-0.5 text-left">
-                    <dt className="flex flex-wrap items-center gap-2 text-base/7 font-medium text-foreground sm:text-sm/6">
-                      {t("welcome.license.commercialTitle")}
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-text">
-                        {t("welcome.license.trialBadge")}
-                      </span>
-                    </dt>
-                    <dd className="text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                      {t("welcome.license.commercialDesc")}
-                    </dd>
-                  </div>
-                </div>
-              </dl>
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={advanceToSetup}
-                >
-                  {t("welcome.skip")}
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
                   onClick={() => {
                     if (!needsSetup) {
                       onComplete();
@@ -378,7 +306,7 @@ export function WelcomeDialog({
                     }
                   }}
                 >
-                  {t("welcome.license.agree")}
+                  {t("welcome.next")}
                   <LuArrowRight className="size-4 shrink-0" />
                 </Button>
               </div>

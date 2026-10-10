@@ -1,6 +1,6 @@
-# Contributing to Donut Browser
+# Contributing to Salamander Browser
 
-Contributions are welcome. Don't open a PR just to get added to the contributors list. Reviewing PRs takes time, so open one only if you believe the change improves Donut for yourself and others. For a significant change, get in touch with the maintainer first.
+Contributions are welcome. Don't open a PR just to get added to the contributors list. Reviewing PRs takes time, so open one only if you believe the change improves Salamander for yourself and others. For a significant change, get in touch with the maintainer first.
 
 ## AI Policy
 
@@ -101,8 +101,7 @@ codeql database analyze /tmp/codeql-rust --format=sarifv2.1.0 --output=/tmp/rust
 - Frontend: Next.js (React), `src/`
 - Backend: Tauri (Rust), `src-tauri/src/`
 - Proxy Worker: Detached process for proxy tunneling, `src-tauri/src/bin/proxy_server.rs`
-- Sync: Cloud sync via S3-compatible storage, `src-tauri/src/sync/`, `donut-sync/`
-- Browsers: Wayfern (Chromium-based anti-detect)
+- Browsers: Camoufox (Firefox-based anti-detect)
 
 ## Getting Help
 

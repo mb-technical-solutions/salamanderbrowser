@@ -937,9 +937,9 @@ impl DownloadedBrowsersRegistry {
       }
     }
 
-    // Check if GeoIP database is missing for Wayfern profiles
+    // Check if GeoIP database is missing for Camoufox profiles
     if self.geoip_downloader.check_missing_geoip_database()? {
-      log::info!("GeoIP database is missing for Wayfern profiles, downloading...");
+      log::info!("GeoIP database is missing for Camoufox profiles, downloading...");
 
       match self
         .geoip_downloader
@@ -1255,12 +1255,12 @@ mod tests {
   fn test_cleanup_removes_the_browser_executable_not_just_its_libraries() {
     use tempfile::TempDir;
     let temp = TempDir::new().unwrap();
-    let version_dir = temp.path().join("wayfern").join("140.0");
+    let version_dir = temp.path().join("camoufox").join("140.0");
     std::fs::create_dir_all(&version_dir).unwrap();
 
     for name in [
       "chrome.exe",
-      "wayfern.exe",
+      "camoufox.exe",
       "notification_helper.exe",
       "chrome.dll",
       "chrome_elf.dll",
@@ -1273,13 +1273,13 @@ mod tests {
 
     let registry = DownloadedBrowsersRegistry::new();
     registry.add_browser(DownloadedBrowserInfo {
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "140.0".to_string(),
       file_path: version_dir.clone(),
     });
 
     registry
-      .cleanup_failed_download("wayfern", "140.0")
+      .cleanup_failed_download("camoufox", "140.0")
       .expect("cleanup should succeed");
 
     let leftovers: Vec<String> = std::fs::read_dir(&version_dir)
@@ -1299,31 +1299,31 @@ mod tests {
   fn test_cleanup_preserves_a_downloaded_archive() {
     use tempfile::TempDir;
     let temp = TempDir::new().unwrap();
-    let version_dir = temp.path().join("wayfern").join("141.0");
+    let version_dir = temp.path().join("camoufox").join("141.0");
     std::fs::create_dir_all(&version_dir).unwrap();
 
-    std::fs::File::create(version_dir.join("wayfern-win64.zip")).unwrap();
-    std::fs::File::create(version_dir.join("wayfern-mac.tar.xz")).unwrap();
+    std::fs::File::create(version_dir.join("camoufox-win64.zip")).unwrap();
+    std::fs::File::create(version_dir.join("camoufox-mac.tar.xz")).unwrap();
     std::fs::File::create(version_dir.join("chrome.exe")).unwrap();
     std::fs::File::create(version_dir.join("chrome.dll")).unwrap();
 
     let registry = DownloadedBrowsersRegistry::new();
     registry.add_browser(DownloadedBrowserInfo {
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "141.0".to_string(),
       file_path: version_dir.clone(),
     });
 
     registry
-      .cleanup_failed_download("wayfern", "141.0")
+      .cleanup_failed_download("camoufox", "141.0")
       .expect("cleanup should succeed");
 
     assert!(
-      version_dir.join("wayfern-win64.zip").exists(),
+      version_dir.join("camoufox-win64.zip").exists(),
       "a downloaded archive must be preserved"
     );
     assert!(
-      version_dir.join("wayfern-mac.tar.xz").exists(),
+      version_dir.join("camoufox-mac.tar.xz").exists(),
       "multi-part archive extensions must still be recognised"
     );
     assert!(
@@ -1343,21 +1343,21 @@ mod tests {
   fn test_cleanup_stands_down_while_a_download_is_in_progress() {
     use tempfile::TempDir;
     let temp = TempDir::new().unwrap();
-    let version_dir = temp.path().join("wayfern").join("142.0");
+    let version_dir = temp.path().join("camoufox").join("142.0");
     std::fs::create_dir_all(&version_dir).unwrap();
     std::fs::File::create(version_dir.join("chrome.exe")).unwrap();
     std::fs::File::create(version_dir.join("chrome.dll")).unwrap();
 
     let registry = DownloadedBrowsersRegistry::new();
     registry.add_browser(DownloadedBrowserInfo {
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "142.0".to_string(),
       file_path: version_dir.clone(),
     });
 
-    crate::downloader::mark_downloading_for_test("wayfern", "142.0");
-    let result = registry.cleanup_failed_download("wayfern", "142.0");
-    crate::downloader::clear_download_state_for_browser("wayfern");
+    crate::downloader::mark_downloading_for_test("camoufox", "142.0");
+    let result = registry.cleanup_failed_download("camoufox", "142.0");
+    crate::downloader::clear_download_state_for_browser("camoufox");
     result.expect("cleanup should succeed");
 
     assert!(
@@ -1365,7 +1365,7 @@ mod tests {
       "an in-flight download must not be deleted out from under itself"
     );
     assert!(
-      registry.is_browser_registered("wayfern", "142.0"),
+      registry.is_browser_registered("camoufox", "142.0"),
       "the registry entry must survive too, the version is still being installed"
     );
   }
@@ -1403,7 +1403,7 @@ pub async fn ensure_active_browsers_downloaded(
 ) -> Result<Vec<String>, String> {
   #[cfg(feature = "e2e")]
   if crate::e2e_automation_enabled()
-    && std::env::var_os("DONUT_E2E_DISABLE_STARTUP_NETWORK").is_some()
+    && std::env::var_os("SALAMANDER_E2E_DISABLE_STARTUP_NETWORK").is_some()
   {
     log::info!("E2E: skipping proactive browser download");
     return Ok(Vec::new());
@@ -1413,7 +1413,7 @@ pub async fn ensure_active_browsers_downloaded(
   let version_manager = crate::browser_version_manager::BrowserVersionManager::instance();
   let mut downloaded = Vec::new();
 
-  for browser in &["wayfern"] {
+  for browser in &["camoufox"] {
     // Check if any version is already downloaded
     let existing = registry.get_downloaded_versions(browser);
     if !existing.is_empty() {
@@ -1425,38 +1425,21 @@ pub async fn ensure_active_browsers_downloaded(
     }
     log::info!("ensure_active: No {browser} versions found, will download");
 
-    // Resolve the version to download. For wayfern, only the currently
-    // published version is downloadable, so ask the API fresh — the release-type
-    // cache can be stale right after a new version is published, and the
-    // downloader rejects requests for versions that are no longer available.
-    let version = if *browser == "wayfern" {
-      match crate::api_client::ApiClient::instance()
-        .fetch_wayfern_version_with_caching(true)
-        .await
-      {
-        Ok(info) => info.version,
-        Err(e) => {
-          log::warn!("Failed to resolve current {browser} version: {e}");
-          continue;
-        }
+    // Get the latest release type for this browser
+    let release_types = match version_manager.get_browser_release_types(browser).await {
+      Ok(rt) => rt,
+      Err(e) => {
+        log::warn!("Failed to get release types for {browser}: {e}");
+        continue;
       }
-    } else {
-      // Get the latest release type for this browser
-      let release_types = match version_manager.get_browser_release_types(browser).await {
-        Ok(rt) => rt,
-        Err(e) => {
-          log::warn!("Failed to get release types for {browser}: {e}");
-          continue;
-        }
-      };
+    };
 
-      // Use stable version (the only release type for these browsers)
-      match release_types.stable {
-        Some(v) => v,
-        None => {
-          log::debug!("No stable version available for {browser} on this platform, skipping");
-          continue;
-        }
+    // Use stable version (the only release type for these browsers)
+    let version = match release_types.stable {
+      Some(v) => v,
+      None => {
+        log::debug!("No stable version available for {browser} on this platform, skipping");
+        continue;
       }
     };
 
@@ -1540,12 +1523,6 @@ pub fn get_downloaded_browser_versions(browser_str: String) -> Result<Vec<String
 }
 
 #[tauri::command]
-pub fn is_browser_downloaded(browser_str: String, version: String) -> bool {
-  let registry = DownloadedBrowsersRegistry::instance();
-  registry.is_browser_downloaded(&browser_str, &version)
-}
-
-#[tauri::command]
 pub async fn check_missing_binaries() -> Result<Vec<(String, String, String)>, String> {
   let registry = DownloadedBrowsersRegistry::instance();
   registry
@@ -1560,7 +1537,7 @@ pub async fn ensure_all_binaries_exist(
 ) -> Result<Vec<String>, String> {
   #[cfg(feature = "e2e")]
   if crate::e2e_automation_enabled()
-    && std::env::var_os("DONUT_E2E_DISABLE_STARTUP_NETWORK").is_some()
+    && std::env::var_os("SALAMANDER_E2E_DISABLE_STARTUP_NETWORK").is_some()
   {
     log::info!("E2E: skipping proactive binary and GeoIP downloads");
     return Ok(Vec::new());

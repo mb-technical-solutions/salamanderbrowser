@@ -17,10 +17,15 @@ permissions:
 
 jobs:
   publish-repos:
-    if: >
-      github.repository == 'zhom/donutbrowser' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+    # Disabled: the apt/yum channel (repo.donutbrowser.com) this publishes to
+    # has not been re-provisioned under the new brand/org yet. Restore the
+    # condition below (remove this `if: false` line) once a real apt/yum
+    # endpoint exists for this fork.
+    # if: >
+    #   github.repository == 'mb-technical-solutions/salamanderbrowser' &&
+    #   (github.event_name == 'workflow_dispatch' ||
+    #    github.event.workflow_run.conclusion == 'success')
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

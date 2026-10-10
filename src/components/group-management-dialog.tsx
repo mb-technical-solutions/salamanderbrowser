@@ -10,7 +10,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoPlus } from "react-icons/go";
@@ -19,7 +18,6 @@ import {
   LuChevronUp,
   LuFolder,
   LuPencil,
-  LuRefreshCw,
   LuTrash2,
 } from "react-icons/lu";
 import { CreateGroupDialog } from "@/components/create-group-dialog";
@@ -31,7 +29,6 @@ import {
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { DeleteGroupDialog } from "@/components/delete-group-dialog";
 import { EditGroupDialog } from "@/components/edit-group-dialog";
-import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -63,56 +60,6 @@ import { cn } from "@/lib/utils";
 import type { GroupWithCount, ProfileGroup } from "@/types";
 import { RippleButton } from "./ui/ripple";
 
-type SyncStatus = "disabled" | "syncing" | "synced" | "error" | "waiting";
-
-function getSyncStatusDot(
-  group: GroupWithCount,
-  liveStatus: SyncStatus | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-  errorMessage?: string,
-): { color: string; tooltip: string; animate: boolean } {
-  const status = liveStatus ?? (group.sync_enabled ? "synced" : "disabled");
-
-  switch (status) {
-    case "syncing":
-      return {
-        color: "bg-warning",
-        tooltip: t("syncTooltips.syncing"),
-        animate: true,
-      };
-    case "synced":
-      return {
-        color: "bg-success",
-        tooltip: group.last_sync
-          ? t("syncTooltips.syncedAt", {
-              time: new Date(group.last_sync * 1000).toLocaleString(),
-            })
-          : t("syncTooltips.synced"),
-        animate: false,
-      };
-    case "waiting":
-      return {
-        color: "bg-warning",
-        tooltip: t("syncTooltips.waiting"),
-        animate: false,
-      };
-    case "error":
-      return {
-        color: "bg-destructive",
-        tooltip: errorMessage
-          ? t("syncTooltips.errorWith", { error: errorMessage })
-          : t("syncTooltips.error"),
-        animate: false,
-      };
-    default:
-      return {
-        color: "bg-muted-foreground",
-        tooltip: t("syncTooltips.notSynced"),
-        animate: false,
-      };
-  }
-}
-
 interface GroupManagementDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -140,48 +87,12 @@ export function GroupManagementDialog({
   const [selectedGroup, setSelectedGroup] = useState<GroupWithCount | null>(
     null,
   );
-  const [groupSyncStatus, setGroupSyncStatus] = useState<
-    Record<string, SyncStatus>
-  >({});
-  const [groupSyncErrors, setGroupSyncErrors] = useState<
-    Record<string, string>
-  >({});
-  const [groupInUse, setGroupInUse] = useState<Record<string, boolean>>({});
-  const [isTogglingSync, setIsTogglingSync] = useState<Record<string, boolean>>(
-    {},
-  );
 
   // Table state
   const [sorting, setSorting] = useState<SortingState>([
     { id: "name", desc: false },
   ]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-
-  // Listen for group sync status events
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    const setupListener = async () => {
-      unlisten = await listen<{ id: string; status: string; error?: string }>(
-        "group-sync-status",
-        (event) => {
-          const { id, status, error } = event.payload;
-          setGroupSyncStatus((prev) => ({
-            ...prev,
-            [id]: status as SyncStatus,
-          }));
-          if (error) {
-            setGroupSyncErrors((prev) => ({ ...prev, [id]: error }));
-          }
-        },
-      );
-    };
-
-    void setupListener();
-    return () => {
-      unlisten?.();
-    };
-  }, []);
 
   const loadGroups = useCallback(async () => {
     setIsLoading(true);
@@ -191,21 +102,6 @@ export function GroupManagementDialog({
         "get_groups_with_profile_counts",
       );
       setGroups(groupList);
-
-      // Check which groups are in use by synced profiles
-      const inUse: Record<string, boolean> = {};
-      for (const group of groupList) {
-        try {
-          const inUseBySynced = await invoke<boolean>(
-            "is_group_in_use_by_synced_profile",
-            { groupId: group.id },
-          );
-          inUse[group.id] = inUseBySynced;
-        } catch (_error) {
-          // Ignore errors
-        }
-      }
-      setGroupInUse(inUse);
     } catch (err) {
       console.error("Failed to load groups:", err);
       setError(
@@ -246,34 +142,6 @@ export function GroupManagementDialog({
     setSelectedGroup(group);
     setDeleteDialogOpen(true);
   }, []);
-
-  const handleToggleSync = useCallback(
-    async (group: GroupWithCount) => {
-      setIsTogglingSync((prev) => ({ ...prev, [group.id]: true }));
-      try {
-        await invoke("set_group_sync_enabled", {
-          groupId: group.id,
-          enabled: !group.sync_enabled,
-        });
-        showSuccessToast(
-          group.sync_enabled
-            ? t("proxies.management.syncDisabled")
-            : t("proxies.management.syncEnabled"),
-        );
-        await loadGroups();
-      } catch (error) {
-        console.error("Failed to toggle sync:", error);
-        showErrorToast(
-          parseBackendError(error)
-            ? translateBackendError(t, error)
-            : t("proxies.management.updateSyncFailed"),
-        );
-      } finally {
-        setIsTogglingSync((prev) => ({ ...prev, [group.id]: false }));
-      }
-    },
-    [loadGroups, t],
-  );
 
   useEffect(() => {
     if (isOpen) {
@@ -339,26 +207,8 @@ export function GroupManagementDialog({
         ),
         cell: ({ row }) => {
           const group = row.original;
-          const syncDot = getSyncStatusDot(
-            group,
-            groupSyncStatus[group.id],
-            t,
-            groupSyncErrors[group.id],
-          );
           return (
             <div className="flex min-w-0 items-center gap-2 font-medium">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`size-2 rounded-full shrink-0 ${syncDot.color} ${
-                      syncDot.animate ? "animate-pulse" : ""
-                    }`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{syncDot.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
               <LuFolder className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate">{group.name}</span>
             </div>
@@ -373,40 +223,6 @@ export function GroupManagementDialog({
         cell: ({ row }) => (
           <Badge variant="secondary">{row.original.count}</Badge>
         ),
-      },
-      {
-        id: "sync",
-        size: 96,
-        enableSorting: false,
-        header: () => t("proxies.management.syncCol"),
-        cell: ({ row }) => {
-          const group = row.original;
-          const locked = groupInUse[group.id];
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center">
-                  <AnimatedSwitch
-                    checked={group.sync_enabled}
-                    onCheckedChange={() => handleToggleSync(group)}
-                    disabled={isTogglingSync[group.id] || locked}
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {locked ? (
-                  <p>{t("syncTooltips.lockedInUse")}</p>
-                ) : (
-                  <p>
-                    {group.sync_enabled
-                      ? t("syncTooltips.disable")
-                      : t("syncTooltips.enable")}
-                  </p>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          );
-        },
       },
       {
         id: "actions",
@@ -454,16 +270,7 @@ export function GroupManagementDialog({
         },
       },
     ],
-    [
-      t,
-      groupSyncStatus,
-      groupSyncErrors,
-      groupInUse,
-      isTogglingSync,
-      handleToggleSync,
-      handleEditGroup,
-      handleDeleteGroup,
-    ],
+    [t, handleEditGroup, handleDeleteGroup],
   );
 
   const table = useReactTable({
@@ -518,41 +325,6 @@ export function GroupManagementDialog({
       setIsBulkDeleting(false);
     }
   }, [selectedGroupsForBulk, table, loadGroups, onGroupManagementComplete, t]);
-
-  const handleBulkToggleSync = useCallback(async () => {
-    if (selectedGroupsForBulk.length === 0) return;
-    const allOn = selectedGroupsForBulk.every((g) => g.sync_enabled);
-    const targetEnabled = !allOn;
-    const targets = selectedGroupsForBulk.filter((g) =>
-      targetEnabled ? !g.sync_enabled : g.sync_enabled && !groupInUse[g.id],
-    );
-    if (targets.length === 0) return;
-    const results = await Promise.allSettled(
-      targets.map((group) =>
-        invoke("set_group_sync_enabled", {
-          groupId: group.id,
-          enabled: targetEnabled,
-        }),
-      ),
-    );
-    const firstRejection = results.find((r) => r.status === "rejected") as
-      | PromiseRejectedResult
-      | undefined;
-    if (firstRejection) {
-      showErrorToast(
-        parseBackendError(firstRejection.reason)
-          ? translateBackendError(t, firstRejection.reason)
-          : t("proxies.management.updateSyncFailed"),
-      );
-    } else {
-      showSuccessToast(
-        targetEnabled
-          ? t("proxies.management.syncEnabled")
-          : t("proxies.management.syncDisabled"),
-      );
-    }
-    await loadGroups();
-  }, [selectedGroupsForBulk, groupInUse, loadGroups, t]);
 
   return (
     <>
@@ -701,15 +473,6 @@ export function GroupManagementDialog({
       {isOpen && (
         <DataTableActionBar table={table}>
           <DataTableActionBarSelection table={table} />
-          <DataTableActionBarAction
-            tooltip={t("syncTooltips.bulkToggle")}
-            onClick={() => {
-              void handleBulkToggleSync();
-            }}
-            size="icon"
-          >
-            <LuRefreshCw />
-          </DataTableActionBarAction>
           <DataTableActionBarAction
             tooltip={t("common.buttons.delete")}
             onClick={() => setBulkDeleteOpen(true)}

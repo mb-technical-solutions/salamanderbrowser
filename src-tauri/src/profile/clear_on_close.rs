@@ -78,12 +78,14 @@ fn clear_chromium_profile_dir(profile_dir: &Path) -> usize {
   cleared
 }
 
-/// Clear browsing data in a Wayfern user-data directory. Handles both
-/// layouts: profile content at the root (imported profiles copy a Chromium
-/// profile dir directly) and the standard `Default` / `Profile N` subdirs
-/// Chromium creates itself. Top-level cache dirs (ShaderCache, GrShaderCache,
-/// component_crx_cache, …) are removed; `Local State` stays because it holds
-/// the os_crypt key extensions may rely on.
+/// Clear browsing data in a Chromium-format user-data directory. Only reached
+/// today for legacy on-disk `browser: "wayfern"` profiles — see the caller,
+/// `clear_profile_browsing_data`. Handles both layouts: profile content at the
+/// root (imported profiles copy a Chromium profile dir directly) and the
+/// standard `Default` / `Profile N` subdirs Chromium creates itself. Top-level
+/// cache dirs (ShaderCache, GrShaderCache, component_crx_cache, …) are
+/// removed; `Local State` stays because it holds the os_crypt key extensions
+/// may rely on.
 pub fn clear_user_data_dir(user_data_dir: &Path) -> usize {
   if !user_data_dir.exists() {
     return 0;
@@ -120,8 +122,25 @@ pub fn clear_user_data_dir(user_data_dir: &Path) -> usize {
 /// No-ops for ephemeral (already wiped) and password-protected (dir is
 /// re-encrypted; plaintext never persists) profiles. Runs the filesystem work
 /// on a blocking thread.
+///
+/// `clear_user_data_dir` only understands the Chromium profile layout. Camoufox
+/// (the only engine left after Wayfern's removal) is Firefox-based: history and
+/// bookmarks share one `places.sqlite`, so the same "delete everything not on an
+/// allowlist" approach would destroy bookmarks and installed extensions instead
+/// of just browsing data. Rather than run destructive Chromium-shaped cleanup
+/// against a Firefox profile, this is a known, undelivered gap — skip
+/// entirely for Camoufox until a real Firefox-aware clearer is built. Legacy
+/// on-disk `browser: "wayfern"` profiles (left in place, not migrated) still
+/// get the original behavior.
 pub async fn clear_profile_browsing_data(profile: &BrowserProfile) {
   if !profile.clear_on_close || profile.ephemeral || profile.password_protected {
+    return;
+  }
+  if profile.browser == "camoufox" {
+    log::warn!(
+      "clear-on-close: not supported for Camoufox profile '{}' yet, skipping",
+      profile.name
+    );
     return;
   }
 

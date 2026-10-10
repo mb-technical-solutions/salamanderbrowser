@@ -100,10 +100,10 @@ async function applyThemeForContrastAudit(app, theme) {
       // returns an intermediate colour and the assertion fails on whichever
       // theme the machine happened to be slow on. Kill transitions for the
       // duration of the audit rather than racing them with a fixed sleep.
-      let freeze = document.getElementById("donut-e2e-freeze-transitions");
+      let freeze = document.getElementById("salamander-e2e-freeze-transitions");
       if (!freeze) {
         freeze = document.createElement("style");
-        freeze.id = "donut-e2e-freeze-transitions";
+        freeze.id = "salamander-e2e-freeze-transitions";
         freeze.textContent =
           "*, *::before, *::after { transition: none !important; animation: none !important; }";
         document.head.appendChild(freeze);
@@ -248,10 +248,10 @@ async function dragBackgroundColorPicker(app) {
     { description: "two pointer-interactive background color picker points" },
   );
   await app.execute(`
-    window.__donutE2eThemePointerEvents = [];
+    window.__salamanderE2eThemePointerEvents = [];
     for (const type of ["pointermove", "pointerdown", "pointerup"]) {
       window.addEventListener(type, (event) => {
-        window.__donutE2eThemePointerEvents.push({
+        window.__salamanderE2eThemePointerEvents.push({
           type,
           x: event.clientX,
           y: event.clientY,
@@ -288,7 +288,7 @@ async function dragBackgroundColorPicker(app) {
     ],
   });
   const pointerEvents = await app.execute(
-    `return window.__donutE2eThemePointerEvents ?? [];`,
+    `return window.__salamanderE2eThemePointerEvents ?? [];`,
   );
   assert.equal(pointerEvents[0]?.type, "pointermove");
   assert.equal(pointerEvents[1]?.type, "pointerdown");
@@ -538,7 +538,7 @@ test("VLESS proxy form keeps the share URI as one clear, validated input", async
       true,
     );
 
-    // A well-formed URI for a setup Donut cannot use must say WHICH part is
+    // A well-formed URI for a setup Salamander cannot use must say WHICH part is
     // unsupported, rather than implying the user mistyped it.
     await app.fillSelector(
       "#proxy-vless-uri",
@@ -672,7 +672,7 @@ test("About exposes a searchable, responsive third-party license inventory", asy
         app.execute(`return Boolean(document.querySelector("[role='menu']"));`),
       { description: "More menu" },
     );
-    await app.clickText("About Donut Browser", {
+    await app.clickText("About Salamander Browser", {
       exact: false,
       roles: ["menuitem"],
     });
@@ -735,7 +735,7 @@ test("About exposes a searchable, responsive third-party license inventory", asy
     assert.ok(
       inventory.rows.some(
         ([name, license]) =>
-          name === "Donut Browser" && license === "AGPL-3.0-only",
+          name === "Salamander Browser" && license === "AGPL-3.0-only",
       ),
     );
     assert.ok(
@@ -844,7 +844,7 @@ test("first-run onboarding stays recoverable, responsive, and platform-aware", a
   await withApp(
     "ui-onboarding",
     async (app) => {
-      await app.waitForText("Welcome to Donut Browser");
+      await app.waitForText("Welcome to Salamander Browser");
       assert.equal(await app.invoke("get_onboarding_completed"), false);
 
       await app.session.command("POST", "/window/rect", {
@@ -1061,10 +1061,10 @@ const EXTENSION_STRINGS = en.extensions;
 async function stubFolderPicker(app, folder) {
   await app.execute(
     `const folder = arguments[0];
-     if (!window.__donutOriginalFetch) {
-       window.__donutOriginalFetch = window.fetch;
+     if (!window.__salamanderOriginalFetch) {
+       window.__salamanderOriginalFetch = window.fetch;
      }
-     window.__donutFolderPickerCalls = [];
+     window.__salamanderFolderPickerCalls = [];
      window.fetch = function (input, init) {
        const url = String(
          typeof input === "string" ? input : (input && input.url) || "",
@@ -1082,7 +1082,7 @@ async function stubFolderPicker(app, folder) {
          } catch (_error) {
            payload = null;
          }
-         window.__donutFolderPickerCalls.push(payload);
+         window.__salamanderFolderPickerCalls.push(payload);
          return Promise.resolve(
            new Response(JSON.stringify(folder), {
              status: 200,
@@ -1093,7 +1093,7 @@ async function stubFolderPicker(app, folder) {
            }),
          );
        }
-       return window.__donutOriginalFetch.apply(window, arguments);
+       return window.__salamanderOriginalFetch.apply(window, arguments);
      };
      return true;`,
     [folder],
@@ -1103,12 +1103,12 @@ async function stubFolderPicker(app, folder) {
 /** Restores the real transport and returns what the picker was asked for. */
 async function restoreFolderPicker(app) {
   return app.execute(
-    `const calls = window.__donutFolderPickerCalls ?? [];
-     if (window.__donutOriginalFetch) {
-       window.fetch = window.__donutOriginalFetch;
-       delete window.__donutOriginalFetch;
+    `const calls = window.__salamanderFolderPickerCalls ?? [];
+     if (window.__salamanderOriginalFetch) {
+       window.fetch = window.__salamanderOriginalFetch;
+       delete window.__salamanderOriginalFetch;
      }
-     delete window.__donutFolderPickerCalls;
+     delete window.__salamanderFolderPickerCalls;
      return calls;`,
   );
 }
@@ -1243,7 +1243,7 @@ test("an uploaded archive and a loaded folder both import, each under its own so
     await writeFile(archivePath, Buffer.from(extensionZipBase64(), "base64"));
     const folder = await writeUnpackedExtension(
       path.join(app.root, "fixtures", "ui-copied-extension"),
-      { name: "Donut UI Copied Folder" },
+      { name: "Salamander UI Copied Folder" },
     );
 
     await openExtensionsPage(app);
@@ -1252,7 +1252,7 @@ test("an uploaded archive and a loaded folder both import, each under its own so
       archivePath,
       "Overridden By The Manifest",
     );
-    await app.waitForText("Donut E2E Fixture");
+    await app.waitForText("Salamander E2E Fixture");
 
     await stageUnpackedFolder(app, folder);
     assert.ok(await app.visibleTextIncludes(EXTENSION_STRINGS.selectedFolder));
@@ -1264,7 +1264,7 @@ test("an uploaded archive and a loaded folder both import, each under its own so
     assert.equal(staged?.checked, false, "linking a folder has to be opt-in");
     assert.equal(staged.help, EXTENSION_STRINGS.linkFolderOff);
     await app.clickText(en.common.buttons.add, { roles: ["button"] });
-    await app.waitForText("Donut UI Copied Folder");
+    await app.waitForText("Salamander UI Copied Folder");
 
     const pickerCalls = await restoreFolderPicker(app);
     assert.equal(pickerCalls.length, 1, "Load unpacked has to open the picker");
@@ -1280,18 +1280,18 @@ test("an uploaded archive and a loaded folder both import, each under its own so
       EXTENSION_STRINGS.source.unpacked,
     );
     assert.equal(
-      (await extensionRow(app, "Donut E2E Fixture"))?.source,
+      (await extensionRow(app, "Salamander E2E Fixture"))?.source,
       EXTENSION_STRINGS.source.archive,
     );
     assert.equal(
-      (await extensionRow(app, "Donut UI Copied Folder"))?.source,
+      (await extensionRow(app, "Salamander UI Copied Folder"))?.source,
       EXTENSION_STRINGS.source.unpacked,
     );
 
     const extensions = await app.invoke("list_extensions");
     assert.equal(extensions.length, 2);
     const copied = extensions.find(
-      (extension) => extension.name === "Donut UI Copied Folder",
+      (extension) => extension.name === "Salamander UI Copied Folder",
     );
     assert.equal(copied.source_kind, "unpacked");
     assert.equal(
@@ -1301,7 +1301,7 @@ test("an uploaded archive and a loaded folder both import, each under its own so
     );
     assert.equal(copied.file_type, "zip");
     const archive = extensions.find(
-      (extension) => extension.name === "Donut E2E Fixture",
+      (extension) => extension.name === "Salamander E2E Fixture",
     );
     assert.equal(archive.source_kind, "archive");
     assert.equal(archive.linked_path, null);
@@ -1317,11 +1317,11 @@ test("linking a folder says what it costs, records the path, and locks that row'
     });
     const folder = await writeUnpackedExtension(
       path.join(app.root, "fixtures", "ui-linked-extension"),
-      { name: "Donut UI Linked Folder" },
+      { name: "Salamander UI Linked Folder" },
     );
 
     await openExtensionsPage(app);
-    await app.waitForText("Donut E2E Fixture");
+    await app.waitForText("Salamander E2E Fixture");
     await stageUnpackedFolder(app, folder);
 
     const off = await linkCheckboxState(app, "ext-link-folder");
@@ -1345,21 +1345,21 @@ test("linking a folder says what it costs, records the path, and locks that row'
     );
 
     await app.clickText(en.common.buttons.add, { roles: ["button"] });
-    await app.waitForText("Donut UI Linked Folder");
+    await app.waitForText("Salamander UI Linked Folder");
     assert.equal((await restoreFolderPicker(app)).length, 1);
 
-    const linkedRow = await extensionRow(app, "Donut UI Linked Folder");
+    const linkedRow = await extensionRow(app, "Salamander UI Linked Folder");
     assert.equal(linkedRow?.source, EXTENSION_STRINGS.source.linked);
     assert.equal(linkedRow.syncChecked, false);
     assert.equal(linkedRow.syncDisabled, true);
     assert.equal(
-      (await extensionRow(app, "Donut E2E Fixture"))?.syncDisabled,
+      (await extensionRow(app, "Salamander E2E Fixture"))?.syncDisabled,
       false,
       "only the linked row loses its sync control",
     );
 
     const linked = (await app.invoke("list_extensions")).find(
-      (extension) => extension.name === "Donut UI Linked Folder",
+      (extension) => extension.name === "Salamander UI Linked Folder",
     );
     assert.equal(linked.linked_path, await realpath(folder));
     assert.equal(linked.file_type, "unpacked");
@@ -1377,12 +1377,12 @@ test("the edit dialog replaces an extension's payload from a folder", async () =
     assert.equal(original.version, "1.0.0");
     const folder = await writeUnpackedExtension(
       path.join(app.root, "fixtures", "ui-replacement-extension"),
-      { name: "Donut UI Replacement", version: "3.1.4" },
+      { name: "Salamander UI Replacement", version: "3.1.4" },
     );
 
     await openExtensionsPage(app);
-    await app.waitForText("Donut E2E Fixture");
-    const editButton = await extensionEditButton(app, "Donut E2E Fixture");
+    await app.waitForText("Salamander E2E Fixture");
+    const editButton = await extensionEditButton(app, "Salamander E2E Fixture");
     assert.ok(editButton, "the extension row's edit control was not visible");
     await app.clickElement(editButton, "extension edit button");
     const beforeReplace = await app.waitFor(
@@ -1433,11 +1433,11 @@ test("the edit dialog replaces an extension's payload from a folder", async () =
     assert.equal(updated.version, "3.1.4");
     // The dialog's own name field stays authoritative, so the row keeps its
     // name while the payload underneath it is swapped.
-    assert.equal(updated.name, "Donut E2E Fixture");
+    assert.equal(updated.name, "Salamander E2E Fixture");
 
     await app.waitFor(
       async () =>
-        (await extensionRow(app, "Donut E2E Fixture"))?.source ===
+        (await extensionRow(app, "Salamander E2E Fixture"))?.source ===
         EXTENSION_STRINGS.source.unpacked,
       { description: "replaced row to report its new source" },
     );

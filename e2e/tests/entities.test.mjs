@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
+import http from "node:http";
 import {
   mkdir,
   readdir,
@@ -113,9 +114,10 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
       });
       assert.ok(cachedValidity === null || cachedValidity.is_valid === false);
 
-      // Donut accepts one VLESS shape (REALITY + XTLS Vision over TCP). The form
-      // uses this to tell the user WHICH part of their setup is unsupported
-      // instead of implying they mistyped, so the reason must survive the IPC hop.
+      // This fork accepts several VLESS shapes (TCP/WS/gRPC/H2 transports,
+      // over none/TLS/REALITY security). The form uses the rejection reason
+      // to tell the user WHICH part of their setup is unsupported instead of
+      // implying they mistyped, so the reason must survive the IPC hop.
       const goodVless =
         "vless://6d6e21a1-4829-4d2b-bc7f-1b25707b61e4@example.com:443" +
         "?security=reality&flow=xtls-rprx-vision&encryption=none&type=tcp" +
@@ -126,9 +128,21 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
       );
 
       for (const [uri, reason] of [
-        [goodVless.replace("security=reality", "security=tls"), "security"],
-        [goodVless.replace("type=tcp", "type=ws"), "transport"],
-        [goodVless.replace("flow=xtls-rprx-vision", "flow=none"), "flow"],
+        [
+          goodVless.replace("security=reality", "security=made-up"),
+          "security",
+        ],
+        [goodVless.replace("type=tcp", "type=quic"), "transport"],
+        [goodVless.replace("flow=xtls-rprx-vision", "flow=made-up"), "flow"],
+        // XTLS Vision needs the raw TLS record layer, so it is still rejected
+        // over a transport that wraps VLESS in its own framing first — even
+        // though WebSocket itself is a supported transport now.
+        [
+          goodVless
+            .replace("security=reality", "security=tls")
+            .replace("type=tcp", "type=ws&path=%2Fray"),
+          "flow",
+        ],
       ]) {
         // invokeError returns the command's error wrapped in a message, so match
         // rather than JSON.parse the whole string.
@@ -139,6 +153,54 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
           new RegExp(`"reason":"${reason}"`),
           `expected reason ${reason} for ${uri}, got: ${error}`,
         );
+      }
+
+      // Plain TLS, WebSocket/gRPC transports, and flow=none are real shapes
+      // this fork added support for — confirm the IPC round trip actually
+      // accepts them, not just the Rust unit tests.
+      for (const uri of [
+        goodVless.replace("security=reality", "security=tls"),
+        goodVless
+          .replace("security=reality", "security=tls")
+          .replace("type=tcp", "type=ws&path=%2Fray")
+          .replace("flow=xtls-rprx-vision", "flow="),
+        goodVless
+          .replace("type=tcp", "type=grpc&serviceName=gun")
+          .replace("flow=xtls-rprx-vision", "flow="),
+        goodVless.replace("flow=xtls-rprx-vision", "flow="),
+      ]) {
+        assert.equal(
+          await app.invoke("validate_vless_uri", { uri }),
+          null,
+          `expected ${uri} to be accepted`,
+        );
+      }
+
+      // fetch_vless_subscription fetches a URL, decodes the body (base64 or
+      // plain), and parses every vless:// line it carries — exercised here
+      // against a local server rather than a real subscription host.
+      const subscriptionServer = http.createServer((_request, response) => {
+        response.writeHead(200, { "content-type": "text/plain" });
+        response.end(
+          [`${goodVless}#Sub%20Node`, "vless://not-a-real-config"].join("\n"),
+        );
+      });
+      const subscriptionUrl = await new Promise((resolve, reject) => {
+        subscriptionServer.once("error", reject);
+        subscriptionServer.listen(0, "127.0.0.1", () => {
+          const { port } = subscriptionServer.address();
+          resolve(`http://127.0.0.1:${port}/sub`);
+        });
+      });
+      try {
+        const subscriptionResult = await app.invoke("fetch_vless_subscription", {
+          url: subscriptionUrl,
+        });
+        assert.equal(subscriptionResult.entries.length, 1);
+        assert.equal(subscriptionResult.entries[0].name, "Sub Node");
+        assert.equal(subscriptionResult.skipped.length, 1);
+      } finally {
+        await new Promise((resolve) => subscriptionServer.close(resolve));
       }
 
       const exported = JSON.parse(
@@ -152,7 +214,7 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
       const importResult = await app.invoke("import_proxies_json", {
         content: JSON.stringify({
           version: "1",
-          source: "Donut Browser",
+          source: "Salamander Browser",
           exported_at: new Date().toISOString(),
           proxies: [
             {
@@ -199,7 +261,7 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
       });
       await app.invoke("update_profile_launch_hook", {
         profileId: profile.id,
-        launchHook: `${process.env.DONUT_E2E_FIXTURE_URL}/launch-hook`,
+        launchHook: `${process.env.SALAMANDER_E2E_FIXTURE_URL}/launch-hook`,
       });
       const invalidHook = await app.invokeError("update_profile_launch_hook", {
         profileId: profile.id,
@@ -511,7 +573,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
       fileName: "fixture.zip",
       fileData: [...Buffer.from(extensionZipBase64(), "base64")],
     });
-    assert.equal(extension.name, "Donut E2E Fixture");
+    assert.equal(extension.name, "Salamander E2E Fixture");
     assert.equal(extension.version, "1.0.0");
     const extensionGroup = await app.invoke("create_extension_group", {
       name: "Automation Extensions",
@@ -578,7 +640,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
     assert.equal(copied.linked_path, null);
     assert.equal(copied.file_type, "zip");
     assert.equal(copied.file_name, "unpacked-extension.zip");
-    assert.equal(copied.name, "Donut E2E Unpacked");
+    assert.equal(copied.name, "Salamander E2E Unpacked");
     assert.equal(copied.version, "1.0.0");
     // The folder declares icons, so packing it must carry one through into the
     // store rather than dropping it the way the icon-less ZIP fixture does.
@@ -603,7 +665,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
 
     const repackedDir = await writeUnpackedExtension(
       path.join(app.root, "fixtures", "unpacked-extension-v2"),
-      { name: "Donut E2E Unpacked v2", version: "2.0.0" },
+      { name: "Salamander E2E Unpacked v2", version: "2.0.0" },
     );
     const repacked = await app.invoke("update_extension_from_path", {
       extensionId: copied.id,
@@ -632,7 +694,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
     });
     assert.equal(unlinked.linked_path, null);
     assert.equal(unlinked.source_kind, "unpacked");
-    assert.equal(unlinked.name, "Donut E2E Unpacked v2");
+    assert.equal(unlinked.name, "Salamander E2E Unpacked v2");
 
     assert.match(
       await app.invokeError("add_unpacked_extension", {
@@ -710,7 +772,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
     await app.invoke("delete_vpn_config", { vpnId: vpn.id });
 
     const dns = await app.invoke("set_custom_dns_config", {
-      sources: [`${process.env.DONUT_E2E_FIXTURE_URL}/dns.txt`],
+      sources: [`${process.env.SALAMANDER_E2E_FIXTURE_URL}/dns.txt`],
       blockDomains: [" Ads.Example.com ", "tracker.example"],
       allowDomains: ["safe.example"],
       allowlistMode: false,
@@ -723,7 +785,7 @@ test("extensions, extension groups, VPN storage, DNS rules, and event-backed ass
     assert.equal(
       textExport,
       [
-        `! source: ${process.env.DONUT_E2E_FIXTURE_URL}/dns.txt`,
+        `! source: ${process.env.SALAMANDER_E2E_FIXTURE_URL}/dns.txt`,
         "@@safe.example",
         "ads.example.com",
         "tracker.example",

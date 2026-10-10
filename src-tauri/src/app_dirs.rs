@@ -27,18 +27,18 @@ pub fn is_portable() -> bool {
 }
 
 /// Optional single-root override for all on-disk state. Set
-/// `DONUTBROWSER_DATA_ROOT=/path` (e.g. a tmpfs mount) to relocate
+/// `SALAMANDERBROWSER_DATA_ROOT=/path` (e.g. a tmpfs mount) to relocate
 /// data/cache/logs under `<root>/{data,cache,logs}` without touching the real
-/// dev/prod directories. The more specific `DONUTBROWSER_DATA_DIR` /
-/// `DONUTBROWSER_CACHE_DIR` overrides still take precedence over this.
+/// dev/prod directories. The more specific `SALAMANDERBROWSER_DATA_DIR` /
+/// `SALAMANDERBROWSER_CACHE_DIR` overrides still take precedence over this.
 fn data_root() -> Option<PathBuf> {
-  std::env::var_os("DONUTBROWSER_DATA_ROOT")
+  std::env::var_os("SALAMANDERBROWSER_DATA_ROOT")
     .filter(|v| !v.is_empty())
     .map(PathBuf::from)
 }
 
 /// Where logs go when something other than the platform default applies:
-/// `<root>/logs` for `DONUTBROWSER_DATA_ROOT`, else `<exe dir>/logs` in
+/// `<root>/logs` for `SALAMANDERBROWSER_DATA_ROOT`, else `<exe dir>/logs` in
 /// portable mode. `None` means the platform default app log dir.
 ///
 /// Portable belongs here for the same reason `data_dir` and `cache_dir` honour
@@ -64,7 +64,7 @@ pub const WINDOW_STATE_FILENAME: &str = ".window-state.json";
 /// True when app state has been moved off the platform default location, by
 /// portable mode or by either directory override.
 fn state_is_relocated() -> bool {
-  std::env::var_os("DONUTBROWSER_DATA_DIR").is_some_and(|v| !v.is_empty())
+  std::env::var_os("SALAMANDERBROWSER_DATA_DIR").is_some_and(|v| !v.is_empty())
     || data_root().is_some()
     || portable_dir().is_some()
 }
@@ -101,9 +101,9 @@ pub fn window_state_path<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> Opt
 
 pub fn app_name() -> &'static str {
   if cfg!(debug_assertions) {
-    "DonutBrowserDev"
+    "SalamanderBrowserDev"
   } else {
-    "DonutBrowser"
+    "SalamanderBrowser"
   }
 }
 
@@ -115,7 +115,7 @@ pub fn data_dir() -> PathBuf {
     }
   }
 
-  if let Ok(dir) = std::env::var("DONUTBROWSER_DATA_DIR") {
+  if let Ok(dir) = std::env::var("SALAMANDERBROWSER_DATA_DIR") {
     return PathBuf::from(dir);
   }
 
@@ -138,7 +138,7 @@ pub fn cache_dir() -> PathBuf {
     }
   }
 
-  if let Ok(dir) = std::env::var("DONUTBROWSER_CACHE_DIR") {
+  if let Ok(dir) = std::env::var("SALAMANDERBROWSER_CACHE_DIR") {
     return PathBuf::from(dir);
   }
 
@@ -297,8 +297,8 @@ mod tests {
   fn test_app_name() {
     let name = app_name();
     assert!(
-      name == "DonutBrowser" || name == "DonutBrowserDev",
-      "app_name should be DonutBrowser or DonutBrowserDev, got: {name}"
+      name == "SalamanderBrowser" || name == "SalamanderBrowserDev",
+      "app_name should be SalamanderBrowser or SalamanderBrowserDev, got: {name}"
     );
   }
 
@@ -345,8 +345,8 @@ mod tests {
 
   #[test]
   fn log_dir_follows_portable_mode_and_data_root() {
-    let root = PathBuf::from("/tmp/donut-root");
-    let portable = PathBuf::from("/tmp/donut-portable");
+    let root = PathBuf::from("/tmp/salamander-root");
+    let portable = PathBuf::from("/tmp/salamander-portable");
 
     // Neither: the platform default app log dir is used.
     assert_eq!(log_dir_for(None, None), None);
@@ -357,7 +357,7 @@ mod tests {
       Some(portable.join("logs"))
     );
 
-    // DONUTBROWSER_DATA_ROOT wins over portable, matching data_dir/cache_dir.
+    // SALAMANDERBROWSER_DATA_ROOT wins over portable, matching data_dir/cache_dir.
     assert_eq!(
       log_dir_for(Some(root.clone()), Some(&portable)),
       Some(root.join("logs"))
@@ -374,8 +374,8 @@ mod tests {
     // absolute path discards the base. tauri-plugin-window-state does
     // `app_config_dir().join(filename)`, so an absolute "filename" relocates
     // the file. If this ever stops holding, the redirect silently stops too.
-    let base = PathBuf::from("/Users/someone/Library/Application Support/com.donutbrowser");
-    let absolute = PathBuf::from("/Volumes/Stick/Donut/data").join(WINDOW_STATE_FILENAME);
+    let base = PathBuf::from("/Users/someone/Library/Application Support/com.salamanderbrowser");
+    let absolute = PathBuf::from("/Volumes/Stick/Salamander/data").join(WINDOW_STATE_FILENAME);
     assert_eq!(base.join(&absolute), absolute);
     assert!(!base.join(&absolute).starts_with(&base));
   }
@@ -391,7 +391,7 @@ mod tests {
 
   #[test]
   fn window_state_follows_a_relocated_data_dir() {
-    let tmp = PathBuf::from("/tmp/donut-relocated");
+    let tmp = PathBuf::from("/tmp/salamander-relocated");
     let _guard = set_test_data_dir(tmp.clone());
     // data_dir is overridden, so the file tracks it rather than app_config_dir.
     assert_eq!(
@@ -404,7 +404,7 @@ mod tests {
   fn portable_keeps_data_cache_and_logs_under_one_root() {
     // The three state directories must agree on where portable state lives, so
     // a portable install leaves nothing behind on the host.
-    let portable = PathBuf::from("/tmp/donut-portable");
+    let portable = PathBuf::from("/tmp/salamander-portable");
     assert_eq!(
       log_dir_for(None, Some(&portable)),
       Some(portable.join("logs"))
@@ -428,7 +428,7 @@ mod tests {
 
   #[test]
   fn test_set_test_data_dir() {
-    let tmp = PathBuf::from("/tmp/test-donut-data");
+    let tmp = PathBuf::from("/tmp/test-salamander-data");
     let _guard = set_test_data_dir(tmp.clone());
     assert_eq!(data_dir(), tmp);
     assert_eq!(profiles_dir(), tmp.join("profiles"));
@@ -437,7 +437,7 @@ mod tests {
 
   #[test]
   fn test_set_test_cache_dir() {
-    let tmp = PathBuf::from("/tmp/test-donut-cache");
+    let tmp = PathBuf::from("/tmp/test-salamander-cache");
     let _guard = set_test_cache_dir(tmp.clone());
     assert_eq!(cache_dir(), tmp);
   }

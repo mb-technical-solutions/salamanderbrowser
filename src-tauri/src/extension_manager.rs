@@ -3,7 +3,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
-use utoipa::ToSchema;
 
 use crate::events;
 
@@ -20,7 +19,7 @@ fn default_source_kind() -> String {
   SOURCE_KIND_ARCHIVE.to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Extension {
   pub id: String,
   pub name: String,
@@ -29,10 +28,6 @@ pub struct Extension {
   pub browser_compatibility: Vec<String>,
   pub created_at: u64,
   pub updated_at: u64,
-  #[serde(default)]
-  pub sync_enabled: bool,
-  #[serde(default)]
-  pub last_sync: Option<u64>,
   #[serde(default)]
   pub version: Option<String>,
   #[serde(default)]
@@ -47,31 +42,18 @@ pub struct Extension {
   pub source_kind: String,
   /// Absolute directory this extension is loaded from in place. `Some` means
   /// nothing is copied into the store: Chromium reads the folder directly, so
-  /// edits land on the next browser start. Linked extensions are machine-local
-  /// and never sync.
+  /// edits land on the next browser start.
   #[serde(default)]
   pub linked_path: Option<String>,
 }
 
-impl Extension {
-  /// A linked extension has no payload in the store, so every path that reads
-  /// `file/<file_name>` has to branch on this.
-  pub fn is_linked(&self) -> bool {
-    self.linked_path.is_some()
-  }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionGroup {
   pub id: String,
   pub name: String,
   pub extension_ids: Vec<String>,
   pub created_at: u64,
   pub updated_at: u64,
-  #[serde(default)]
-  pub sync_enabled: bool,
-  #[serde(default)]
-  pub last_sync: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -583,33 +565,6 @@ impl ExtensionManager {
     )
   }
 
-  /// Import an archive that already exists on disk. Used by the REST and MCP
-  /// surfaces, where a caller supplies a server-local path rather than bytes.
-  pub fn add_extension_from_path(
-    &self,
-    name: String,
-    path: &Path,
-    link: bool,
-  ) -> Result<Extension, Box<dyn std::error::Error>> {
-    if !path.exists() {
-      return Err(err_code("EXTENSION_DIR_NOT_FOUND"));
-    }
-    if path.is_dir() {
-      return self.add_unpacked_extension(name, path, link);
-    }
-    if link {
-      // Linking means "load this folder in place"; there is nothing to link to
-      // for a single archive file.
-      return Err(err_code("EXTENSION_LINK_REQUIRES_DIRECTORY"));
-    }
-    let file_name = path
-      .file_name()
-      .map(|n| n.to_string_lossy().to_string())
-      .ok_or_else(|| err_code("EXTENSION_UNSUPPORTED_FILE_TYPE"))?;
-    let data = fs::read(path)?;
-    self.add_extension(name, file_name, data)
-  }
-
   /// Persist a new extension whose payload is a single archive.
   fn store_archive_extension(
     &self,
@@ -636,8 +591,6 @@ impl ExtensionManager {
       browser_compatibility,
       created_at: now,
       updated_at: now,
-      sync_enabled: crate::sync::is_sync_configured(),
-      last_sync: None,
       version,
       description,
       author,
@@ -658,8 +611,7 @@ impl ExtensionManager {
   }
 
   /// Persist a new extension that is loaded in place from `dir`. Nothing is
-  /// copied, so sync is forced off: the remote could never reconstruct a path
-  /// that only exists on this machine.
+  /// copied into the store.
   fn store_linked_extension(
     &self,
     name: String,
@@ -686,8 +638,6 @@ impl ExtensionManager {
       browser_compatibility: determine_browser_compatibility("unpacked"),
       created_at: now,
       updated_at: now,
-      sync_enabled: false,
-      last_sync: None,
       version,
       description,
       author,
@@ -736,15 +686,6 @@ impl ExtensionManager {
 
     if let Err(e) = events::emit_empty("extensions-changed") {
       log::error!("Failed to emit extensions-changed event: {e}");
-    }
-
-    if ext.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let id = ext.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_sync(id).await;
-        });
-      }
     }
 
     Ok(ext)
@@ -957,8 +898,6 @@ impl ExtensionManager {
     ext.browser_compatibility = determine_browser_compatibility(&ext.file_type);
     ext.source_kind = SOURCE_KIND_UNPACKED.to_string();
     ext.linked_path = Some(absolute.to_string_lossy().to_string());
-    // The path only exists on this machine, so there is nothing to sync.
-    ext.sync_enabled = false;
 
     let (manifest_name, version, description, author, homepage_url) =
       manifest_metadata(manifest, &ManifestSource::Dir(&absolute));
@@ -1019,24 +958,15 @@ impl ExtensionManager {
       log::error!("Failed to emit extensions-changed event: {e}");
     }
 
-    if ext.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let eid = ext.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_sync(eid).await;
-        });
-      }
-    }
-
     Ok(ext)
   }
 
   pub fn delete_extension(
     &self,
-    app_handle: &tauri::AppHandle,
+    _app_handle: &tauri::AppHandle,
     id: &str,
   ) -> Result<(), Box<dyn std::error::Error>> {
-    let ext = self.get_extension(id)?;
+    self.get_extension(id)?;
     let ext_dir = self.get_extension_dir(id);
     if ext_dir.exists() {
       fs::remove_dir_all(&ext_dir)?;
@@ -1052,23 +982,6 @@ impl ExtensionManager {
 
     if let Err(e) = events::emit_empty("extensions-changed") {
       log::error!("Failed to emit extensions-changed event: {e}");
-    }
-
-    if ext.sync_enabled {
-      let ext_id = id.to_string();
-      let app_handle_clone = app_handle.clone();
-      tauri::async_runtime::spawn(async move {
-        match crate::sync::SyncEngine::create_from_settings(&app_handle_clone).await {
-          Ok(engine) => {
-            if let Err(e) = engine.delete_extension(&ext_id).await {
-              log::warn!("Failed to delete extension {} from sync: {}", ext_id, e);
-            }
-          }
-          Err(e) => {
-            log::debug!("Sync not configured, skipping remote deletion: {}", e);
-          }
-        }
-      });
     }
 
     Ok(())
@@ -1118,8 +1031,6 @@ impl ExtensionManager {
       extension_ids: Vec::new(),
       created_at: now,
       updated_at: now,
-      sync_enabled: crate::sync::is_sync_configured(),
-      last_sync: None,
     };
 
     data.groups.push(group.clone());
@@ -1127,15 +1038,6 @@ impl ExtensionManager {
 
     if let Err(e) = events::emit_empty("extensions-changed") {
       log::error!("Failed to emit extensions-changed event: {e}");
-    }
-
-    if group.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let id = group.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_group_sync(id).await;
-        });
-      }
     }
 
     Ok(group)
@@ -1202,31 +1104,15 @@ impl ExtensionManager {
       log::error!("Failed to emit extensions-changed event: {e}");
     }
 
-    if updated.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let gid = updated.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_group_sync(gid).await;
-        });
-      }
-    }
-
     Ok(updated)
   }
 
   pub fn delete_group(
     &self,
-    app_handle: &tauri::AppHandle,
+    _app_handle: &tauri::AppHandle,
     id: &str,
   ) -> Result<(), Box<dyn std::error::Error>> {
     let mut data = self.load_groups_data()?;
-
-    let was_sync_enabled = data
-      .groups
-      .iter()
-      .find(|g| g.id == id)
-      .map(|g| g.sync_enabled)
-      .unwrap_or(false);
 
     let initial_len = data.groups.len();
     data.groups.retain(|g| g.id != id);
@@ -1244,27 +1130,6 @@ impl ExtensionManager {
           let _ = profile_manager.save_profile(&p);
         }
       }
-    }
-
-    if was_sync_enabled {
-      let group_id_owned = id.to_string();
-      let app_handle_clone = app_handle.clone();
-      tauri::async_runtime::spawn(async move {
-        match crate::sync::SyncEngine::create_from_settings(&app_handle_clone).await {
-          Ok(engine) => {
-            if let Err(e) = engine.delete_extension_group(&group_id_owned).await {
-              log::warn!(
-                "Failed to delete extension group {} from sync: {}",
-                group_id_owned,
-                e
-              );
-            }
-          }
-          Err(e) => {
-            log::debug!("Sync not configured, skipping remote deletion: {}", e);
-          }
-        }
-      });
     }
 
     if let Err(e) = events::emit_empty("extensions-changed") {
@@ -1301,15 +1166,6 @@ impl ExtensionManager {
       log::error!("Failed to emit extensions-changed event: {e}");
     }
 
-    if updated.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let gid = updated.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_group_sync(gid).await;
-        });
-      }
-    }
-
     Ok(updated)
   }
 
@@ -1335,20 +1191,13 @@ impl ExtensionManager {
       log::error!("Failed to emit extensions-changed event: {e}");
     }
 
-    if updated.sync_enabled {
-      if let Some(scheduler) = crate::sync::get_global_scheduler() {
-        let gid = updated.id.clone();
-        tauri::async_runtime::spawn(async move {
-          scheduler.queue_extension_group_sync(gid).await;
-        });
-      }
-    }
-
     Ok(updated)
   }
 
-  // Sync helpers
-
+  /// Write an extension's metadata directly, bypassing the event emit that
+  /// the public `update_extension` command does. Test-only: lets tests set up
+  /// fixture state without needing a running event loop.
+  #[cfg(test)]
   pub fn update_extension_internal(
     &self,
     ext: &Extension,
@@ -1362,13 +1211,10 @@ impl ExtensionManager {
     Ok(())
   }
 
-  pub fn upsert_extension_internal(
-    &self,
-    ext: &Extension,
-  ) -> Result<(), Box<dyn std::error::Error>> {
-    self.update_extension_internal(ext)
-  }
-
+  /// Delete an extension without the `AppHandle` the public `delete_extension`
+  /// command needs. Test-only: lets tests exercise deletion without
+  /// constructing a real Tauri app instance.
+  #[cfg(test)]
   pub fn delete_extension_internal(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
     let ext_dir = self.get_extension_dir(id);
     if ext_dir.exists() {
@@ -1384,47 +1230,6 @@ impl ExtensionManager {
     Ok(())
   }
 
-  pub fn update_group_internal(
-    &self,
-    group: &ExtensionGroup,
-  ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut data = self.load_groups_data()?;
-    if let Some(existing) = data.groups.iter_mut().find(|g| g.id == group.id) {
-      existing.name = group.name.clone();
-      existing.extension_ids = group.extension_ids.clone();
-      existing.sync_enabled = group.sync_enabled;
-      existing.last_sync = group.last_sync;
-      existing.updated_at = group.updated_at;
-      self.save_groups_data(&data)?;
-    }
-    Ok(())
-  }
-
-  pub fn upsert_group_internal(
-    &self,
-    group: &ExtensionGroup,
-  ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut data = self.load_groups_data()?;
-    if let Some(existing) = data.groups.iter_mut().find(|g| g.id == group.id) {
-      existing.name = group.name.clone();
-      existing.extension_ids = group.extension_ids.clone();
-      existing.sync_enabled = group.sync_enabled;
-      existing.last_sync = group.last_sync;
-      existing.updated_at = group.updated_at;
-    } else {
-      data.groups.push(group.clone());
-    }
-    self.save_groups_data(&data)?;
-    Ok(())
-  }
-
-  pub fn delete_group_internal(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut data = self.load_groups_data()?;
-    data.groups.retain(|g| g.id != id);
-    self.save_groups_data(&data)?;
-    Ok(())
-  }
-
   // Compatibility validation
 
   pub fn validate_group_compatibility(
@@ -1433,8 +1238,12 @@ impl ExtensionManager {
     browser: &str,
   ) -> Result<(), Box<dyn std::error::Error>> {
     let group = self.get_group(group_id)?;
+    // Camoufox is Firefox-based (`.xpi` extensions), unlike Wayfern's
+    // Chromium (`.crx`/unpacked). `determine_browser_compatibility` doesn't
+    // tag anything as "firefox"-compatible yet (see `install_extensions_for_profile`),
+    // so today this only lets an empty group through for Camoufox.
     let browser_type = match browser {
-      "wayfern" => "chromium",
+      "camoufox" => "firefox",
       _ => return Err(format!("Extensions are not supported for browser '{browser}'").into()),
     };
 
@@ -1457,8 +1266,12 @@ impl ExtensionManager {
     Ok(())
   }
 
-  // Launch-time installation
-
+  // Launch-time installation. Currently unreachable: this is Chromium
+  // `.crx`/unpacked-extension staging, and Camoufox (the only engine left
+  // after Wayfern's removal) has no launch-time extension-install path of
+  // its own yet — kept as scaffolding for whenever Camoufox `.xpi` sideload
+  // support is built, rather than deleted along with Wayfern.
+  #[allow(dead_code)]
   pub fn install_extensions_for_profile(
     &self,
     profile: &crate::profile::BrowserProfile,
@@ -2078,8 +1891,15 @@ mod tests {
       .add_extension_to_group(&chrome_group.id, &chrome_ext.id)
       .unwrap();
 
+    // A Chromium-only (`.crx`) extension group is not compatible with
+    // Camoufox, which is Firefox-based.
     assert!(mgr
-      .validate_group_compatibility(&chrome_group.id, "wayfern")
+      .validate_group_compatibility(&chrome_group.id, "camoufox")
+      .is_err());
+
+    let empty_group = mgr.create_group("Empty Group".to_string()).unwrap();
+    assert!(mgr
+      .validate_group_compatibility(&empty_group.id, "camoufox")
       .is_ok());
   }
 
@@ -2186,7 +2006,6 @@ mod tests {
       .add_unpacked_extension("Ignored".to_string(), &source, true)
       .unwrap();
     assert_eq!(ext.linked_path.as_deref(), Some(canonical.as_str()));
-    assert!(!ext.sync_enabled);
     assert!(!mgr.get_file_dir_public(&ext.id).exists());
 
     let group = mgr.create_group("Linked Group".to_string()).unwrap();

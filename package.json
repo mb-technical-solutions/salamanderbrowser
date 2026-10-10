@@ -1,5 +1,5 @@
 {
-  "name": "donutbrowser",
+  "name": "salamanderbrowser",
   "private": true,
   "license": "AGPL-3.0",
   "version": "0.30.0",
@@ -10,10 +10,9 @@
     "prebuild": "pnpm licenses:generate",
     "build": "next build",
     "start": "next start",
-    "test": "pnpm test:themes && pnpm test:window-decorations && pnpm test:cookie-bot-limits && pnpm test:proxy-string && pnpm test:profile-search && pnpm test:licenses && pnpm test:xray-packaging && pnpm test:rust:unit && pnpm test:sync-e2e",
+    "test": "pnpm test:themes && pnpm test:window-decorations && pnpm test:proxy-string && pnpm test:profile-search && pnpm test:licenses && pnpm test:xray-packaging && pnpm test:rust:unit",
     "test:themes": "node --test src/lib/themes.test.mjs",
     "test:window-decorations": "node --test src/lib/window-decorations.test.mjs",
-    "test:cookie-bot-limits": "node --test src/lib/cookie-bot-limits.test.mjs",
     "test:proxy-string": "node --test src/lib/proxy-string.test.mjs",
     "test:profile-search": "node --test src/lib/profile-search.test.mjs",
     "test:licenses": "node --test scripts/generate-licenses.test.mjs && node scripts/generate-licenses.mjs --check",
@@ -21,27 +20,22 @@
     "licenses:generate": "node scripts/generate-licenses.mjs",
     "licenses:check": "node scripts/generate-licenses.mjs --check",
     "test:rust": "cd src-tauri && cargo test",
-    "test:rust:unit": "cd src-tauri && cargo test --lib && cargo test --test donut_proxy_integration && cargo test --test vpn_integration",
-    "test:sync-e2e": "node scripts/sync-test-harness.mjs",
+    "test:rust:unit": "cd src-tauri && cargo test --lib && cargo test --test salamander_proxy_integration && cargo test --test vpn_integration",
     "e2e": "node e2e/run.mjs --suite=full",
     "e2e:smoke": "node e2e/run.mjs --suite=smoke",
     "e2e:ui": "node e2e/run.mjs --suite=ui",
     "e2e:entities": "node e2e/run.mjs --suite=entities",
     "e2e:network": "node e2e/run.mjs --suite=network",
     "e2e:integrations": "node e2e/run.mjs --suite=integrations",
-    "e2e:sync": "node e2e/run.mjs --suite=sync",
-    "e2e:browser": "node e2e/run.mjs --suite=browser",
     "lint": "pnpm lint:js && pnpm lint:rust && pnpm lint:spell",
-    "lint:js": "biome check src/ e2e/ scripts/generate-licenses.mjs scripts/generate-licenses.test.mjs src-tauri/download-xray.mjs src-tauri/download-xray.test.mjs src-tauri/copy-proxy-binary.mjs && tsc --noEmit && cd donut-sync && biome check src/ && tsc --noEmit",
+    "lint:js": "biome check src/ e2e/ scripts/generate-licenses.mjs scripts/generate-licenses.test.mjs src-tauri/download-xray.mjs src-tauri/download-xray.test.mjs src-tauri/copy-proxy-binary.mjs && tsc --noEmit",
     "lint:rust": "cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -D clippy::all && cargo fmt --all",
     "lint:spell": "typos .",
     "tauri": "node scripts/run-with-env.mjs tauri",
     "shadcn:add": "pnpm dlx shadcn@latest add",
-    "prepare": "husky && husky install",
     "format:rust": "cd src-tauri && cargo clippy --fix --allow-dirty --all-targets --all-features -- -D warnings -D clippy::all && cargo fmt --all",
-    "format:js": "biome check src/ e2e/ --write --unsafe && cd donut-sync && biome check src/ --write --unsafe",
+    "format:js": "biome check src/ e2e/ --write --unsafe",
     "format": "pnpm format:js && pnpm format:rust",
-    "build:sync": "cd donut-sync && pnpm build",
     "cargo": "cd src-tauri && cargo",
     "unused-exports:js": "ts-unused-exports tsconfig.json",
     "check-unused-commands": "cd src-tauri && cargo test test_no_unused_tauri_commands",
@@ -105,26 +99,11 @@
     "@types/node": "^26.3.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.3.0",
     "spdx-expression-parse": "5.0.0",
     "tailwindcss": "^4.3.3",
     "ts-unused-exports": "^11.0.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "~6.0.3"
   },
-  "packageManager": "pnpm@11.21.0",
-  "lint-staged": {
-    "**/*.{js,jsx,ts,tsx,json,css}": [
-      "biome check --fix"
-    ],
-    "src-tauri/**/*.rs": [
-      "bash -c 'cd src-tauri && cargo fmt --all'",
-      "bash -c 'cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -D clippy::all'",
-      "bash -c 'cd src-tauri && cargo test --lib'"
-    ],
-    "**/*.{rs,ts,tsx,js,jsx,md}": [
-      "typos"
-    ]
-  }
+  "packageManager": "pnpm@11.21.0"
 }

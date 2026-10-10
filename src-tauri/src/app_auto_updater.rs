@@ -1,7 +1,7 @@
 /*!
 # App Auto Updater
 
-This module provides comprehensive self-update functionality for the Donut Browser application
+This module provides comprehensive self-update functionality for the Salamander Browser application
 across multiple operating systems and installation methods.
 
 ## Supported Platforms
@@ -220,7 +220,7 @@ impl AppAutoUpdater {
 
       // Build the release page URL
       let release_page_url = format!(
-        "https://github.com/zhom/donutbrowser/releases/tag/{}",
+        "https://github.com/mb-technical-solutions/salamanderbrowser/releases/tag/{}",
         latest_release.tag_name
       );
 
@@ -324,7 +324,7 @@ impl AppAutoUpdater {
   async fn fetch_app_releases(
     &self,
   ) -> Result<Vec<AppRelease>, Box<dyn std::error::Error + Send + Sync>> {
-    let url = "https://api.github.com/repos/zhom/donutbrowser/releases?per_page=100";
+    let url = "https://api.github.com/repos/mb-technical-solutions/salamanderbrowser/releases?per_page=100";
     let response = self
       .client
       .get(url)
@@ -917,7 +917,7 @@ impl AppAutoUpdater {
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log::info!("Starting background update download and install");
 
-    let temp_dir = std::env::temp_dir().join("donut_app_update");
+    let temp_dir = std::env::temp_dir().join("salamander_app_update");
     fs::create_dir_all(&temp_dir)?;
 
     let filename = update_info
@@ -1739,7 +1739,7 @@ impl AppAutoUpdater {
       .filter(|pid| crate::proxy_storage::is_process_running(*pid))
       .collect();
     log::error!(
-      "App update aborted because donut-proxy worker PIDs are still running: {:?}",
+      "App update aborted because salamander-proxy worker PIDs are still running: {:?}",
       remaining
     );
     Err(
@@ -1760,7 +1760,7 @@ impl AppAutoUpdater {
 
       // Create a temporary restart script
       let temp_dir = std::env::temp_dir();
-      let script_path = temp_dir.join("donut_restart.sh");
+      let script_path = temp_dir.join("salamander_restart.sh");
 
       // Create the restart script content
       let script_content = format!(
@@ -1907,7 +1907,7 @@ rm "{}"
         let app_path = self.get_current_app_path()?;
         let current_pid = std::process::id();
         let temp_dir = std::env::temp_dir();
-        let script_path = temp_dir.join("donut_restart.bat");
+        let script_path = temp_dir.join("salamander_restart.bat");
 
         let script_content = format!(
           "@echo off\n\
@@ -1939,7 +1939,7 @@ rm "{}"
 
       // Create a temporary restart script
       let temp_dir = std::env::temp_dir();
-      let script_path = temp_dir.join("donut_restart.sh");
+      let script_path = temp_dir.join("salamander_restart.sh");
 
       // Create the restart script content
       let script_content = format!(
@@ -1997,11 +1997,23 @@ rm "{}"
 
 // Tauri commands
 
+/// `fetch_app_releases` now points at this fork's own repository
+/// (mb-technical-solutions/salamanderbrowser), but no release has actually
+/// been published there yet under that name — flipping this on before one
+/// exists would just make every update check fail. Flip this to `true` once
+/// a real tagged release has been cut from `release.yml`.
+const RELEASE_REPO_CONFIGURED: bool = false;
+
 #[tauri::command]
 pub async fn check_for_app_updates() -> Result<Option<AppUpdateInfo>, String> {
+  if !RELEASE_REPO_CONFIGURED {
+    log::info!("App update check skipped: no release repository configured for this fork");
+    return Ok(None);
+  }
+
   #[cfg(feature = "e2e")]
   if crate::e2e_automation_enabled()
-    && std::env::var_os("DONUT_E2E_DISABLE_STARTUP_NETWORK").is_some()
+    && std::env::var_os("SALAMANDER_E2E_DISABLE_STARTUP_NETWORK").is_some()
   {
     log::info!("E2E: skipping automatic app update check");
     return Ok(None);
@@ -2060,9 +2072,14 @@ pub async fn restart_application() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn check_for_app_updates_manual() -> Result<Option<AppUpdateInfo>, String> {
+  if !RELEASE_REPO_CONFIGURED {
+    log::info!("Manual app update check skipped: no release repository configured for this fork");
+    return Ok(None);
+  }
+
   #[cfg(feature = "e2e")]
   if crate::e2e_automation_enabled()
-    && std::env::var_os("DONUT_E2E_DISABLE_STARTUP_NETWORK").is_some()
+    && std::env::var_os("SALAMANDER_E2E_DISABLE_STARTUP_NETWORK").is_some()
   {
     log::info!("E2E: skipping manual app update check");
     return Ok(None);
@@ -2192,7 +2209,7 @@ mod tests {
   fn test_find_checksums_url() {
     let assets = vec![
       AppReleaseAsset {
-        name: "Donut_0.29.0_x64.dmg".to_string(),
+        name: "Salamander_0.29.0_x64.dmg".to_string(),
         browser_download_url: "https://example.com/x64.dmg".to_string(),
         size: 1,
         digest: None,
@@ -2240,10 +2257,10 @@ mod tests {
 
     let hooks = include_str!("../installer-hooks.nsh");
     assert!(hooks.contains("NSIS_HOOK_PREINSTALL"));
-    assert!(hooks.contains("IfFileExists \"$INSTDIR\\donut-proxy.exe\""));
+    assert!(hooks.contains("IfFileExists \"$INSTDIR\\salamander-proxy.exe\""));
     assert!(hooks.contains("taskkill.exe"));
-    assert!(hooks.contains("donut-proxy.exe"));
-    assert!(hooks.contains("Delete \"$INSTDIR\\donut-proxy.exe\""));
+    assert!(hooks.contains("salamander-proxy.exe"));
+    assert!(hooks.contains("Delete \"$INSTDIR\\salamander-proxy.exe\""));
   }
 
   #[test]
@@ -2261,39 +2278,39 @@ mod tests {
     let all_assets = vec![
       // macOS assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_aarch64.dmg".to_string(),
+        name: "Salamander.Browser_0.1.0_aarch64.dmg".to_string(),
         browser_download_url: "https://example.com/aarch64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_x64.dmg".to_string(),
+        name: "Salamander.Browser_0.1.0_x64.dmg".to_string(),
         browser_download_url: "https://example.com/x64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       // Windows assets (NSIS naming: _ARCH-setup.exe)
       AppReleaseAsset {
-        name: "Donut_0.1.0_x64-setup.exe".to_string(),
+        name: "Salamander_0.1.0_x64-setup.exe".to_string(),
         browser_download_url: "https://example.com/x64-setup.exe".to_string(),
         size: 12345,
         digest: None,
       },
       // Linux assets
       AppReleaseAsset {
-        name: "donutbrowser_0.1.0_amd64.deb".to_string(),
+        name: "salamanderbrowser_0.1.0_amd64.deb".to_string(),
         browser_download_url: "https://example.com/amd64.deb".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "donutbrowser-0.1.0-1.x86_64.rpm".to_string(),
+        name: "salamanderbrowser-0.1.0-1.x86_64.rpm".to_string(),
         browser_download_url: "https://example.com/x86_64.rpm".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "Salamander.Browser-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,
@@ -2396,13 +2413,13 @@ mod tests {
     // Create mock assets including AppImage
     let assets = vec![
       AppReleaseAsset {
-        name: "donutbrowser_0.1.0_amd64.deb".to_string(),
+        name: "salamanderbrowser_0.1.0_amd64.deb".to_string(),
         browser_download_url: "https://example.com/amd64.deb".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "Salamander.Browser-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,
@@ -2443,27 +2460,27 @@ mod tests {
     let all_assets = vec![
       // macOS assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_aarch64.dmg".to_string(),
+        name: "Salamander.Browser_0.1.0_aarch64.dmg".to_string(),
         browser_download_url: "https://example.com/aarch64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       // Windows assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_x64.msi".to_string(),
+        name: "Salamander.Browser_0.1.0_x64.msi".to_string(),
         browser_download_url: "https://example.com/x64.msi".to_string(),
         size: 12345,
         digest: None,
       },
       // Linux assets
       AppReleaseAsset {
-        name: "donutbrowser_0.1.0_amd64.deb".to_string(),
+        name: "salamanderbrowser_0.1.0_amd64.deb".to_string(),
         browser_download_url: "https://example.com/amd64.deb".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "Salamander.Browser-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,

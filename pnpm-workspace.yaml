@@ -1,10 +1,8 @@
 packages:
   - nodecar
-  - donut-sync
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
-  - '@nestjs/core'
   - '@tailwindcss/oxide'
   - better-sqlite3
   - esbuild
@@ -39,9 +37,5 @@ overrides:
   sharp@<0.35.0: '>=0.35.0 <0.36'
 
 allowBuilds:
-  '@nestjs/core': true
   sharp: true
   unrs-resolver: true
-
-patchedDependencies:
-  brace-expansion@5.0.9: patches/brace-expansion@5.0.9.patch

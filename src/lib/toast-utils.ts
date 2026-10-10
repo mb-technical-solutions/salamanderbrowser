@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import React from "react";
 import { type ExternalToast, toast as sonnerToast } from "sonner";
 import { UnifiedToast } from "@/components/custom-toast";
@@ -48,27 +47,12 @@ interface VersionUpdateToastProps extends BaseToastProps {
   };
 }
 
-interface SyncProgressToastProps extends BaseToastProps {
-  type: "sync-progress";
-  progress?: {
-    completed_files: number;
-    total_files: number;
-    completed_bytes: number;
-    total_bytes: number;
-    speed_bytes_per_sec: number;
-    eta_seconds: number;
-    failed_count: number;
-    phase: string;
-  };
-}
-
 type ToastProps =
   | SuccessToastProps
   | ErrorToastProps
   | DownloadToastProps
   | LoadingToastProps
-  | VersionUpdateToastProps
-  | SyncProgressToastProps;
+  | VersionUpdateToastProps;
 
 export function showToast(props: ToastProps & { id?: string }) {
   const toastId = props.id ?? `toast-${props.type}-${Date.now()}`;
@@ -96,9 +80,6 @@ export function showToast(props: ToastProps & { id?: string }) {
         break;
       case "version-update":
         duration = 15000;
-        break;
-      case "sync-progress":
-        duration = Number.POSITIVE_INFINITY;
         break;
       default:
         duration = 5000;
@@ -245,41 +226,4 @@ export function showAutoUpdateToast(
 
 export function dismissToast(id: string) {
   sonnerToast.dismiss(id);
-}
-
-export function showSyncProgressToast(
-  profileName: string,
-  progress: {
-    completed_files: number;
-    total_files: number;
-    completed_bytes: number;
-    total_bytes: number;
-    speed_bytes_per_sec: number;
-    eta_seconds: number;
-    failed_count: number;
-    phase: string;
-  },
-  options?: { id?: string; profileId?: string },
-) {
-  return showToast({
-    type: "sync-progress",
-    title: i18n.t("toasts.loading.syncingProfile", { name: profileName }),
-    progress,
-    id: options?.id,
-    duration: Number.POSITIVE_INFINITY,
-    onCancel: () => {
-      if (options?.profileId) {
-        // Fire-and-forget — backend flips the cancel flag for the in-flight
-        // upload/download loops to drain.
-        void invoke("cancel_profile_sync", {
-          profileId: options.profileId,
-        }).catch((err: unknown) => {
-          console.error("Failed to cancel sync:", err);
-        });
-      }
-      if (options?.id) {
-        dismissToast(options.id);
-      }
-    },
-  });
 }

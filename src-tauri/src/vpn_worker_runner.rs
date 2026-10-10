@@ -1,5 +1,5 @@
 use crate::proxy_runner::find_sidecar_executable;
-use crate::proxy_storage::is_process_running;
+use crate::proxy_storage::{is_process_running, process_identity_matches, resolve_process_start_time};
 use crate::vpn_worker_storage::{
   delete_vpn_worker_config, find_vpn_worker_by_vpn_id, generate_vpn_worker_id,
   get_vpn_worker_config, list_vpn_worker_configs, save_vpn_worker_config, vpn_worker_config_path,
@@ -34,7 +34,7 @@ async fn vpn_worker_accepting_connections(config: &VpnWorkerConfig) -> bool {
 }
 
 fn worker_log_path(id: &str) -> std::path::PathBuf {
-  std::env::temp_dir().join(format!("donut-vpn-{}.log", id))
+  std::env::temp_dir().join(format!("salamander-vpn-{}.log", id))
 }
 
 fn read_worker_log(id: &str) -> String {
@@ -61,7 +61,9 @@ async fn wait_for_vpn_worker_ready(
     .await;
 
     if let Some(updated_config) = get_vpn_worker_config(id) {
-      let process_running = updated_config.pid.map(is_process_running).unwrap_or(false);
+      let process_running = updated_config
+        .pid
+        .is_some_and(|pid| process_identity_matches(pid, updated_config.pid_start_time));
 
       if !process_running && attempts > 2 {
         let log_output = read_worker_log(id);
@@ -77,7 +79,9 @@ async fn wait_for_vpn_worker_ready(
     attempts += 1;
     if tokio::time::Instant::now() >= startup_deadline {
       if let Some(config) = get_vpn_worker_config(id) {
-        let process_running = config.pid.map(is_process_running).unwrap_or(false);
+        let process_running = config
+          .pid
+          .is_some_and(|pid| process_identity_matches(pid, config.pid_start_time));
         let log_output = read_worker_log(id);
         delete_vpn_worker_config(id);
         return Err(
@@ -146,11 +150,10 @@ pub async fn start_vpn_worker_tracked(
   crate::proxy_runner::ensure_sidecar_version().await?;
 
   for config in list_vpn_worker_configs() {
-    if let Some(pid) = config.pid {
-      if !is_process_running(pid) {
-        delete_vpn_worker_config(&config.id);
-      }
-    } else {
+    let dead = config
+      .pid
+      .is_some_and(|pid| !process_identity_matches(pid, config.pid_start_time));
+    if dead || config.pid.is_none() {
       delete_vpn_worker_config(&config.id);
     }
   }
@@ -158,7 +161,7 @@ pub async fn start_vpn_worker_tracked(
   // Check if a VPN worker for this vpn_id already exists and is running
   if let Some(existing) = find_vpn_worker_by_vpn_id(vpn_id) {
     if let Some(pid) = existing.pid {
-      if is_process_running(pid) {
+      if process_identity_matches(pid, existing.pid_start_time) {
         if vpn_worker_accepting_connections(&existing).await {
           return Ok(VpnWorkerStart {
             config: existing,
@@ -192,7 +195,7 @@ pub async fn start_vpn_worker_tracked(
 
   // Write decrypted config to a temp file
   let config_file_path = std::env::temp_dir()
-    .join(format!("donut_vpn_{}.conf", vpn_id))
+    .join(format!("salamander_vpn_{}.conf", vpn_id))
     .to_string_lossy()
     .to_string();
 
@@ -223,7 +226,7 @@ pub async fn start_vpn_worker_tracked(
   let config_json_path = vpn_worker_config_path(&id);
 
   // Spawn detached VPN worker process
-  let exe = find_sidecar_executable("donut-proxy")?;
+  let exe = find_sidecar_executable("salamander-proxy")?;
 
   #[cfg(unix)]
   {
@@ -243,7 +246,7 @@ pub async fn start_vpn_worker_tracked(
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());
 
-    let log_path = std::env::temp_dir().join(format!("donut-vpn-{}.log", id));
+    let log_path = std::env::temp_dir().join(format!("salamander-vpn-{}.log", id));
     if let Ok(file) = std::fs::File::create(&log_path) {
       log::info!("VPN worker stderr will be logged to: {:?}", log_path);
       cmd.stderr(Stdio::from(file));
@@ -266,6 +269,7 @@ pub async fn start_vpn_worker_tracked(
 
     let mut config_with_pid = config.clone();
     config_with_pid.pid = Some(pid);
+    config_with_pid.pid_start_time = resolve_process_start_time(pid);
     config_with_pid.local_port = Some(local_port);
     save_vpn_worker_config(&config_with_pid)?;
 
@@ -290,7 +294,7 @@ pub async fn start_vpn_worker_tracked(
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());
 
-    let log_path = std::env::temp_dir().join(format!("donut-vpn-{}.log", id));
+    let log_path = std::env::temp_dir().join(format!("salamander-vpn-{}.log", id));
     if let Ok(file) = std::fs::File::create(&log_path) {
       log::info!("VPN worker stderr will be logged to: {:?}", log_path);
       cmd.stderr(Stdio::from(file));
@@ -308,6 +312,7 @@ pub async fn start_vpn_worker_tracked(
 
     let mut config_with_pid = config.clone();
     config_with_pid.pid = Some(pid);
+    config_with_pid.pid_start_time = resolve_process_start_time(pid);
     config_with_pid.local_port = Some(local_port);
     save_vpn_worker_config(&config_with_pid)?;
 
@@ -326,7 +331,10 @@ pub async fn stop_vpn_worker(id: &str) -> Result<bool, Box<dyn std::error::Error
   let config = get_vpn_worker_config(id);
 
   if let Some(config) = config {
-    if let Some(pid) = config.pid {
+    if let Some(pid) = config
+      .pid
+      .filter(|pid| process_identity_matches(*pid, config.pid_start_time))
+    {
       #[cfg(unix)]
       {
         use std::process::Command;

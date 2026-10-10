@@ -7,7 +7,7 @@ use std::process::Command;
 /// profile/data-dir argument, NOT merely a substring. A bare `contains` match
 /// force-killed unrelated processes that happened to mention the path (editors,
 /// `tail`, a terminal that `cd`'d there, or another profile whose path has this
-/// one as a prefix). Mirrors the precise matching in browser_runner/wayfern_manager.
+/// one as a prefix). Mirrors the precise matching in browser_runner.
 ///
 /// Only the macOS and Linux process-kill paths use this; Windows has no
 /// `find_processes_by_profile_path`, so gate it to avoid a dead-code error there.
@@ -19,7 +19,7 @@ fn cmd_matches_profile_path(cmd: &[std::ffi::OsString], profile_path: &str) -> b
     if *arg == profile_path {
       return true;
     }
-    // `--user-data-dir=<path>` (Chromium/Wayfern) or `-profile=<path>`.
+    // `--user-data-dir=<path>` (Chromium-based engines) or `-profile=<path>` (Camoufox).
     if let Some(val) = arg
       .strip_prefix("--user-data-dir=")
       .or_else(|| arg.strip_prefix("-profile="))
@@ -275,8 +275,8 @@ pub mod macos {
     // The Chromium `--user-data-dir=<path> <url>` remote command failed.
     // We intentionally do NOT fall back to an AppleScript `System Events`
     // keystroke path: that would send Apple Events to another application
-    // and trigger the macOS TCC "<Donut> wants control of <Browser>" /
-    // "prevented from modifying other apps" prompts. Donut must never touch
+    // and trigger the macOS TCC "<Salamander> wants control of <Browser>" /
+    // "prevented from modifying other apps" prompts. Salamander must never touch
     // other apps on the user's Mac.
     Err(
       format!(

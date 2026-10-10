@@ -8,24 +8,19 @@ import { useOnborda } from "onborda";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "@/components/about-dialog";
-import { AccountPage } from "@/components/account-page";
 import { CloneProfileDialog } from "@/components/clone-profile-dialog";
 import { CloseConfirmDialog } from "@/components/close-confirm-dialog";
 import { CommandPalette } from "@/components/command-palette";
-import { CommercialTrialModal } from "@/components/commercial-trial-modal";
-import { CookieBotPage, type CookieBotTab } from "@/components/cookie-bot-page";
 import { CookieCopyDialog } from "@/components/cookie-copy-dialog";
 import { CookieManagementDialog } from "@/components/cookie-management-dialog";
 import { CreateProfileDialog } from "@/components/create-profile-dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
-import { DeviceCodeVerifyDialog } from "@/components/device-code-verify-dialog";
 import { ExtensionGroupAssignmentDialog } from "@/components/extension-group-assignment-dialog";
 import { ExtensionManagementDialog } from "@/components/extension-management-dialog";
 import { GroupAssignmentDialog } from "@/components/group-assignment-dialog";
 import { GroupManagementDialog } from "@/components/group-management-dialog";
 import HomeHeader from "@/components/home-header";
 import { ImportProfileDialog } from "@/components/import-profile-dialog";
-import { IntegrationsDialog } from "@/components/integrations-dialog";
 import { ONBOARDING_TOUR } from "@/components/onboarding-provider";
 import { PermissionDialog } from "@/components/permission-dialog";
 import {
@@ -39,36 +34,24 @@ import {
   ProfilePasswordDialog,
 } from "@/components/profile-password-dialog";
 import { ProfileSelectorDialog } from "@/components/profile-selector-dialog";
-import { ProfileSyncDialog } from "@/components/profile-sync-dialog";
 import { ProxyAssignmentDialog } from "@/components/proxy-assignment-dialog";
 import { ProxyManagementDialog } from "@/components/proxy-management-dialog";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { ShortcutsPage } from "@/components/shortcuts-page";
-import { SyncAllDialog } from "@/components/sync-all-dialog";
-import { SyncConfigDialog } from "@/components/sync-config-dialog";
-import { SyncFollowerDialog } from "@/components/sync-follower-dialog";
 import { ThankYouDialog } from "@/components/thank-you-dialog";
-import { WayfernConfigDialog } from "@/components/wayfern-config-dialog";
-import { WayfernTermsDialog } from "@/components/wayfern-terms-dialog";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { WindowResizeWarningDialog } from "@/components/window-resize-warning-dialog";
 import { useAppUpdateNotifications } from "@/hooks/use-app-update-notifications";
-import { useCloudAuth } from "@/hooks/use-cloud-auth";
-import { useCommercialTrial } from "@/hooks/use-commercial-trial";
-import { cookieBotScopeFor, useCookieBot } from "@/hooks/use-cookie-bot";
 import { useGroupEvents } from "@/hooks/use-group-events";
 import type { PermissionType } from "@/hooks/use-permissions";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProfileEvents } from "@/hooks/use-profile-events";
 import { useProxyEvents } from "@/hooks/use-proxy-events";
-import { useSyncSessions } from "@/hooks/use-sync-session";
 import { useUpdateNotifications } from "@/hooks/use-update-notifications";
 import { useVersionUpdater } from "@/hooks/use-version-updater";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
-import { useWayfernTerms } from "@/hooks/use-wayfern-terms";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";
-import { canUseCookieBot, getEntitlements } from "@/lib/entitlements";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import {
   ONBOARDING_TOUR_CLOSED_EVENT,
@@ -86,20 +69,13 @@ import {
   SHORTCUTS,
   type ShortcutId,
 } from "@/lib/shortcuts";
-import {
-  dismissToast,
-  showErrorToast,
-  showSuccessToast,
-  showSyncProgressToast,
-  showToast,
-} from "@/lib/toast-utils";
+import { showErrorToast } from "@/lib/toast-utils";
 import type {
   BrowserProfile,
+  CamoufoxConfig,
   ConsistencyResult,
   ExtensionGroup,
   PreLaunchChecks,
-  SyncSettings,
-  WayfernConfig,
 } from "@/types";
 
 type GateRequest = {
@@ -131,7 +107,7 @@ function consistencyFromErrorParams(
   };
 }
 
-type BrowserTypeString = "wayfern";
+type BrowserTypeString = "camoufox";
 
 interface PendingUrl {
   id: string;
@@ -302,63 +278,12 @@ export default function Home() {
     };
   }, []);
 
-  // Synchronizer sessions
-  const { getProfileSyncInfo } = useSyncSessions();
-  const [syncLeaderProfile, setSyncLeaderProfile] =
-    useState<BrowserProfile | null>(null);
-
-  // Wayfern terms and commercial trial hooks
-  const {
-    termsAccepted,
-    isLoading: termsLoading,
-    checkTerms,
-  } = useWayfernTerms();
-  const {
-    trialStatus,
-    hasAcknowledged: trialAcknowledged,
-    checkTrialStatus,
-  } = useCommercialTrial();
-
-  // Cloud auth for cross-OS unlock
-  const { user: cloudUser } = useCloudAuth();
-  const crossOsUnlocked = getEntitlements(cloudUser).crossOsFingerprints;
-  // Bulk run/stop is a paid (browser automation) feature, matching the
-  // /v1/profiles/batch/run API gate. Free/solo users see the bulk Run/Stop
-  // actions disabled with a Pro badge.
-  const automationUnlocked = getEntitlements(cloudUser).browserAutomation;
-  // The rail needs to show a live run from every page, so the shell subscribes
-  // to the shared cookie-bot store too. It is a module singleton, so this costs
-  // one more listener and no extra request. This is also what starts the event
-  // stream for a user who signs in without restarting the app.
-  const { liveSessions: cookieBotLiveSessions } = useCookieBot(
-    canUseCookieBot(cloudUser),
-    cookieBotScopeFor(cloudUser),
-  );
-
-  const [selfHostedSyncConfigured, setSelfHostedSyncConfigured] =
-    useState(false);
-
-  const checkSelfHostedSync = useCallback(async () => {
-    try {
-      const settings = await invoke<SyncSettings>("get_sync_settings");
-      const hasConfig = Boolean(
-        settings.sync_server_url && settings.sync_token,
-      );
-      setSelfHostedSyncConfigured(hasConfig && !cloudUser);
-    } catch {
-      setSelfHostedSyncConfigured(false);
-    }
-  }, [cloudUser]);
-
-  // Cloud sync follows `cloudBackup`, NOT `crossOsFingerprints`. They agreed on
-  // every plan until Solo, which buys 20 cloud backups and deliberately has no
-  // fingerprint editing — so deriving sync from the fingerprint capability put a
-  // Pro badge on the one feature a Solo customer is paying for.
-  const cloudBackupUnlocked = getEntitlements(cloudUser).cloudBackup;
-  const syncUnlocked = cloudBackupUnlocked || selfHostedSyncConfigured;
+  // This fork has no paid-plan gating, so every capability that used to be
+  // entitlement-gated is unconditionally available.
+  const crossOsUnlocked = true;
+  const automationUnlocked = true;
 
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   // Tracks which tab inside the shared proxy-management page should be active.
   // The VPN rail item routes to the same page but pre-selects the VPN tab.
   const [proxyManagementInitialTab, setProxyManagementInitialTab] = useState<
@@ -366,19 +291,11 @@ export default function Home() {
   >("proxies");
   const [extensionManagementInitialTab, setExtensionManagementInitialTab] =
     useState<"extensions" | "groups">("extensions");
-  const [integrationsInitialTab, setIntegrationsInitialTab] = useState<
-    "api" | "mcp"
-  >("api");
-  const [cookieBotDialogOpen, setCookieBotDialogOpen] = useState(false);
-  const [cookieBotInitialTab, setCookieBotInitialTab] =
-    useState<CookieBotTab>("overview");
   const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [importProfileDialogOpen, setImportProfileDialogOpen] = useState(false);
   const [proxyManagementDialogOpen, setProxyManagementDialogOpen] =
     useState(false);
-  const [wayfernConfigDialogOpen, setWayfernConfigDialogOpen] = useState(false);
   const [groupManagementDialogOpen, setGroupManagementDialogOpen] =
     useState(false);
   const [extensionManagementDialogOpen, setExtensionManagementDialogOpen] =
@@ -415,8 +332,6 @@ export default function Home() {
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [pendingUrls, setPendingUrls] = useState<PendingUrl[]>([]);
-  const [currentProfileForWayfernConfig, setCurrentProfileForWayfernConfig] =
-    useState<BrowserProfile | null>(null);
   const [cloneProfile, setCloneProfile] = useState<BrowserProfile | null>(null);
   const [passwordDialogProfile, setPasswordDialogProfile] =
     useState<BrowserProfile | null>(null);
@@ -433,12 +348,6 @@ export default function Home() {
   const [showBulkDeleteConfirmation, setShowBulkDeleteConfirmation] =
     useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [syncConfigDialogOpen, setSyncConfigDialogOpen] = useState(false);
-  const [deviceCodeDialogOpen, setDeviceCodeDialogOpen] = useState(false);
-  const [syncAllDialogOpen, setSyncAllDialogOpen] = useState(false);
-  const [profileSyncDialogOpen, setProfileSyncDialogOpen] = useState(false);
-  const [currentProfileForSync, setCurrentProfileForSync] =
-    useState<BrowserProfile | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   // Pre-launch gate. Requests queue instead of overwriting a single resolver:
@@ -495,10 +404,7 @@ export default function Home() {
     setProxyManagementDialogOpen(false);
     setExtensionManagementDialogOpen(false);
     setGroupManagementDialogOpen(false);
-    setIntegrationsDialogOpen(false);
     setImportProfileDialogOpen(false);
-    setAccountDialogOpen(false);
-    setCookieBotDialogOpen(false);
 
     setCurrentPage(page);
     switch (page) {
@@ -517,12 +423,6 @@ export default function Home() {
       case "groups":
         setGroupManagementDialogOpen(true);
         break;
-      case "cookieBot":
-        setCookieBotDialogOpen(true);
-        break;
-      case "integrations":
-        setIntegrationsDialogOpen(true);
-        break;
       case "import":
         setImportProfileDialogOpen(true);
         break;
@@ -531,9 +431,6 @@ export default function Home() {
         // the user lands directly on the right list.
         setProxyManagementInitialTab("vpns");
         setProxyManagementDialogOpen(true);
-        break;
-      case "account":
-        setAccountDialogOpen(true);
         break;
       case "shortcuts":
         // Plain page render — nothing else to open.
@@ -584,31 +481,6 @@ export default function Home() {
         }
         case "goGroups":
           handleRailNavigate("groups");
-          break;
-        case "goCookieBot": {
-          // Mod+B: navigate first time; flip overview↔activity while already
-          // there, matching how Mod+I flips the integrations tabs.
-          if (currentPage === "cookieBot") {
-            setCookieBotInitialTab((cur) =>
-              cur === "overview" ? "activity" : "overview",
-            );
-          } else {
-            setCookieBotInitialTab("overview");
-            handleRailNavigate("cookieBot");
-          }
-          break;
-        }
-        case "goIntegrations": {
-          // Mod+I: flip api↔mcp tab when already on integrations.
-          if (currentPage === "integrations") {
-            setIntegrationsInitialTab((cur) => (cur === "api" ? "mcp" : "api"));
-          } else {
-            handleRailNavigate("integrations");
-          }
-          break;
-        }
-        case "goAccount":
-          handleRailNavigate("account");
           break;
         case "goSettings":
           handleRailNavigate("settings");
@@ -935,31 +807,6 @@ export default function Home() {
     }
   }, [handleUrlOpen, t]);
 
-  const handleConfigureWayfern = useCallback((profile: BrowserProfile) => {
-    setCurrentProfileForWayfernConfig(profile);
-    setWayfernConfigDialogOpen(true);
-  }, []);
-
-  const handleSaveWayfernConfig = useCallback(
-    async (profile: BrowserProfile, config: WayfernConfig) => {
-      try {
-        await invoke("update_wayfern_config", {
-          profileId: profile.id,
-          config,
-        });
-        // No need to manually reload - useProfileEvents will handle the update
-        setWayfernConfigDialogOpen(false);
-      } catch (err: unknown) {
-        console.error("Failed to update wayfern config:", err);
-        showErrorToast(
-          t("errors.updateWayfernConfigFailed", { error: JSON.stringify(err) }),
-        );
-        throw err;
-      }
-    },
-    [t],
-  );
-
   const handleCreateProfile = useCallback(
     async (profileData: {
       name: string;
@@ -968,7 +815,7 @@ export default function Home() {
       releaseType: string;
       proxyId?: string;
       vpnId?: string;
-      wayfernConfig?: WayfernConfig;
+      camoufoxConfig?: CamoufoxConfig;
       groupId?: string;
       extensionGroupId?: string;
       ephemeral?: boolean;
@@ -986,7 +833,7 @@ export default function Home() {
             releaseType: profileData.releaseType,
             proxyId: profileData.proxyId,
             vpnId: profileData.vpnId,
-            wayfernConfig: profileData.wayfernConfig,
+            camoufoxConfig: profileData.camoufoxConfig,
             groupId:
               profileData.groupId ??
               (selectedGroupId && selectedGroupId !== "__all__"
@@ -1038,33 +885,6 @@ export default function Home() {
     },
     [selectedGroupId, t],
   );
-
-  // Unattended launches — REST and MCP automation — are the only ones the
-  // backend gate lets past a measured mismatch, because there is no dialog for
-  // them to answer. Without a listener that finding was emitted into the void.
-  useEffect(() => {
-    const unlisten = listen<ConsistencyResult>(
-      "fingerprint-consistency-warning",
-      (event) => {
-        const { exit_timezone, fingerprint_timezone } = event.payload;
-        showErrorToast(t("backendErrors.fingerprintExitMismatch"), {
-          description:
-            exit_timezone && fingerprint_timezone
-              ? t("consistencyWarning.timezoneDetail", {
-                  exit: exit_timezone,
-                  fingerprint: fingerprint_timezone,
-                })
-              : undefined,
-          id: `fingerprint-mismatch-${exit_timezone ?? "unknown"}`,
-        });
-      },
-    );
-    return () => {
-      void unlisten.then((fn) => {
-        fn();
-      });
-    };
-  }, [t]);
 
   // Show the queue's head, and how many are waiting behind it.
   const syncGateUi = useCallback(() => {
@@ -1206,7 +1026,7 @@ export default function Home() {
       }
 
       // Show one-time warning about window resizing for fingerprinted browsers
-      if (profile.browser === "wayfern") {
+      if (profile.browser === "camoufox") {
         try {
           const dismissed = await invoke<boolean>(
             "get_window_resize_warning_dismissed",
@@ -1522,7 +1342,7 @@ export default function Home() {
   const handleBulkCopyCookies = useCallback(() => {
     if (selectedProfiles.length === 0) return;
     const eligibleProfiles = profiles.filter(
-      (p) => selectedProfiles.includes(p.id) && p.browser === "wayfern",
+      (p) => selectedProfiles.includes(p.id) && p.browser === "camoufox",
     );
     if (eligibleProfiles.length === 0) {
       showErrorToast(t("errors.cookieCopyUnsupportedBrowser"));
@@ -1646,131 +1466,6 @@ export default function Home() {
     // No need to manually reload - useProfileEvents will handle the update
   }, []);
 
-  const handleOpenProfileSyncDialog = useCallback((profile: BrowserProfile) => {
-    setCurrentProfileForSync(profile);
-    setProfileSyncDialogOpen(true);
-  }, []);
-
-  const handleToggleProfileSync = useCallback(
-    async (profile: BrowserProfile) => {
-      try {
-        const enabling = !profile.sync_mode || profile.sync_mode === "Disabled";
-        await invoke("set_profile_sync_mode", {
-          profileId: profile.id,
-          syncMode: enabling ? "Regular" : "Disabled",
-        });
-        showSuccessToast(
-          t(enabling ? "sync.enabledToast" : "sync.disabledToast"),
-          {
-            description: t(
-              enabling ? "sync.enabledDescription" : "sync.disabledDescription",
-            ),
-          },
-        );
-      } catch (error) {
-        console.error("Failed to toggle sync:", error);
-        showErrorToast(t("errors.updateSyncSettingsFailed"));
-      }
-    },
-    [t],
-  );
-
-  useEffect(() => {
-    let disposed = false;
-    let unlistenStatus: (() => void) | undefined;
-    let unlistenProgress: (() => void) | undefined;
-    const profilesWithTransfer = new Set<string>();
-    void (async () => {
-      try {
-        unlistenStatus = await listen<{
-          profile_id: string;
-          status: string;
-          error?: string;
-          profile_name?: string;
-        }>("profile-sync-status", (event) => {
-          const { profile_id, status, error, profile_name } = event.payload;
-          const toastId = `sync-${profile_id}`;
-          const profile = profiles.find((p) => p.id === profile_id);
-          const name =
-            profile_name || profile?.name || t("common.labels.unknownProfile");
-
-          if (status === "synced") {
-            dismissToast(toastId);
-            if (profilesWithTransfer.has(profile_id)) {
-              profilesWithTransfer.delete(profile_id);
-              showSuccessToast(t("sync.toast.profileSynced", { name }));
-            }
-          } else if (status === "error") {
-            dismissToast(toastId);
-            profilesWithTransfer.delete(profile_id);
-            showErrorToast(
-              error
-                ? t("sync.toast.profileSyncFailedWithError", { name, error })
-                : t("sync.toast.profileSyncFailed", { name }),
-            );
-          }
-        });
-
-        unlistenProgress = await listen<{
-          profile_id: string;
-          phase: string;
-          total_files?: number;
-          total_bytes?: number;
-          completed_files?: number;
-          completed_bytes?: number;
-          speed_bytes_per_sec?: number;
-          eta_seconds?: number;
-          failed_count?: number;
-          profile_name?: string;
-        }>("profile-sync-progress", (event) => {
-          const payload = event.payload;
-          const toastId = `sync-${payload.profile_id}`;
-          const profile = profiles.find((p) => p.id === payload.profile_id);
-          const name =
-            payload.profile_name ||
-            profile?.name ||
-            t("common.labels.unknownProfile");
-
-          if (
-            payload.phase === "started" ||
-            payload.phase === "uploading" ||
-            payload.phase === "downloading"
-          ) {
-            profilesWithTransfer.add(payload.profile_id);
-            showSyncProgressToast(
-              name,
-              {
-                completed_files: payload.completed_files ?? 0,
-                total_files: payload.total_files ?? 0,
-                completed_bytes: payload.completed_bytes ?? 0,
-                total_bytes: payload.total_bytes ?? 0,
-                speed_bytes_per_sec: payload.speed_bytes_per_sec ?? 0,
-                eta_seconds: payload.eta_seconds ?? 0,
-                failed_count: payload.failed_count ?? 0,
-                phase: payload.phase,
-              },
-              { id: toastId, profileId: payload.profile_id },
-            );
-          }
-        });
-        // If the effect was torn down while we were awaiting the listeners,
-        // unlisten immediately — the cleanup below already ran and would have
-        // missed these handles. (Tauri unlisten is safe to call more than once.)
-        if (disposed) {
-          unlistenStatus?.();
-          unlistenProgress?.();
-        }
-      } catch (error) {
-        console.error("Failed to listen for sync events:", error);
-      }
-    })();
-    return () => {
-      disposed = true;
-      if (unlistenStatus) unlistenStatus();
-      if (unlistenProgress) unlistenProgress();
-    };
-  }, [profiles, t]);
-
   useEffect(() => {
     // Listen for URL open events. Guard against the effect tearing down (or
     // re-running) before the async listener setup resolves: if that happens,
@@ -1801,7 +1496,7 @@ export default function Home() {
       void checkMissingBinaries();
     }
 
-    // Proactively download Wayfern if not already available
+    // Proactively download Camoufox if not already available
     if (!profilesLoading) {
       void invoke("ensure_active_browsers_downloaded").catch((err: unknown) => {
         console.error("Failed to auto-download browsers:", err);
@@ -1822,127 +1517,6 @@ export default function Home() {
     profiles.length,
   ]);
 
-  // E2E encryption listeners — surface password-required prompts and rollover
-  // progress so the user isn't left guessing whether sealing finished.
-  useEffect(() => {
-    let disposed = false;
-    let unlistenRequired: (() => void) | undefined;
-    let unlistenStarted: (() => void) | undefined;
-    let unlistenProgress: (() => void) | undefined;
-    let unlistenCompleted: (() => void) | undefined;
-    let unlistenWayfernBlocked: (() => void) | undefined;
-
-    void (async () => {
-      unlistenRequired = await listen(
-        "profile-sync-e2e-password-required",
-        () => {
-          showToast({
-            id: "e2e-password-required",
-            type: "error",
-            title: t("encryption.required.title"),
-            description: t("encryption.required.description"),
-            duration: 12000,
-            action: {
-              label: t("encryption.required.openSettings"),
-              onClick: () => {
-                setSettingsDialogOpen(true);
-                setCurrentPage("settings");
-              },
-            },
-          });
-        },
-      );
-
-      unlistenStarted = await listen("e2e-rollover-started", () => {
-        showToast({
-          id: "e2e-rollover",
-          type: "loading",
-          title: t("encryption.rollover.startedTitle"),
-          description: t("encryption.rollover.startedDescription"),
-          duration: Number.POSITIVE_INFINITY,
-        });
-      });
-
-      unlistenProgress = await listen<{
-        stage: string;
-        done: number;
-        total: number;
-      }>("e2e-rollover-progress", (event) => {
-        const { stage, done, total } = event.payload;
-        showToast({
-          id: "e2e-rollover",
-          type: "loading",
-          title: t("encryption.rollover.progressTitle", {
-            stage: t(`encryption.rollover.stage.${stage}`),
-          }),
-          description: t("encryption.rollover.progressDescription", {
-            done,
-            total,
-          }),
-          duration: Number.POSITIVE_INFINITY,
-        });
-      });
-
-      unlistenCompleted = await listen("e2e-rollover-completed", () => {
-        showToast({
-          id: "e2e-rollover",
-          type: "success",
-          title: t("encryption.rollover.completedTitle"),
-          description: t("encryption.rollover.completedDescription"),
-          duration: 5000,
-        });
-      });
-
-      unlistenWayfernBlocked = await listen("wayfern-paid-blocked", () => {
-        showToast({
-          id: "wayfern-paid-blocked",
-          type: "error",
-          title: t("wayfernBlocked.title"),
-          description: t("wayfernBlocked.description"),
-          duration: 15000,
-        });
-      });
-
-      // If the effect was torn down mid-setup, the cleanup below already ran
-      // before these handles existed — unlisten them now so nothing leaks.
-      if (disposed) {
-        unlistenRequired?.();
-        unlistenStarted?.();
-        unlistenProgress?.();
-        unlistenCompleted?.();
-        unlistenWayfernBlocked?.();
-      }
-    })();
-
-    return () => {
-      disposed = true;
-      unlistenRequired?.();
-      unlistenStarted?.();
-      unlistenProgress?.();
-      unlistenCompleted?.();
-      unlistenWayfernBlocked?.();
-    };
-  }, [t]);
-
-  // Re-check Wayfern terms when a browser download completes
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    const setup = async () => {
-      unlisten = await listen<{ stage: string }>(
-        "download-progress",
-        (event) => {
-          if (event.payload.stage === "completed") {
-            void checkTerms();
-          }
-        },
-      );
-    };
-    void setup();
-    return () => {
-      if (unlisten) unlisten();
-    };
-  }, [checkTerms]);
-
   // Check permissions when they are initialized. During first-run onboarding
   // the welcome flow requests permissions, so the standalone dialog is deferred
   // until we know this isn't a first-run onboarding.
@@ -1951,11 +1525,6 @@ export default function Home() {
       checkAllPermissions();
     }
   }, [isInitialized, firstRunOnboarding, checkAllPermissions]);
-
-  // Check self-hosted sync config on mount and when cloud user changes
-  useEffect(() => {
-    void checkSelfHostedSync();
-  }, [checkSelfHostedSync]);
 
   // A profile stores ids, and the query asks about names, so the matcher is
   // handed the resolution up front. Built off the entity lists rather than off
@@ -2021,7 +1590,6 @@ export default function Home() {
           onOpenAbout={() => {
             setAboutDialogOpen(true);
           }}
-          cookieBotRunning={Object.keys(cookieBotLiveSessions).length > 0}
         />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {currentPage === "profiles" && (
@@ -2045,7 +1613,6 @@ export default function Home() {
                 onRemovePassword={handleRemovePassword}
                 onDeleteProfile={handleDeleteProfile}
                 onRenameProfile={handleRenameProfile}
-                onConfigureWayfern={handleConfigureWayfern}
                 onCopyCookiesToProfile={handleCopyCookiesToProfile}
                 onOpenCookieManagement={handleOpenCookieManagement}
                 runningProfiles={runningProfiles}
@@ -2053,7 +1620,6 @@ export default function Home() {
                 isUpdating={isUpdating}
                 onDeleteSelectedProfiles={handleDeleteSelectedProfiles}
                 onAssignProfilesToGroup={handleAssignProfilesToGroup}
-                onAssignProfilesToProxy={handleAssignProfilesToProxy}
                 selectedGroupId={selectedGroupId}
                 selectedProfiles={selectedProfiles}
                 onSelectedProfilesChange={setSelectedProfiles}
@@ -2068,14 +1634,7 @@ export default function Home() {
                   handleBulkExtensionGroupAssignment
                 }
                 onAssignExtensionGroup={handleAssignExtensionGroup}
-                onOpenProfileSyncDialog={handleOpenProfileSyncDialog}
-                onToggleProfileSync={handleToggleProfileSync}
                 crossOsUnlocked={crossOsUnlocked}
-                syncUnlocked={syncUnlocked}
-                getProfileSyncInfo={getProfileSyncInfo}
-                onLaunchWithSync={(profile) => {
-                  setSyncLeaderProfile(profile);
-                }}
                 onCreateProfile={() => {
                   setCreateProfileDialogOpen(true);
                 }}
@@ -2104,24 +1663,7 @@ export default function Home() {
                 setSettingsDialogOpen(false);
                 setCurrentPage("profiles");
               }}
-              onIntegrationsOpen={() => {
-                setSettingsDialogOpen(false);
-                setIntegrationsDialogOpen(true);
-                setCurrentPage("integrations");
-              }}
               subPage={currentPage === "settings"}
-            />
-          )}
-
-          {integrationsDialogOpen && (
-            <IntegrationsDialog
-              isOpen={integrationsDialogOpen}
-              onClose={() => {
-                setIntegrationsDialogOpen(false);
-                setCurrentPage("profiles");
-              }}
-              subPage={currentPage === "integrations"}
-              initialTab={integrationsInitialTab}
             />
           )}
 
@@ -2171,38 +1713,6 @@ export default function Home() {
               }}
               crossOsUnlocked={crossOsUnlocked}
               subPage={currentPage === "import"}
-            />
-          )}
-
-          {cookieBotDialogOpen && (
-            <CookieBotPage
-              isOpen={cookieBotDialogOpen}
-              onClose={() => {
-                setCookieBotDialogOpen(false);
-                setCurrentPage("profiles");
-              }}
-              subPage={currentPage === "cookieBot"}
-              initialTab={cookieBotInitialTab}
-              profiles={profiles}
-              cloudUser={cloudUser}
-              onOpenProfileSync={handleOpenProfileSyncDialog}
-              onAssignProxy={handleAssignProfilesToProxy}
-            />
-          )}
-
-          {accountDialogOpen && (
-            <AccountPage
-              isOpen={accountDialogOpen}
-              onClose={() => {
-                setAccountDialogOpen(false);
-                setCurrentPage("profiles");
-              }}
-              subPage={currentPage === "account"}
-              onOpenSignIn={() => {
-                setAccountDialogOpen(false);
-                setCurrentPage("profiles");
-                setDeviceCodeDialogOpen(true);
-              }}
             />
           )}
         </main>
@@ -2324,39 +1834,7 @@ export default function Home() {
             pendingLaunchAfterUnlockRef.current = null;
             void launchProfile(target);
           }
-          // On set/change/remove, the profile's encryption state changed.
-          // Push that state to the sync server immediately so other devices
-          // see the new envelope before they next pull. Skip if the profile
-          // is currently running — its files would be in flux.
-          if (
-            (passwordDialogMode === "set" ||
-              passwordDialogMode === "change" ||
-              passwordDialogMode === "remove") &&
-            !runningProfiles.has(p.id) &&
-            p.sync_mode !== "Disabled"
-          ) {
-            void invoke("request_profile_sync", { profileId: p.id }).catch(
-              (err: unknown) => {
-                console.error("post-password sync failed", err);
-              },
-            );
-          }
         }}
-      />
-
-      <WayfernConfigDialog
-        isOpen={wayfernConfigDialogOpen}
-        onClose={() => {
-          setWayfernConfigDialogOpen(false);
-        }}
-        profile={currentProfileForWayfernConfig}
-        onSave={handleSaveWayfernConfig}
-        isRunning={
-          currentProfileForWayfernConfig
-            ? runningProfiles.has(currentProfileForWayfernConfig.id)
-            : false
-        }
-        crossOsUnlocked={crossOsUnlocked}
       />
 
       <GroupAssignmentDialog
@@ -2475,75 +1953,6 @@ export default function Home() {
         profiles={profiles.map((p) => ({ id: p.id, name: p.name }))}
       />
 
-      <SyncConfigDialog
-        isOpen={syncConfigDialogOpen}
-        onClose={(loginOccurred) => {
-          setSyncConfigDialogOpen(false);
-          void checkSelfHostedSync();
-          if (loginOccurred) {
-            setSyncAllDialogOpen(true);
-          }
-        }}
-        onLoginStarted={() => {
-          // Hand the verify step off to its own dialog. We close this one
-          // first so the verify dialog isn't stacked on top of it (and
-          // can't end up stacked on top of the profile selector either).
-          setSyncConfigDialogOpen(false);
-          setDeviceCodeDialogOpen(true);
-        }}
-      />
-
-      {/* Only render while no profile-selector flow is in progress, so the
-          verify dialog never lands on top of a deep-link-triggered selector. */}
-      {pendingUrls.length === 0 && (
-        <DeviceCodeVerifyDialog
-          isOpen={deviceCodeDialogOpen}
-          onClose={(loginOccurred) => {
-            setDeviceCodeDialogOpen(false);
-            if (loginOccurred) {
-              setSyncAllDialogOpen(true);
-            }
-          }}
-        />
-      )}
-
-      <SyncAllDialog
-        isOpen={syncAllDialogOpen}
-        onClose={() => {
-          setSyncAllDialogOpen(false);
-        }}
-      />
-
-      <ProfileSyncDialog
-        isOpen={profileSyncDialogOpen}
-        onClose={() => {
-          setProfileSyncDialogOpen(false);
-          setCurrentProfileForSync(null);
-        }}
-        profile={currentProfileForSync}
-        onSyncConfigOpen={() => {
-          setSyncConfigDialogOpen(true);
-        }}
-      />
-
-      {/* Wayfern Terms and Conditions Dialog - shown if terms not accepted */}
-      <WayfernTermsDialog
-        isOpen={!termsLoading && termsAccepted === false}
-        onAccepted={checkTerms}
-      />
-
-      {/* Commercial Trial Modal - shown once when trial expires (skip for paid users) */}
-      <CommercialTrialModal
-        isOpen={
-          !termsLoading &&
-          termsAccepted === true &&
-          trialStatus?.type === "Expired" &&
-          !trialAcknowledged &&
-          !crossOsUnlocked
-        }
-        onClose={checkTrialStatus}
-      />
-
       <WindowResizeWarningDialog
         isOpen={windowResizeWarningOpen}
         onResult={(proceed) => {
@@ -2551,16 +1960,6 @@ export default function Home() {
           windowResizeWarningResolver.current?.(proceed);
           windowResizeWarningResolver.current = null;
         }}
-      />
-
-      <SyncFollowerDialog
-        isOpen={syncLeaderProfile !== null}
-        onClose={() => {
-          setSyncLeaderProfile(null);
-        }}
-        leaderProfile={syncLeaderProfile}
-        allProfiles={profiles}
-        runningProfiles={runningProfiles}
       />
     </div>
   );

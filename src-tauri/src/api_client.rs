@@ -1,3 +1,4 @@
+use crate::browser::{GithubAsset, GithubRelease};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -20,13 +21,29 @@ impl VersionComponent {
     } else {
       version
     };
+    let version = version.to_lowercase();
 
-    let numeric_part = Self::numeric_prefix(version);
+    let prefix_end = Self::numeric_prefix_end(&version);
+    let numeric_part = version[..prefix_end].trim_end_matches('.');
 
-    let parts: Vec<u32> = numeric_part
+    let mut parts: Vec<u32> = numeric_part
       .split('.')
       .filter_map(|part| part.parse().ok())
       .collect();
+
+    // A trailing pre-release/build number after the dotted numeric prefix
+    // (Camoufox tags releases `152.0.4-beta.30`) is the real tiebreaker
+    // between releases that otherwise share the same major.minor.patch.
+    // Without it, every beta of "152.0.4" parses identically and a
+    // supposedly-newest-first sort degrades to whatever arbitrary order the
+    // caller happened to hand in — which is exactly how an old beta with a
+    // known-broken search-service build ends up selected as "latest".
+    if parts.len() < 4 {
+      if let Some(trailing) = Self::last_digit_run(&version[prefix_end..]) {
+        parts.resize(3, 0);
+        parts.push(trailing);
+      }
+    }
 
     VersionComponent {
       major: parts.first().copied().unwrap_or(0),
@@ -36,14 +53,35 @@ impl VersionComponent {
     }
   }
 
-  fn numeric_prefix(version: &str) -> String {
-    let version = version.to_lowercase();
-    for (i, ch) in version.char_indices() {
-      if ch.is_alphabetic() && i > 0 {
-        return version[..i].to_string();
+  /// End index of the leading run of digits and `.` in `version` (already
+  /// lowercased). Stopping at any other character — not just letters — keeps
+  /// a trailing separator like the `-` in `152.0.4-beta.30` out of the
+  /// numeric prefix, where it would otherwise attach to the last digit group
+  /// and make it unparseable.
+  fn numeric_prefix_end(version: &str) -> usize {
+    version
+      .char_indices()
+      .find(|&(_, ch)| !(ch.is_ascii_digit() || ch == '.'))
+      .map(|(i, _)| i)
+      .unwrap_or(version.len())
+  }
+
+  /// The last maximal run of ASCII digits anywhere in `s`.
+  fn last_digit_run(s: &str) -> Option<u32> {
+    let mut last = None;
+    let mut current = String::new();
+    for ch in s.chars() {
+      if ch.is_ascii_digit() {
+        current.push(ch);
+      } else if !current.is_empty() {
+        last = current.parse().ok();
+        current.clear();
       }
     }
-    version
+    if !current.is_empty() {
+      last = current.parse().ok();
+    }
+    last
   }
 }
 
@@ -84,17 +122,19 @@ pub fn is_version_newer(version1: &str, version2: &str) -> bool {
   version_a > version_b
 }
 
+/// Sort GitHub releases newest-first by their tag name.
+pub fn sort_github_releases(releases: &mut [GithubRelease]) {
+  releases.sort_by(|a, b| {
+    let version_a = VersionComponent::parse(&a.tag_name);
+    let version_b = VersionComponent::parse(&b.tag_name);
+    version_b.cmp(&version_a)
+  });
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BrowserRelease {
   pub version: String,
   pub date: String,
-}
-
-/// Wayfern version info from https://donutbrowser.com/wayfern.json
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct WayfernVersionInfo {
-  pub version: String,
-  pub downloads: std::collections::HashMap<String, Option<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -104,8 +144,8 @@ struct CachedVersionData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct CachedWayfernData {
-  version_info: WayfernVersionInfo,
+struct CachedGithubData {
+  releases: Vec<GithubRelease>,
   timestamp: u64,
 }
 
@@ -218,121 +258,6 @@ impl ApiClient {
     Ok(())
   }
 
-  fn load_cached_wayfern_version(&self) -> Option<WayfernVersionInfo> {
-    let cache_dir = Self::get_cache_dir().ok()?;
-    let cache_file = cache_dir.join("wayfern_version.json");
-
-    if !cache_file.exists() {
-      return None;
-    }
-
-    let content = fs::read_to_string(&cache_file).ok()?;
-    let cached_data: CachedWayfernData = serde_json::from_str(&content).ok()?;
-
-    Some(cached_data.version_info)
-  }
-
-  fn save_cached_wayfern_version(
-    &self,
-    version_info: &WayfernVersionInfo,
-  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let cache_dir = Self::get_cache_dir()?;
-    let cache_file = cache_dir.join("wayfern_version.json");
-
-    let cached_data = CachedWayfernData {
-      version_info: version_info.clone(),
-      timestamp: Self::get_current_timestamp(),
-    };
-
-    let content = serde_json::to_string_pretty(&cached_data)?;
-    fs::write(&cache_file, content)?;
-    log::info!("Cached Wayfern version: {}", version_info.version);
-    Ok(())
-  }
-
-  /// Fetch Wayfern version info from https://donutbrowser.com/wayfern.json
-  pub async fn fetch_wayfern_version_with_caching(
-    &self,
-    no_caching: bool,
-  ) -> Result<WayfernVersionInfo, Box<dyn std::error::Error + Send + Sync>> {
-    if !no_caching {
-      if let Some(cached_version) = self.load_cached_wayfern_version() {
-        log::info!("Using cached Wayfern version: {}", cached_version.version);
-        return Ok(cached_version);
-      }
-    }
-
-    log::info!("Fetching Wayfern version from https://donutbrowser.com/wayfern.json");
-    let url = "https://donutbrowser.com/wayfern.json";
-
-    let mut last_err = None;
-    let mut version_info: Option<WayfernVersionInfo> = None;
-
-    for attempt in 1..=3 {
-      match self
-        .client
-        .get(url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36")
-        .send()
-        .await
-      {
-        Ok(response) => {
-          if !response.status().is_success() {
-            last_err = Some(format!("HTTP {}", response.status().as_u16()));
-          } else {
-            match response.json::<WayfernVersionInfo>().await {
-              Ok(info) => {
-                version_info = Some(info);
-                break;
-              }
-              Err(e) => last_err = Some(format!("Failed to parse response: {e}")),
-            }
-          }
-        }
-        Err(e) => {
-          log::warn!("Wayfern fetch attempt {attempt}/3 failed: {e}");
-          last_err = Some(e.to_string());
-        }
-      }
-
-      if attempt < 3 {
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-      }
-    }
-
-    let version_info = version_info.ok_or_else(|| {
-      format!(
-        "Failed to fetch Wayfern version after 3 attempts: {}",
-        last_err.unwrap_or_default()
-      )
-    })?;
-    log::info!("Fetched Wayfern version: {}", version_info.version);
-
-    if !no_caching {
-      if let Err(e) = self.save_cached_wayfern_version(&version_info) {
-        log::error!("Failed to cache Wayfern version: {e}");
-      }
-    }
-
-    Ok(version_info)
-  }
-
-  /// Get the download URL for Wayfern based on current platform
-  pub fn get_wayfern_download_url(&self, version_info: &WayfernVersionInfo) -> Option<String> {
-    let (os, arch) = Self::get_platform_info();
-    let platform_key = format!("{os}-{arch}");
-
-    version_info
-      .downloads
-      .get(&platform_key)
-      .and_then(|url| url.clone())
-  }
-
-  /// Check if Wayfern has a compatible download for current platform
-  pub fn has_wayfern_compatible_download(&self, version_info: &WayfernVersionInfo) -> bool {
-    self.get_wayfern_download_url(version_info).is_some()
-  }
-
   fn get_platform_info() -> (String, String) {
     let os = if cfg!(target_os = "windows") {
       "windows"
@@ -353,6 +278,147 @@ impl ApiClient {
     };
 
     (os.to_string(), arch.to_string())
+  }
+
+  fn load_cached_github_releases(&self, browser: &str) -> Option<Vec<GithubRelease>> {
+    let cache_dir = Self::get_cache_dir().ok()?;
+    let cache_file = cache_dir.join(format!("{browser}_github.json"));
+
+    if !cache_file.exists() {
+      return None;
+    }
+
+    let content = fs::read_to_string(&cache_file).ok()?;
+    let cached_data: CachedGithubData = serde_json::from_str(&content).ok()?;
+    Some(cached_data.releases)
+  }
+
+  fn save_cached_github_releases(
+    &self,
+    browser: &str,
+    releases: &[GithubRelease],
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let cache_dir = Self::get_cache_dir()?;
+    let cache_file = cache_dir.join(format!("{browser}_github.json"));
+
+    let cached_data = CachedGithubData {
+      releases: releases.to_vec(),
+      timestamp: Self::get_current_timestamp(),
+    };
+
+    let content = serde_json::to_string_pretty(&cached_data)?;
+    fs::write(&cache_file, content)?;
+    log::info!("Cached {} GitHub releases for {}", releases.len(), browser);
+    Ok(())
+  }
+
+  async fn fetch_github_releases_multiple_pages(
+    &self,
+    base_releases_url: &str,
+  ) -> Result<Vec<GithubRelease>, Box<dyn std::error::Error + Send + Sync>> {
+    let url = format!("{base_releases_url}?per_page=100&page=1");
+    let response = self
+      .client
+      .get(&url)
+      .header(
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      )
+      .send()
+      .await?;
+
+    if !response.status().is_success() {
+      return Err(format!("GitHub API returned status: {}", response.status()).into());
+    }
+
+    let text = response.text().await?;
+    let releases: Vec<GithubRelease> = serde_json::from_str(&text).map_err(|e| {
+      log::error!("Failed to parse GitHub API response: {e}");
+      format!("Failed to parse GitHub API response: {e}")
+    })?;
+
+    Ok(releases)
+  }
+
+  /// Check if a Camoufox release has an asset compatible with the given
+  /// platform/architecture. Real upstream naming:
+  /// `camoufox-{version}-beta.{n}-{os}.{arch}.zip`, e.g.
+  /// `camoufox-135.0.1-beta.24-lin.x86_64.zip`.
+  fn camoufox_asset_pattern(os: &str, arch: &str) -> Option<String> {
+    let (os_name, arch_name) = match (os, arch) {
+      ("windows", "x64") => ("win", "x86_64"),
+      ("windows", "arm64") => ("win", "arm64"),
+      ("linux", "x64") => ("lin", "x86_64"),
+      ("linux", "arm64") => ("lin", "arm64"),
+      ("macos", "x64") => ("mac", "x86_64"),
+      ("macos", "arm64") => ("mac", "arm64"),
+      _ => return None,
+    };
+    Some(format!("-{os_name}.{arch_name}.zip"))
+  }
+
+  fn has_compatible_camoufox_asset(assets: &[GithubAsset], os: &str, arch: &str) -> bool {
+    let Some(pattern) = Self::camoufox_asset_pattern(os, arch) else {
+      return false;
+    };
+    assets.iter().any(|asset| {
+      let name = asset.name.to_lowercase();
+      name.starts_with("camoufox-") && name.ends_with(&pattern)
+    })
+  }
+
+  /// Find the download URL for the asset matching the current platform in a
+  /// specific Camoufox release.
+  pub fn find_camoufox_asset<'a>(
+    release: &'a GithubRelease,
+    os: &str,
+    arch: &str,
+  ) -> Option<&'a GithubAsset> {
+    let pattern = Self::camoufox_asset_pattern(os, arch)?;
+    release.assets.iter().find(|asset| {
+      let name = asset.name.to_lowercase();
+      name.starts_with("camoufox-") && name.ends_with(&pattern)
+    })
+  }
+
+  /// Fetch Camoufox releases from `github.com/daijro/camoufox`, filtered to
+  /// releases that have an asset compatible with the current platform, newest
+  /// first. The GitHub releases list never expires once cached; callers pass
+  /// `no_caching: true` for background refreshes.
+  pub async fn fetch_camoufox_releases_with_caching(
+    &self,
+    no_caching: bool,
+  ) -> Result<Vec<GithubRelease>, Box<dyn std::error::Error + Send + Sync>> {
+    if !no_caching {
+      if let Some(cached_releases) = self.load_cached_github_releases("camoufox") {
+        log::info!(
+          "Using cached Camoufox releases, count: {}",
+          cached_releases.len()
+        );
+        return Ok(cached_releases);
+      }
+    }
+
+    log::info!("Fetching Camoufox releases from GitHub API");
+    let releases: Vec<GithubRelease> = self
+      .fetch_github_releases_multiple_pages("https://api.github.com/repos/daijro/camoufox/releases")
+      .await?;
+
+    let (os, arch) = Self::get_platform_info();
+    let mut compatible_releases: Vec<GithubRelease> = releases
+      .into_iter()
+      .filter(|release| Self::has_compatible_camoufox_asset(&release.assets, &os, &arch))
+      .collect();
+
+    sort_github_releases(&mut compatible_releases);
+
+    if !no_caching {
+      if let Err(e) = self.save_cached_github_releases("camoufox", &compatible_releases) {
+        log::error!("Failed to cache Camoufox releases: {e}");
+      }
+    }
+
+    Ok(compatible_releases)
   }
 
   pub fn clear_all_cache(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -399,6 +465,22 @@ mod tests {
     assert_eq!(v3.major, 137);
     assert_eq!(v3.minor, 0);
     assert_eq!(v3.patch, 0);
+
+    // Camoufox's own tag shape: `v<major>.<minor>.<patch>-beta.<n>`. The
+    // trailing beta number must land in `build`, not get merged into (or
+    // silently drop) the patch component.
+    let v4 = VersionComponent::parse("v152.0.4-beta.30");
+    assert_eq!(v4.major, 152);
+    assert_eq!(v4.minor, 0);
+    assert_eq!(v4.patch, 4);
+    assert_eq!(v4.build, 30);
+
+    // Some Camoufox tags omit the patch component entirely.
+    let v5 = VersionComponent::parse("v132.0-beta.14");
+    assert_eq!(v5.major, 132);
+    assert_eq!(v5.minor, 0);
+    assert_eq!(v5.patch, 0);
+    assert_eq!(v5.build, 14);
   }
 
   #[test]
@@ -406,6 +488,46 @@ mod tests {
     assert!(VersionComponent::parse("1.2.4") > VersionComponent::parse("1.2.3"));
     assert!(VersionComponent::parse("2.0.0") > VersionComponent::parse("1.9.9"));
     assert!(VersionComponent::parse("138.0.7204.50") > VersionComponent::parse("138.0.7204.49"));
+
+    // Regression: two Camoufox betas sharing "152.0.4" must not compare
+    // equal — the newer beta number must sort ahead of the older one, or an
+    // "always fetch fresh, sort newest-first" pipeline can silently settle
+    // on a stale (possibly broken) build instead of the real latest.
+    assert!(
+      VersionComponent::parse("v152.0.4-beta.30") > VersionComponent::parse("v152.0.4-beta.26")
+    );
+  }
+
+  #[test]
+  fn test_sort_github_releases_orders_camoufox_betas_newest_first() {
+    let tags = [
+      "v152.0.4-beta.27",
+      "v152.0.4-beta.30",
+      "v152.0.4-beta.26",
+      "v152.0.4-beta.28",
+      "v152.0.4-beta.29",
+    ];
+    let mut releases: Vec<GithubRelease> = tags
+      .iter()
+      .map(|tag| {
+        serde_json::from_value(serde_json::json!({ "tag_name": tag, "assets": [] }))
+          .expect("minimal release JSON deserializes")
+      })
+      .collect();
+
+    sort_github_releases(&mut releases);
+
+    let sorted_tags: Vec<&str> = releases.iter().map(|r| r.tag_name.as_str()).collect();
+    assert_eq!(
+      sorted_tags,
+      vec![
+        "v152.0.4-beta.30",
+        "v152.0.4-beta.29",
+        "v152.0.4-beta.28",
+        "v152.0.4-beta.27",
+        "v152.0.4-beta.26",
+      ]
+    );
   }
 
   #[test]

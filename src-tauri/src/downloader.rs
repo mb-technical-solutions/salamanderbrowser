@@ -55,6 +55,11 @@ pub struct DownloadProgress {
   pub stage: String, // "downloading", "extracting", "verifying"
 }
 
+struct ResolvedDownload {
+  url: String,
+  sha256: String,
+}
+
 pub struct Downloader {
   client: Client,
   api_client: &'static ApiClient,
@@ -143,53 +148,81 @@ impl Downloader {
   }
 
   /// Resolve the actual download URL for browsers that need dynamic asset resolution
-  pub async fn resolve_download_url(
+  async fn resolve_download_url(
     &self,
     browser_type: BrowserType,
     version: &str,
     _download_info: &DownloadInfo,
-  ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+  ) -> Result<ResolvedDownload, Box<dyn std::error::Error + Send + Sync>> {
     match browser_type {
-      BrowserType::Wayfern => {
-        // For Wayfern, get the download URL from version.json
-        let version_info = self
+      BrowserType::Camoufox => {
+        // The exact asset URL (which embeds a beta build number the tag name
+        // doesn't) is only known from the fetched release list.
+        let releases = self
           .api_client
-          .fetch_wayfern_version_with_caching(true)
+          .fetch_camoufox_releases_with_caching(true)
           .await?;
 
-        // Never substitute: downloading the current build into the requested
-        // version's directory would register a mislabeled install.
-        if version_info.version != version {
-          return Err(
-            serde_json::json!({
-              "code": "WAYFERN_VERSION_NOT_AVAILABLE",
-              "params": { "requested": version, "current": version_info.version }
-            })
-            .to_string()
-            .into(),
-          );
-        }
+        let release = releases
+          .iter()
+          .find(|r| r.tag_name == version)
+          .ok_or_else(|| format!("Camoufox version {version} is not available"))?;
 
-        // Get the download URL for current platform
-        let download_url = self
-          .api_client
-          .get_wayfern_download_url(&version_info)
+        let (os, arch) = Self::get_platform_info();
+        let asset = crate::api_client::ApiClient::find_camoufox_asset(release, &os, &arch)
           .ok_or_else(|| {
-            let (os, arch) = Self::get_platform_info();
-            format!(
-              "No compatible download found for Wayfern on {os}/{arch}. Available platforms: {}",
-              version_info
-                .downloads
-                .iter()
-                .filter_map(|(k, v)| if v.is_some() { Some(k.as_str()) } else { None })
-                .collect::<Vec<_>>()
-                .join(", ")
-            )
+            format!("No compatible asset found for Camoufox version {version} on {os}/{arch}")
+          })?;
+        let sha256 = asset
+          .digest
+          .as_deref()
+          .and_then(|digest| digest.strip_prefix("sha256:"))
+          .filter(|digest| {
+            digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+          })
+          .ok_or_else(|| {
+            format!("Camoufox asset has no valid SHA-256 digest for version {version}")
           })?;
 
-        Ok(download_url)
+        Ok(ResolvedDownload {
+          url: asset.browser_download_url.clone(),
+          sha256: sha256.to_string(),
+        })
       }
     }
+  }
+
+  /// Ensure `version.json` exists in the Camoufox installation directory, so
+  /// `camoufox::config::get_firefox_version` can find the underlying Firefox
+  /// version and pick the matching fingerprint preset bundle. Created from
+  /// the release tag name if missing (format `135.0.1-beta.24` -> Firefox
+  /// version `135.0.1`).
+  async fn ensure_camoufox_version_json(
+    &self,
+    browser_dir: &Path,
+    version: &str,
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let version_json_locations = [
+      browser_dir.join("version.json"),
+      browser_dir.join("camoufox").join("version.json"),
+    ];
+
+    for location in &version_json_locations {
+      if location.exists() {
+        return Ok(());
+      }
+    }
+
+    let firefox_version = version.split('-').next().unwrap_or(version);
+    let version_data = serde_json::json!({ "version": firefox_version });
+    tokio::fs::write(
+      browser_dir.join("version.json"),
+      serde_json::to_string_pretty(&version_data)?,
+    )
+    .await?;
+
+    log::info!("Created Camoufox version.json with Firefox version: {firefox_version}");
+    Ok(())
   }
 
   /// Get platform and architecture information
@@ -232,23 +265,16 @@ impl Downloader {
       browser_type.as_str(),
       version
     );
-    let download_url = self
+    let resolved_download = self
       .resolve_download_url(browser_type.clone(), version, download_info)
       .await?;
     log::info!("Download URL resolved");
-
-    // Every browser asset is published with a `<asset>.sha256` sidecar. Fetch
-    // it before the transfer starts: an asset nobody can verify costs one small
-    // request to reject here, or a wasted gigabyte to reject later.
-    let expected_sha256 = self
-      .fetch_expected_archive_checksum(&download_url, browser_type.display_name(), version)
-      .await?;
 
     let file_path = self
       .stream_download(
         browser_type.clone(),
         version,
-        &download_url,
+        &resolved_download.url,
         file_path,
         cancel_token,
       )
@@ -271,69 +297,13 @@ impl Downloader {
     );
     verify_archive_checksum(
       &file_path,
-      &expected_sha256,
+      &resolved_download.sha256,
       browser_type.display_name(),
       version,
     )
     .await?;
 
     Ok(file_path)
-  }
-
-  /// Fetch `<asset>.sha256` and return the digest it publishes for the asset.
-  /// Every failure mode maps to `BROWSER_CHECKSUM_UNAVAILABLE`; the specifics
-  /// go to the log.
-  async fn fetch_expected_archive_checksum(
-    &self,
-    download_url: &str,
-    browser: &str,
-    version: &str,
-  ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    let unavailable = || -> Box<dyn std::error::Error + Send + Sync> {
-      serde_json::json!({
-        "code": "BROWSER_CHECKSUM_UNAVAILABLE",
-        "params": { "browser": browser, "version": version }
-      })
-      .to_string()
-      .into()
-    };
-
-    let sidecar_url = checksum_sidecar_url(download_url);
-    let response = match self
-      .client
-      .get(&sidecar_url)
-      .header("User-Agent", DOWNLOAD_USER_AGENT)
-      .send()
-      .await
-    {
-      Ok(response) if response.status().is_success() => response,
-      Ok(response) => {
-        log::warn!(
-          "Checksum sidecar request failed for {browser} {version}: HTTP {}",
-          response.status()
-        );
-        return Err(unavailable());
-      }
-      Err(e) => {
-        log::warn!("Checksum sidecar request failed for {browser} {version}: {e}");
-        return Err(unavailable());
-      }
-    };
-
-    let sidecar_text = match response.text().await {
-      Ok(text) => text,
-      Err(e) => {
-        log::warn!("Failed to read the checksum sidecar for {browser} {version}: {e}");
-        return Err(unavailable());
-      }
-    };
-
-    let asset_name = asset_filename_from_url(download_url);
-    let Some(expected) = crate::checksum::parse_sidecar_digest(&sidecar_text, asset_name) else {
-      log::warn!("No usable digest for {asset_name} in {sidecar_url}");
-      return Err(unavailable());
-    };
-    Ok(expected)
   }
 
   async fn stream_download(
@@ -640,42 +610,11 @@ impl Downloader {
     browser_str: String,
     version: String,
   ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    // Only check Wayfern terms if Wayfern is already downloaded
-    let terms_manager = crate::wayfern_terms::WayfernTermsManager::instance();
-    if terms_manager.is_wayfern_downloaded() && !terms_manager.is_terms_accepted() {
-      return Err("Please accept Wayfern Terms and Conditions before downloading browsers".into());
-    }
-
     // Validate the browser type before touching the in-flight maps so a bad
     // request can't leave state behind.
     let browser_type =
       BrowserType::from_str(&browser_str).map_err(|e| format!("Invalid browser type: {e}"))?;
     let browser = create_browser(browser_type.clone());
-
-    // For Wayfern, only the currently published version can be fetched.
-    // Requesting any other not-yet-downloaded version is an error — silently
-    // substituting the latest would install a version the caller never asked
-    // for while the response still echoes the requested one. The fetch must
-    // succeed too: proceeding unverified would let resolve_download_url fetch
-    // the current build into the requested version's directory (a mislabeled
-    // install), and that URL resolution needs the same endpoint anyway.
-    if browser_str == "wayfern" && !self.registry.is_browser_downloaded(&browser_str, &version) {
-      let info = self
-        .api_client
-        .fetch_wayfern_version_with_caching(true)
-        .await
-        .map_err(|e| format!("Failed to determine the current Wayfern version: {e}"))?;
-      if info.version != version {
-        return Err(
-          serde_json::json!({
-            "code": "WAYFERN_VERSION_NOT_AVAILABLE",
-            "params": { "requested": version, "current": info.version }
-          })
-          .to_string()
-          .into(),
-        );
-      }
-    }
 
     // Check if this browser-version pair is already being downloaded
     let download_key = format!("{browser_str}-{version}");
@@ -796,6 +735,13 @@ impl Downloader {
 
     // Use the extraction module
     if download_info.is_archive {
+      // A failed extraction can leave a half-written browser tree behind.
+      // Remove that tree before retrying, but keep the verified archive so a
+      // transient filesystem error does not force another multi-hundred-MB
+      // download.
+      if let Err(e) = clear_extracted_files(&browser_dir, &download_path) {
+        log::warn!("Failed to clear stale extraction output: {e}");
+      }
       match self
         .extractor
         .extract_browser(
@@ -817,6 +763,10 @@ impl Downloader {
           if download_path.exists() {
             log::info!("Deleting corrupt archive: {}", download_path.display());
             let _ = std::fs::remove_file(&download_path);
+          }
+
+          if let Err(cleanup_error) = clear_extracted_files(&browser_dir, &download_path) {
+            log::warn!("Failed to clear partial extraction output: {cleanup_error}");
           }
 
           let _ = self.registry.remove_browser(&browser_str, &version);
@@ -841,6 +791,15 @@ impl Downloader {
 
       // Give filesystem a moment to settle after extraction
       tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+      if browser_str == "camoufox" {
+        if let Err(e) = self
+          .ensure_camoufox_version_json(&browser_dir, &version)
+          .await
+        {
+          log::warn!("Failed to write Camoufox version.json: {e}");
+        }
+      }
     }
 
     // Emit verification progress
@@ -980,25 +939,29 @@ impl Downloader {
   }
 }
 
+fn clear_extracted_files(
+  browser_dir: &Path,
+  archive_path: &Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+  if !browser_dir.exists() {
+    return Ok(());
+  }
+
+  for entry in std::fs::read_dir(browser_dir)? {
+    let path = entry?.path();
+    if path == archive_path {
+      continue;
+    }
+    if path.is_dir() {
+      std::fs::remove_dir_all(path)?;
+    } else {
+      std::fs::remove_file(path)?;
+    }
+  }
+  Ok(())
+}
+
 /// Offset of a URL's query or fragment, or its length when it has neither.
-fn url_path_end(url: &str) -> usize {
-  url.find(['?', '#']).unwrap_or(url.len())
-}
-
-/// The `<asset>.sha256` published next to every browser asset. Any query or
-/// fragment stays at the end so a signed URL keeps working.
-fn checksum_sidecar_url(download_url: &str) -> String {
-  let (base, suffix) = download_url.split_at(url_path_end(download_url));
-  format!("{base}.sha256{suffix}")
-}
-
-/// Last path segment of `url`. This is the name a `sha256sum` sidecar records,
-/// and it is not the local filename: the local one is built from the running
-/// platform, while this one is whatever the publisher called the asset.
-fn asset_filename_from_url(url: &str) -> &str {
-  url[..url_path_end(url)].rsplit('/').next().unwrap_or("")
-}
-
 /// Compare the finished archive against the digest published beside it. A
 /// mismatch means the bytes on disk are not the asset the manifest promised,
 /// so the file is deleted instead of being handed to the extractor.
@@ -1218,7 +1181,7 @@ mod tests {
 
   // Stand-in archive body for the checksum tests. Digests are computed from
   // it rather than hardcoded, so the fixture and the assertion cannot drift.
-  const ARCHIVE_BODY: &[u8] = b"wayfern archive bytes";
+  const ARCHIVE_BODY: &[u8] = b"camoufox archive bytes";
 
   fn digest_of(bytes: &[u8]) -> String {
     let temp_dir = TempDir::new().unwrap();
@@ -1227,115 +1190,10 @@ mod tests {
     crate::checksum::sha256_file(&path).unwrap()
   }
 
-  #[test]
-  fn test_checksum_sidecar_url_appends_to_the_asset_path() {
-    assert_eq!(
-      checksum_sidecar_url("https://download.wayfern.com/wayfern-151_windows_x64.zip"),
-      "https://download.wayfern.com/wayfern-151_windows_x64.zip.sha256"
-    );
-    // A signed URL keeps its query, so the sidecar stays reachable.
-    assert_eq!(
-      checksum_sidecar_url("https://cdn.example.com/a.zip?token=abc&exp=1"),
-      "https://cdn.example.com/a.zip.sha256?token=abc&exp=1"
-    );
-    assert_eq!(
-      checksum_sidecar_url("https://cdn.example.com/a.zip#frag"),
-      "https://cdn.example.com/a.zip.sha256#frag"
-    );
-  }
-
-  #[test]
-  fn test_asset_filename_from_url_takes_the_publisher_name() {
-    // Deliberately different from the local filename, which is built from the
-    // running platform and would never match a sidecar entry.
-    assert_eq!(
-      asset_filename_from_url("https://download.wayfern.com/wayfern-151.0.7922.71_windows_x64.zip"),
-      "wayfern-151.0.7922.71_windows_x64.zip"
-    );
-    assert_eq!(
-      asset_filename_from_url("https://cdn.example.com/dir/a.tar.xz?token=abc"),
-      "a.tar.xz"
-    );
-    assert_eq!(asset_filename_from_url("https://cdn.example.com/"), "");
-  }
-
-  #[tokio::test]
-  async fn test_fetch_expected_archive_checksum_reads_the_sidecar() {
-    let server = MockServer::start().await;
-    let downloader = Downloader::new_for_test();
-    let digest = digest_of(ARCHIVE_BODY);
-
-    Mock::given(method("GET"))
-      .and(path("/wayfern-151_windows_x64.zip.sha256"))
-      .respond_with(
-        ResponseTemplate::new(200)
-          .set_body_string(format!("{digest}  wayfern-151_windows_x64.zip\n")),
-      )
-      .mount(&server)
-      .await;
-
-    let url = format!("{}/wayfern-151_windows_x64.zip", server.uri());
-    let expected = downloader
-      .fetch_expected_archive_checksum(&url, "wayfern", "151")
-      .await
-      .expect("sidecar should resolve");
-
-    assert_eq!(expected, digest);
-  }
-
-  #[tokio::test]
-  async fn test_fetch_expected_archive_checksum_fails_when_the_sidecar_is_missing() {
-    let server = MockServer::start().await;
-    let downloader = Downloader::new_for_test();
-
-    Mock::given(method("GET"))
-      .and(path("/wayfern-151_windows_x64.zip.sha256"))
-      .respond_with(ResponseTemplate::new(404))
-      .mount(&server)
-      .await;
-
-    let url = format!("{}/wayfern-151_windows_x64.zip", server.uri());
-    let error = downloader
-      .fetch_expected_archive_checksum(&url, "wayfern", "151")
-      .await
-      .expect_err("an unverifiable asset must not be downloaded")
-      .to_string();
-
-    assert!(
-      error.contains("BROWSER_CHECKSUM_UNAVAILABLE") && error.contains("151"),
-      "expected a coded, translatable error, got: {error}"
-    );
-  }
-
-  #[tokio::test]
-  async fn test_fetch_expected_archive_checksum_rejects_a_sidecar_without_a_digest() {
-    let server = MockServer::start().await;
-    let downloader = Downloader::new_for_test();
-
-    // A CDN that answers 200 with an error page must not be read as a digest.
-    Mock::given(method("GET"))
-      .and(path("/wayfern-151_windows_x64.zip.sha256"))
-      .respond_with(ResponseTemplate::new(200).set_body_string("<!doctype html><title>404</title>"))
-      .mount(&server)
-      .await;
-
-    let url = format!("{}/wayfern-151_windows_x64.zip", server.uri());
-    let error = downloader
-      .fetch_expected_archive_checksum(&url, "wayfern", "151")
-      .await
-      .expect_err("an unparsable sidecar must not pass")
-      .to_string();
-
-    assert!(
-      error.contains("BROWSER_CHECKSUM_UNAVAILABLE"),
-      "expected a coded error, got: {error}"
-    );
-  }
-
   #[tokio::test]
   async fn test_verify_archive_checksum_accepts_a_matching_digest() {
     let temp_dir = TempDir::new().unwrap();
-    let archive = temp_dir.path().join("wayfern.zip");
+    let archive = temp_dir.path().join("camoufox.zip");
     std::fs::write(&archive, ARCHIVE_BODY).unwrap();
     let digest = crate::checksum::sha256_file(&archive).unwrap();
 
@@ -1343,7 +1201,7 @@ mod tests {
     verify_archive_checksum(
       &archive,
       &digest.to_ascii_uppercase(),
-      "wayfern",
+      "camoufox",
       "151.0.7922.71",
     )
     .await
@@ -1355,13 +1213,13 @@ mod tests {
   #[tokio::test]
   async fn test_verify_archive_checksum_rejects_and_deletes_a_mismatch() {
     let temp_dir = TempDir::new().unwrap();
-    let archive = temp_dir.path().join("wayfern.zip");
+    let archive = temp_dir.path().join("camoufox.zip");
     // The file on disk is the wrong asset entirely, which is what a mislinked
     // manifest slot delivers, while the sidecar describes the right one.
     std::fs::write(&archive, b"a macOS disk image, not a windows zip").unwrap();
     let expected = digest_of(ARCHIVE_BODY);
 
-    let error = verify_archive_checksum(&archive, &expected, "wayfern", "151.0.7922.71")
+    let error = verify_archive_checksum(&archive, &expected, "camoufox", "151.0.7922.71")
       .await
       .expect_err("a mismatched digest must fail")
       .to_string();
@@ -1380,7 +1238,7 @@ mod tests {
   fn test_contextualize_preserves_a_coded_backend_error() {
     // A coded payload must survive untouched: wrap_backend_error only passes
     // it through while it still starts with '{'.
-    let coded = r#"{"code":"BROWSER_CHECKSUM_MISMATCH","params":{"browser":"wayfern"}}"#;
+    let coded = r#"{"code":"BROWSER_CHECKSUM_MISMATCH","params":{"browser":"camoufox"}}"#;
     assert_eq!(
       contextualize("Failed to download browser", coded).to_string(),
       coded
@@ -1397,7 +1255,7 @@ mod tests {
   fn test_clear_download_state_for_browser_removes_stuck_keys() {
     // Simulate a download future that was abandoned without running its own cleanup,
     // leaving stuck bookkeeping for a version that differs from the requested one.
-    let key = "wayfern-1.2.3-resolved".to_string();
+    let key = "camoufox-1.2.3-resolved".to_string();
     {
       let mut downloading = DOWNLOADING_BROWSERS.lock().unwrap();
       downloading.insert(key.clone());
@@ -1414,17 +1272,17 @@ mod tests {
       downloading.insert(other.clone());
     }
 
-    clear_download_state_for_browser("wayfern");
+    clear_download_state_for_browser("camoufox");
 
     assert!(
-      !is_downloading("wayfern", "1.2.3-resolved"),
-      "stuck wayfern key should be cleared even when version differs from request"
+      !is_downloading("camoufox", "1.2.3-resolved"),
+      "stuck camoufox key should be cleared even when version differs from request"
     );
     {
       let tokens = DOWNLOAD_CANCELLATION_TOKENS.lock().unwrap();
       assert!(
         !tokens.contains_key(&key),
-        "stuck wayfern cancellation token should be cleared"
+        "stuck camoufox cancellation token should be cleared"
       );
     }
     assert!(
@@ -1433,7 +1291,7 @@ mod tests {
     );
 
     // Cleanup so we don't leak global state into other tests.
-    clear_download_state_for_browser("wayfern");
+    clear_download_state_for_browser("camoufox");
     clear_download_state_for_browser("chromium");
   }
 }

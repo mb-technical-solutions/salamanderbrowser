@@ -6,18 +6,9 @@ import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
 import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import {
-  LuCloud,
-  LuCookie,
-  LuInfo,
-  LuKeyboard,
-  LuPlug,
-  LuPuzzle,
-  LuUser,
-  LuUsers,
-} from "react-icons/lu";
-import { launchDonutClone } from "@/lib/donut-physics";
+import { LuInfo, LuKeyboard, LuPuzzle, LuUser, LuUsers } from "react-icons/lu";
 import { MOTION_SPRING_POSITION } from "@/lib/motion";
+import { launchSalamanderClone } from "@/lib/salamander-crawl";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -27,17 +18,14 @@ export type AppPage =
   | "proxies"
   | "extensions"
   | "groups"
-  | "cookieBot"
   | "vpns"
   | "settings"
-  | "integrations"
-  | "account"
   | "import"
   | "shortcuts";
 
 const CLICK_THRESHOLD = 5;
 const CLICK_WINDOW_MS = 2000;
-const LOGO_HIDDEN_KEY = "donut-logo-hidden";
+const LOGO_HIDDEN_KEY = "salamander-logo-hidden";
 
 function useLogoEasterEgg({
   currentPage,
@@ -51,9 +39,10 @@ function useLogoEasterEgg({
   const [wobbleKey, setWobbleKey] = useState(0);
   const [isFalling, setIsFalling] = useState(false);
   /**
-   * Click count toward the bounce trigger while the user is on the profiles
-   * page. Capped at 4: each click here grows the logo by 25%, so step 4 has
-   * doubled the original size. Click 5 fires `triggerFall` and resets.
+   * Click count toward the crawl-away trigger while the user is on the
+   * profiles page. Capped at 4: each click here grows the logo by 25%, so
+   * step 4 has doubled the original size. Click 5 fires `triggerCrawlAway`
+   * and resets.
    */
   const [growStep, setGrowStep] = useState(0);
   const resetTimeoutRef = useRef<number | null>(null);
@@ -65,14 +54,14 @@ function useLogoEasterEgg({
     }
   });
   const logoRef = useRef<HTMLButtonElement>(null);
-  const cancelFallRef = useRef<(() => void) | null>(null);
+  const cancelCrawlRef = useRef<(() => void) | null>(null);
 
-  const triggerFall = useCallback(() => {
+  const triggerCrawlAway = useCallback(() => {
     const el = logoRef.current;
     if (!el || isFalling) return;
     setIsFalling(true);
 
-    cancelFallRef.current = launchDonutClone(el, {
+    cancelCrawlRef.current = launchSalamanderClone(el, {
       onExit: () => {
         try {
           sessionStorage.setItem(LOGO_HIDDEN_KEY, "1");
@@ -87,7 +76,7 @@ function useLogoEasterEgg({
 
   useEffect(() => {
     return () => {
-      cancelFallRef.current?.();
+      cancelCrawlRef.current?.();
     };
   }, []);
 
@@ -95,7 +84,7 @@ function useLogoEasterEgg({
     if (isFalling || isHidden) return;
 
     // First behaviour: any click from elsewhere in the app just routes the
-    // user back to the profiles list. Growing the donut requires the user
+    // user back to the profiles list. Growing the logo requires the user
     // to already be home — that keeps the easter egg from accidentally
     // firing during normal navigation.
     if (currentPage !== "profiles") {
@@ -122,7 +111,7 @@ function useLogoEasterEgg({
         window.clearTimeout(resetTimeoutRef.current);
         resetTimeoutRef.current = null;
       }
-      triggerFall();
+      triggerCrawlAway();
     } else {
       setGrowStep(
         Math.min(clickTimestamps.current.length, CLICK_THRESHOLD - 1),
@@ -137,7 +126,7 @@ function useLogoEasterEgg({
         resetTimeoutRef.current = null;
       }, CLICK_WINDOW_MS);
     }
-  }, [currentPage, isFalling, isHidden, onNavigate, triggerFall]);
+  }, [currentPage, isFalling, isHidden, onNavigate, triggerCrawlAway]);
 
   // Leaving the profiles page mid-streak cancels growth so we never end up
   // with an outsized logo when the user returns later.
@@ -176,12 +165,6 @@ interface RailNavProps {
   currentPage: AppPage;
   onNavigate: (page: AppPage) => void;
   onOpenAbout: () => void;
-  /**
-   * A remote session is running right now. The Cookie Bot item carries a dot so
-   * the state is legible from every other page — an overnight job you cannot
-   * see from where you are standing may as well not be observable at all.
-   */
-  cookieBotRunning?: boolean;
 }
 
 /** Shared-element indicator that slides between the active rail items. */
@@ -207,9 +190,6 @@ const TOP_ITEMS: RailItem[] = [
   { page: "proxies", Icon: FiWifi, labelKey: "rail.network" },
   { page: "extensions", Icon: LuPuzzle, labelKey: "rail.extensions" },
   { page: "groups", Icon: LuUsers, labelKey: "rail.groups" },
-  { page: "cookieBot", Icon: LuCookie, labelKey: "rail.cookieBot" },
-  { page: "integrations", Icon: LuPlug, labelKey: "rail.integrations" },
-  { page: "account", Icon: LuCloud, labelKey: "rail.account" },
 ];
 
 interface MoreMenuItem {
@@ -238,7 +218,6 @@ export function RailNav({
   currentPage,
   onNavigate,
   onOpenAbout,
-  cookieBotRunning = false,
 }: RailNavProps) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -270,7 +249,7 @@ export function RailNav({
         <button
           ref={logoRef}
           type="button"
-          aria-label={t("header.donutLogo")}
+          aria-label={t("header.salamanderLogo")}
           className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md bg-transparent text-foreground select-none"
           onClick={handleClick}
           onPointerDown={() => {
@@ -335,19 +314,9 @@ export function RailNav({
                 >
                   {active && <ActiveIndicator />}
                   <Icon className="size-3.5" />
-                  {page === "cookieBot" && cookieBotRunning && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute top-1 right-1 size-1.5 rounded-full bg-success"
-                    />
-                  )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                {page === "cookieBot" && cookieBotRunning
-                  ? t("rail.cookieBotRunning")
-                  : t(labelKey)}
-              </TooltipContent>
+              <TooltipContent side="right">{t(labelKey)}</TooltipContent>
             </Tooltip>
           );
         })}

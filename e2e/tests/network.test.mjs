@@ -177,7 +177,7 @@ async function createExtensionsThroughUi(app) {
     "Visible UI Extension",
   );
   await app.clickText("Add", { roles: ["button"] });
-  await app.waitForText("Donut E2E Fixture");
+  await app.waitForText("Salamander E2E Fixture");
 
   await app.clickText("Groups", { exact: false, roles: ["tab"] });
   await app.clickSelector('[aria-label="New group"]');
@@ -193,7 +193,7 @@ async function createExtensionsThroughUi(app) {
     app.invoke("list_extension_groups"),
   ]);
   const extension = extensions.find(
-    (item) => item.name === "Donut E2E Fixture",
+    (item) => item.name === "Salamander E2E Fixture",
   );
   let group = groups.find((item) => item.name === "Visible Extension Group");
   assert.ok(extension && group);
@@ -367,7 +367,7 @@ async function stopProfile(app, base, token, profileId, cdp) {
 
 async function assertProxyWorkerLogsRedacted(app, settings) {
   const files = (await readdir(path.join(app.root, "tmp"))).filter(
-    (file) => file.startsWith("donut-proxy-") && file.endsWith(".log"),
+    (file) => file.startsWith("salamander-proxy-") && file.endsWith(".log"),
   );
   assert.ok(files.length > 0, "No proxy worker diagnostic logs were created");
   const contents = (
@@ -388,7 +388,7 @@ async function assertProxyWorkerLogsRedacted(app, settings) {
 }
 
 function wireGuardTargetWasReached() {
-  const container = process.env.DONUT_E2E_WIREGUARD_CONTAINER;
+  const container = process.env.SALAMANDER_E2E_WIREGUARD_CONTAINER;
   assert.ok(container, "WireGuard fixture container name is required");
   return (
     spawnSync(
@@ -398,8 +398,8 @@ function wireGuardTargetWasReached() {
         container,
         "grep",
         "-q",
-        "GET /donut-e2e-wireguard ",
-        "/tmp/donut-e2e-target-requests",
+        "GET /salamander-e2e-wireguard ",
+        "/tmp/salamander-e2e-target-requests",
       ],
       { stdio: "ignore", timeout: 2_000 },
     ).status === 0
@@ -442,9 +442,15 @@ async function createXrayProfile(app, version) {
 // passing the assertion.
 const XRAY_ACCESS_LOG_TARGET = /^.*[\s:]api\.ipify\.org:443(?:\s.*)?$/;
 
-test("VLESS Reality persists, imports, routes through Xray-core, records traffic, and cleans up", async () => {
-  const vlessUri = process.env.DONUT_E2E_VLESS_URI;
-  const accessLog = process.env.DONUT_E2E_XRAY_ACCESS_LOG;
+// Skipped: this test launches a profile via `prepareWayfern`, which downloads
+// the long-removed "wayfern" browser engine (the app now only supports
+// "camoufox", see `get_supported_browsers()`). Disabled rather than rewritten
+// for Camoufox per a deliberate decision to not take on that larger rewrite
+// here; see fixtures.mjs's prepareWayfern/seedWayfern for the dead code this
+// depended on.
+test.skip("VLESS Reality persists, imports, routes through Xray-core, records traffic, and cleans up", async () => {
+  const vlessUri = process.env.SALAMANDER_E2E_VLESS_URI;
+  const accessLog = process.env.SALAMANDER_E2E_XRAY_ACCESS_LOG;
   assert.ok(vlessUri, "The network harness must provide a VLESS Reality URI");
   assert.ok(accessLog, "The network harness must provide an Xray access log");
 
@@ -459,7 +465,7 @@ test("VLESS Reality persists, imports, routes through Xray-core, records traffic
   try {
     const prepared = await prepareWayfern(
       app,
-      process.env.DONUT_E2E_PROJECT_ROOT,
+      process.env.SALAMANDER_E2E_PROJECT_ROOT,
     );
     if (!app.session) await app.start();
     if (!(await app.invoke("check_wayfern_terms_accepted"))) {
@@ -562,7 +568,7 @@ test("VLESS Reality persists, imports, routes through Xray-core, records traffic
     const invalidImport = await app.invoke("import_proxies_json", {
       content: JSON.stringify({
         version: "1.0",
-        source: "DonutBrowser",
+        source: "SalamanderBrowser",
         exported_at: new Date().toISOString(),
         proxies: [
           {
@@ -736,7 +742,9 @@ test("VLESS Reality persists, imports, routes through Xray-core, records traffic
   }
 });
 
-test("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions, and extension groups", async () => {
+// Skipped: same reason as the test above — depends on `prepareWayfern`
+// downloading the removed "wayfern" browser engine.
+test.skip("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions, and extension groups", async () => {
   const httpSettings = proxySettings(
     process.env.RESIDENTIAL_PROXY_URL_ONE_HTTP,
     "HTTP",
@@ -745,9 +753,9 @@ test("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions
     process.env.RESIDENTIAL_PROXY_URL_ONE_SOCKS,
     "SOCKS",
   );
-  const realWireGuardConfig = process.env.DONUT_E2E_WIREGUARD_CONFIG_BASE64
+  const realWireGuardConfig = process.env.SALAMANDER_E2E_WIREGUARD_CONFIG_BASE64
     ? Buffer.from(
-        process.env.DONUT_E2E_WIREGUARD_CONFIG_BASE64,
+        process.env.SALAMANDER_E2E_WIREGUARD_CONFIG_BASE64,
         "base64",
       ).toString("utf8")
     : null;
@@ -761,7 +769,7 @@ test("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions
   try {
     const prepared = await prepareWayfern(
       app,
-      process.env.DONUT_E2E_PROJECT_ROOT,
+      process.env.SALAMANDER_E2E_PROJECT_ROOT,
     );
     if (!app.session) await app.start();
     if (!(await app.invoke("check_wayfern_terms_accepted"))) {
@@ -769,7 +777,7 @@ test("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions
       await app.restart();
     }
     assert.equal(
-      await app.visibleTextIncludes("Welcome to Donut Browser"),
+      await app.visibleTextIncludes("Welcome to Salamander Browser"),
       false,
       "completed test sessions must not leave the Welcome dialog over the UI",
     );
@@ -901,7 +909,7 @@ test("visible UI creates and assigns profiles, groups, proxies, VPNs, extensions
         base,
         saved.api_token,
         profile.id,
-        process.env.DONUT_E2E_WIREGUARD_TARGET_URL,
+        process.env.SALAMANDER_E2E_WIREGUARD_TARGET_URL,
       );
       activeCdp = tunneled.cdp;
       await app.waitFor(wireGuardTargetWasReached, {

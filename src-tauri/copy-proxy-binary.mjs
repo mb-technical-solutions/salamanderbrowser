@@ -79,5 +79,5 @@ function copyBinary(baseName) {
   console.log(`Built and copied ${binName} to ${dest}`);
 }
 
-copyBinary("donut-proxy");
+copyBinary("salamander-proxy");
 await downloadXray(TARGET);

@@ -1,24 +1,6 @@
-use crate::wayfern_manager::WayfernConfig;
+use crate::camoufox_manager::CamoufoxConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
-#[allow(dead_code)]
-pub enum SyncStatus {
-  #[default]
-  Disabled,
-  Syncing,
-  Synced,
-  Error,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
-pub enum SyncMode {
-  #[default]
-  Disabled,
-  Regular,
-  Encrypted,
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct BrowserProfile {
@@ -39,7 +21,7 @@ pub struct BrowserProfile {
   #[serde(default = "default_release_type")]
   pub release_type: String,
   #[serde(default)]
-  pub wayfern_config: Option<WayfernConfig>, // Wayfern configuration
+  pub camoufox_config: Option<CamoufoxConfig>, // Camoufox configuration
   #[serde(default)]
   pub group_id: Option<String>, // Reference to profile group
   #[serde(default)]
@@ -49,11 +31,7 @@ pub struct BrowserProfile {
   #[serde(default)]
   pub window_color: Option<String>, // Per-profile window frame color "#RRGGBB"; auto-derived from the id when unset
   #[serde(default)]
-  pub sync_mode: SyncMode,
-  #[serde(default)]
-  pub encryption_salt: Option<String>,
-  #[serde(default)]
-  pub last_sync: Option<u64>, // Timestamp of last successful sync (epoch seconds)
+  pub encryption_salt: Option<String>, // Per-profile salt for password-protected profile encryption
   #[serde(default)]
   pub host_os: Option<String>, // OS where profile was created ("macos", "windows", "linux")
   #[serde(default)]
@@ -62,10 +40,6 @@ pub struct BrowserProfile {
   pub extension_group_id: Option<String>,
   #[serde(default)]
   pub proxy_bypass_rules: Vec<String>,
-  #[serde(default)]
-  pub created_by_id: Option<String>,
-  #[serde(default)]
-  pub created_by_email: Option<String>,
   #[serde(default)]
   pub dns_blocklist: Option<String>,
   /// True when the on-disk profile dir is encrypted with a per-profile password.
@@ -83,8 +57,6 @@ pub struct BrowserProfile {
   pub created_at: Option<u64>,
   /// Unix seconds of the last meaningful metadata edit (name, tags, note,
   /// proxy/vpn/group/extension assignment, launch hook, bypass rules, dns).
-  /// Source of truth for metadata sync conflict resolution (last-write-wins);
-  /// NOT bumped by browser-file changes, which sync via the file manifest.
   #[serde(default)]
   pub updated_at: Option<u64>,
 }
@@ -126,7 +98,7 @@ impl BrowserProfile {
     self
       .host_os
       .as_deref()
-      .or_else(|| self.wayfern_config.as_ref().and_then(|c| c.os.as_deref()))
+      .or_else(|| self.camoufox_config.as_ref().and_then(|c| c.os.as_deref()))
   }
 
   /// Returns true when the profile was created on a different OS than the current host.
@@ -138,15 +110,6 @@ impl BrowserProfile {
     }
   }
 
-  /// Returns true if sync is enabled (either Regular or Encrypted mode).
-  pub fn is_sync_enabled(&self) -> bool {
-    self.sync_mode != SyncMode::Disabled
-  }
-
-  /// Returns true if sync uses E2E encryption.
-  pub fn is_encrypted_sync(&self) -> bool {
-    self.sync_mode == SyncMode::Encrypted
-  }
 }
 
 #[cfg(test)]

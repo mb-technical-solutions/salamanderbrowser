@@ -620,14 +620,6 @@
     "license": "BSD-3-Clause"
   },
   {
-    "name": "axum",
-    "license": "MIT"
-  },
-  {
-    "name": "axum-core",
-    "license": "MIT"
-  },
-  {
     "name": "base64",
     "license": "Apache-2.0 OR MIT"
   },
@@ -1048,10 +1040,6 @@
     "license": "MIT"
   },
   {
-    "name": "data-encoding",
-    "license": "MIT"
-  },
-  {
     "name": "dayjs",
     "license": "MIT"
   },
@@ -1138,10 +1126,6 @@
   {
     "name": "dom_query",
     "license": "MIT"
-  },
-  {
-    "name": "Donut Browser",
-    "license": "AGPL-3.0-only"
   },
   {
     "name": "downcast-rs",
@@ -1548,10 +1532,6 @@
     "license": "MIT"
   },
   {
-    "name": "http-range-header",
-    "license": "MIT"
-  },
-  {
     "name": "httparse",
     "license": "Apache-2.0 OR MIT"
   },
@@ -1856,10 +1836,6 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
-    "name": "matchit",
-    "license": "MIT AND BSD-3-Clause"
-  },
-  {
     "name": "maxminddb",
     "license": "ISC"
   },
@@ -1968,10 +1944,6 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
-    "name": "num",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
     "name": "num-bigint",
     "license": "Apache-2.0 OR MIT"
   },
@@ -1989,10 +1961,6 @@
   },
   {
     "name": "num-integer",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "num-iter",
     "license": "Apache-2.0 OR MIT"
   },
   {
@@ -2488,6 +2456,10 @@
     "license": "Apache-2.0 OR BSL-1.0"
   },
   {
+    "name": "Salamander Browser",
+    "license": "AGPL-3.0-only"
+  },
+  {
     "name": "same-file",
     "license": "MIT OR Unlicense"
   },
@@ -2517,10 +2489,6 @@
   },
   {
     "name": "sealed",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "secret-service",
     "license": "Apache-2.0 OR MIT"
   },
   {
@@ -2569,10 +2537,6 @@
   },
   {
     "name": "serde_json",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "serde_path_to_error",
     "license": "Apache-2.0 OR MIT"
   },
   {
@@ -2912,10 +2876,6 @@
     "license": "MIT"
   },
   {
-    "name": "tokio-tungstenite",
-    "license": "MIT"
-  },
-  {
     "name": "tokio-util",
     "license": "MIT"
   },
@@ -2986,10 +2946,6 @@
   {
     "name": "tslib",
     "license": "0BSD"
-  },
-  {
-    "name": "tungstenite",
-    "license": "Apache-2.0 OR MIT"
   },
   {
     "name": "typed-path",
@@ -3089,18 +3045,6 @@
   },
   {
     "name": "utf8parse",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "utoipa",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "utoipa-axum",
-    "license": "Apache-2.0 OR MIT"
-  },
-  {
-    "name": "utoipa-gen",
     "license": "Apache-2.0 OR MIT"
   },
   {

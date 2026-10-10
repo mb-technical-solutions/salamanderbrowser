@@ -48,12 +48,7 @@ pub struct VpnConfig {
   pub config_data: String, // Raw config content (encrypted at rest)
   pub created_at: i64,
   pub last_used: Option<i64>,
-  #[serde(default)]
-  pub sync_enabled: bool,
-  #[serde(default)]
-  pub last_sync: Option<u64>,
-  /// Unix seconds of the last meaningful user edit. Source of truth for sync
-  /// conflict resolution (last-write-wins); bumped on config edits only.
+  /// Unix seconds of the last meaningful user edit, bumped on config edits only.
   #[serde(default)]
   pub updated_at: Option<u64>,
 }

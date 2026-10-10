@@ -1,5 +1,5 @@
 {
-  description = "Donut Browser development environment and quick-start commands";
+  description = "Salamander Browser development environment and quick-start commands";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -100,12 +100,12 @@
         releaseAppImage =
           if system == "x86_64-linux" then
             pkgs.fetchurl {
-              url = "https://github.com/zhom/donutbrowser/releases/download/v0.30.0/Donut_0.30.0_amd64.AppImage";
+              url = "https://github.com/mb-technical-solutions/salamanderbrowser/releases/download/v0.30.0/Salamander_0.30.0_amd64.AppImage";
               hash = "sha256-Vcs7ZyWUOcny+ZjoxoP5U6laOTXbqMFAdr+DZABUeJM=";
             }
           else if system == "aarch64-linux" then
             pkgs.fetchurl {
-              url = "https://github.com/zhom/donutbrowser/releases/download/v0.30.0/Donut_0.30.0_aarch64.AppImage";
+              url = "https://github.com/mb-technical-solutions/salamanderbrowser/releases/download/v0.30.0/Salamander_0.30.0_aarch64.AppImage";
               hash = "sha256-KLZe+Vgce9KCzacVESnCkleD6x7yZbWofdMCrHjlJjE=";
             }
           else
@@ -113,7 +113,7 @@
         releaseUnpacked =
           if releaseAppImage != null then
             pkgs.stdenvNoCC.mkDerivation {
-              pname = "donut-release-unpacked";
+              pname = "salamander-release-unpacked";
               version = releaseVersion;
               src = releaseAppImage;
               dontUnpack = true;
@@ -121,9 +121,9 @@
               installPhase = ''
                 runHook preInstall
 
-                cp "$src" ./donut.AppImage
-                chmod +x ./donut.AppImage
-                ./donut.AppImage --appimage-extract >/dev/null
+                cp "$src" ./salamander.AppImage
+                chmod +x ./salamander.AppImage
+                ./salamander.AppImage --appimage-extract >/dev/null
 
                 mkdir -p "$out"
                 cp -a ./squashfs-root "$out/"
@@ -136,14 +136,14 @@
         releaseWrapped =
           if releaseAppImage != null then
             pkgs.appimageTools.wrapType2 {
-              pname = "donut";
+              pname = "salamander";
               version = releaseVersion;
               src = releaseAppImage;
               extraPkgs = _: commonLibs;
               extraInstallCommands = ''
                 for bin in "$out"/bin/*; do
                   if [ -f "$bin" ]; then
-                    mv "$bin" "$out/bin/donut-release"
+                    mv "$bin" "$out/bin/salamander-release"
                     break
                   fi
                 done
@@ -154,7 +154,7 @@
         releaseLauncher =
           if releaseUnpacked != null then
             pkgs.writeShellApplication {
-              name = "donut-release-start";
+              name = "salamander-release-start";
               runtimeInputs = with pkgs; [
                 coreutils
                 xdg-utils
@@ -162,8 +162,8 @@
               text = ''
                 set -euo pipefail
 
-                if [ -x "${releaseWrapped}/bin/donut-release" ]; then
-                  if "${releaseWrapped}/bin/donut-release" "$@"; then
+                if [ -x "${releaseWrapped}/bin/salamander-release" ]; then
+                  if "${releaseWrapped}/bin/salamander-release" "$@"; then
                     exit 0
                   fi
                   echo "Wrapped AppImage failed, retrying with direct AppRun..." >&2
@@ -178,7 +178,7 @@
             }
           else
             pkgs.writeShellApplication {
-              name = "donut-release-start";
+              name = "salamander-release-start";
               text = ''
                 echo "Release launcher is supported only on Linux (x86_64/aarch64)."
                 exit 1
@@ -258,7 +258,7 @@
             export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}"
             export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share:${pkgs.gtk3}/share:''${XDG_DATA_DIRS:-}"
 
-            echo "Donut Browser dev shell ready."
+            echo "Salamander Browser dev shell ready."
             echo "Quick start:"
             echo "  nix run .#setup"
             echo "  nix run .#tauri-dev"
@@ -269,7 +269,7 @@
           '';
         };
 
-        apps.info = mkApp "donut-info" ''
+        apps.info = mkApp "salamander-info" ''
           set -euo pipefail
           echo "Node: $(node --version)"
           echo "pnpm: $(pnpm --version)"
@@ -278,48 +278,48 @@
           echo "Tauri CLI: $(cargo-tauri --version)"
         '';
 
-        apps.deps = mkApp "donut-deps" ''
+        apps.deps = mkApp "salamander-deps" ''
           set -euo pipefail
           pnpm install
         '';
 
-        apps.dev = mkApp "donut-dev" ''
+        apps.dev = mkApp "salamander-dev" ''
           set -euo pipefail
           pnpm dev
         '';
 
-        apps."tauri-dev" = mkApp "donut-tauri-dev" ''
+        apps."tauri-dev" = mkApp "salamander-tauri-dev" ''
           set -euo pipefail
           pnpm tauri dev
         '';
 
-        apps."full-dev" = mkApp "donut-full-dev" ''
+        apps."full-dev" = mkApp "salamander-full-dev" ''
           set -euo pipefail
           chmod +x ./scripts/dev.sh
           ./scripts/dev.sh
         '';
 
-        apps.build = mkApp "donut-build" ''
+        apps.build = mkApp "salamander-build" ''
           set -euo pipefail
           pnpm build
           (cd src-tauri && cargo build)
         '';
 
-        apps.start = mkApp "donut-start" ''
+        apps.start = mkApp "salamander-start" ''
           set -euo pipefail
           pnpm start
         '';
 
-        apps.test = mkApp "donut-test" ''
+        apps.test = mkApp "salamander-test" ''
           set -euo pipefail
           pnpm format && pnpm lint && pnpm test
         '';
 
-        apps.setup = mkApp "donut-setup" ''
+        apps.setup = mkApp "salamander-setup" ''
           set -euo pipefail
 
           if [ ! -f "package.json" ]; then
-            echo "package.json not found. Run this from the donutbrowser repo root."
+            echo "package.json not found. Run this from the salamanderbrowser repo root."
             exit 1
           fi
 
@@ -329,13 +329,13 @@
           echo "Setup complete."
           echo "Run the app with:"
           echo "  nix run .#tauri-dev"
-          echo "Or run full local stack (sync + minio + tauri):"
+          echo "Or run the full dev script:"
           echo "  nix run .#full-dev"
         '';
 
         apps."release-start" = {
           type = "app";
-          program = "${releaseLauncher}/bin/donut-release-start";
+          program = "${releaseLauncher}/bin/salamander-release-start";
         };
 
         apps.default = self.apps.${system}.setup;

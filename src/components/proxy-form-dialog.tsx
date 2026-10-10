@@ -90,7 +90,7 @@ export function ProxyFormDialog({
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<ProxyFormData>(DEFAULT_FORM);
-  // The local parse only covers scheme/host/port. Whether Donut can actually
+  // The local parse only covers scheme/host/port. Whether Salamander can actually
   // use the server — REALITY, XTLS Vision, plain TCP — is decided by the Rust
   // parser, so ask it (below) and show the specific reason while the user is
   // still editing rather than after they save. Declared here because

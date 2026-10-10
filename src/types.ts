@@ -1,6 +1,3 @@
-import type { CookieBotSchedule } from "@/lib/cookie-bot";
-import type { RemoteSessionState } from "@/lib/remote-sessions";
-
 export interface ProxySettings {
   proxy_type: string;
   host: string;
@@ -26,21 +23,16 @@ export interface BrowserProfile {
   process_id?: number;
   last_launch?: number;
   release_type: string;
-  wayfern_config?: WayfernConfig; // Wayfern configuration
+  camoufox_config?: CamoufoxConfig; // Camoufox configuration
   group_id?: string; // Reference to profile group
   tags?: string[];
   note?: string; // User note
   window_color?: string; // Per-profile window frame color "#RRGGBB"; auto-derived from the id when unset
-  sync_mode?: SyncMode;
-  encryption_salt?: string;
-  last_sync?: number; // Timestamp of last successful sync (epoch seconds)
   host_os?: string; // OS where profile was created ("macos", "windows", "linux")
   ephemeral?: boolean;
   clear_on_close?: boolean;
   extension_group_id?: string;
   proxy_bypass_rules?: string[];
-  created_by_id?: string;
-  created_by_email?: string;
   /** Profile creation timestamp (epoch seconds, UTC). Undefined for legacy
    * profiles created before this field existed. */
   created_at?: number;
@@ -56,8 +48,6 @@ export interface Extension {
   browser_compatibility: string[];
   created_at: number;
   updated_at: number;
-  sync_enabled?: boolean;
-  last_sync?: number;
   version?: string;
   description?: string;
   author?: string;
@@ -65,7 +55,7 @@ export interface Extension {
   /** How the payload was imported: a `.crx`/`.zip` archive, or a folder. */
   source_kind: "archive" | "unpacked";
   /** Absolute folder the extension is loaded from in place. Set means nothing
-   * was copied into Donut, so the extension is machine-local and never syncs. */
+   * was copied into Salamander, so the extension is machine-local and never syncs. */
   linked_path?: string;
 }
 
@@ -75,167 +65,6 @@ export interface ExtensionGroup {
   extension_ids: string[];
   created_at: number;
   updated_at: number;
-  sync_enabled?: boolean;
-  last_sync?: number;
-}
-
-export type SyncMode = "Disabled" | "Regular" | "Encrypted";
-
-export type SyncStatus = "Disabled" | "Syncing" | "Synced" | "Error";
-
-export interface SyncSettings {
-  sync_server_url?: string;
-  sync_token?: string;
-}
-
-/**
- * Result of `check_sync_server_connection`. Files upload straight to the
- * storage host named in the presigned URL rather than through the sync server,
- * so a healthy server is not evidence that sync works: `storage_reachable`
- * false means every transfer will fail at connect.
- *
- * `null` means "not known", which is not the same as false — a server that
- * predates `/readyz`, or a cloud deployment that withholds its storage host,
- * discloses nothing to probe.
- */
-export interface SyncServerCheck {
-  server_reachable: boolean;
-  storage_ready: boolean | null;
-  storage_endpoint: string | null;
-  storage_reachable: boolean | null;
-  storage_error: string | null;
-}
-
-/**
- * Capability/limit set derived from the plan by the backend. Features are gated
- * on these flags instead of a single "is paid?" check, so a plan like "solo"
- * (cloud backup + nightly cookie bot, no automation, no fingerprint editing, no
- * hands-on remote session) is just data. Mirrors
- * `apps/backend/src/plans/entitlements.ts`. Resolve via `getEntitlements()` —
- * the desktop populates it, but it stays optional for safety on older state.
- */
-export interface Entitlements {
-  active: boolean;
-  browserAutomation: boolean;
-  crossOsFingerprints: boolean;
-  cloudBackup: boolean;
-  teamCollaboration: boolean;
-  /** Overnight profile warming on a leased remote host. */
-  cookieBot: boolean;
-  /**
-   * May open a HANDS-ON remote session. Not implied by `cookieBot` or by a
-   * non-zero `remoteBrowserHours`: solo funds a nightly bot out of its hours and
-   * may not drive a remote browser itself, so any UI offering interactive remote
-   * control must read this flag.
-   */
-  remoteInteractive: boolean;
-  profileLimit: number;
-  requestsPerHour: number;
-  /**
-   * Per-seat monthly allowance for remote sessions. Reporting only: the
-   * spendable figure is whatever `get_remote_hours_quota` returns, because a
-   * team pools this across its seats and only the server knows the seat count.
-   */
-  remoteBrowserHours: number;
-}
-
-/**
- * What a backend older than the current release actually sends. Read it through
- * `getEntitlements()`, which fills the gaps — never off `CloudUser` directly, or
- * a paying customer's Cookie Bot silently reads `false`.
- *
- * `remoteInteractive` joins the optional set for the same reason `cookieBot`
- * did: a backend predating the solo tier omits it, and reading the absent key as
- * `false` would take interactive remote sessions away from a Pro customer whose
- * only mistake was a stale cached login.
- */
-export type ServerEntitlements = Omit<
-  Entitlements,
-  "cookieBot" | "remoteBrowserHours" | "remoteInteractive"
-> &
-  Partial<
-    Pick<Entitlements, "cookieBot" | "remoteBrowserHours" | "remoteInteractive">
-  >;
-
-export interface CloudUser {
-  id: string;
-  email: string;
-  plan: string;
-  planPeriod: string | null;
-  subscriptionStatus: string;
-  profileLimit: number;
-  cloudProfilesUsed: number;
-  proxyBandwidthLimitMb: number;
-  proxyBandwidthUsedMb: number;
-  proxyBandwidthExtraMb: number;
-  teamId?: string;
-  teamName?: string;
-  teamRole?: string;
-  // This device's position among the user's active devices (oldest = 1).
-  // Ordinal 1 / isPrimaryDevice === true is the only device that can run
-  // browser automation. Optional: older backends omit them.
-  deviceOrdinal?: number | null;
-  deviceCount?: number | null;
-  isPrimaryDevice?: boolean | null;
-  // Plan-derived capabilities. The desktop resolves this before handing CloudUser
-  // to the UI; optional to stay safe on older cached state.
-  entitlements?: ServerEntitlements;
-}
-
-/**
- * Cookie Bot and remote-session wire types. Defined next to the transport that
- * owns them (`src/lib/cookie-bot.ts`, `src/lib/remote-sessions.ts`) and
- * re-exported here so a component reads one module. Type-only, so nothing is
- * pulled into the bundle.
- */
-export type {
-  CookieBotConflict,
-  CookieBotPreset,
-  CookieBotPresetList,
-  CookieBotRun,
-  CookieBotRunPage,
-  CookieBotRunStarted,
-  CookieBotSchedule,
-  CookieBotScheduleInput,
-  CookieBotScheduleList,
-  CookieBotScheduleSaved,
-  CookieBotScope,
-  CookieBotUsage,
-  CookieBotUsageMember,
-  CookieBotUsageProfile,
-  RemoteHoursMember,
-  RemoteHoursQuota,
-} from "@/lib/cookie-bot";
-export type {
-  RemoteSessionPhase,
-  RemoteSessionSnapshot,
-  RemoteSessionState,
-} from "@/lib/remote-sessions";
-
-/** Where a profile stands with the bot, as one row of the profile table reads it. */
-export interface ProfileBotState {
-  /** The stored enrolment, or null when the profile is not enrolled. */
-  schedule: CookieBotSchedule | null;
-  /** A remote session for this profile that has not closed yet. */
-  liveSession: RemoteSessionState | null;
-}
-
-export interface ProfileLockInfo {
-  profileId: string;
-  lockedBy: string;
-  lockedByEmail: string;
-  lockedAt: string;
-  expiresAt?: string;
-}
-
-export interface CloudAuthState {
-  user: CloudUser;
-  logged_in_at: string;
-}
-
-export interface ProfileSyncStatusEvent {
-  profile_id: string;
-  status: "disabled" | "syncing" | "synced" | "error" | "pending";
 }
 
 export interface ProxyCheckResult {
@@ -247,22 +76,11 @@ export interface ProxyCheckResult {
   is_valid: boolean;
 }
 
-export function isSyncEnabled(profile: BrowserProfile): boolean {
-  return profile.sync_mode != null && profile.sync_mode !== "Disabled";
-}
-
-export const CLOUD_PROXY_ID = "cloud-included-proxy";
-
 export interface StoredProxy {
   id: string;
   name: string;
   proxy_settings: ProxySettings;
-  sync_enabled?: boolean;
-  last_sync?: number;
-  is_cloud_managed?: boolean;
-  is_cloud_derived?: boolean;
   geo_country?: string;
-  geo_state?: string;
   geo_region?: string;
   geo_city?: string;
   geo_isp?: string;
@@ -276,96 +94,12 @@ export interface LocationItem {
 export interface ProfileGroup {
   id: string;
   name: string;
-  sync_enabled?: boolean;
-  last_sync?: number;
 }
 
 export interface GroupWithCount {
   id: string;
   name: string;
   count: number;
-  sync_enabled?: boolean;
-  last_sync?: number;
-}
-
-export interface DetectedProfile {
-  browser: string;
-  name: string;
-  path: string;
-  description: string;
-  mapped_browser: string;
-}
-
-export interface ImportProfileItem {
-  source_path: string;
-  /**
-   * Source browser family. Selects which OS keychain entry holds the key that
-   * unlocks the source's cookies and passwords, so it decides whether secrets
-   * survive the import.
-   */
-  browser_type?: string;
-  new_profile_name: string;
-  /** Mutually exclusive with `vpn_id`; the importer rejects setting both. */
-  proxy_id?: string | null;
-  vpn_id?: string | null;
-  /** Import even though the source browser is still running. */
-  allow_running?: boolean;
-}
-
-/** Stable warning codes; each maps to `importProfile.warnings.*`. */
-export type ProfileImportWarning =
-  | "secretsNotMigrated"
-  | "appBoundEncrypted"
-  | "storeTooOld"
-  | "storeTooNew"
-  | "sourceBrowserRunning"
-  | "securePreferencesReset"
-  | "extensionsPartial"
-  | "storeUnreadable";
-
-export interface ProfileImportReport {
-  cookies_migrated: number;
-  cookies_unrecoverable: number;
-  passwords_migrated: number;
-  passwords_unrecoverable: number;
-  payment_methods_migrated: number;
-  payment_methods_unrecoverable: number;
-  extensions_migrated: number;
-  history_entries: number;
-  bookmarks: number;
-  local_storage_origins: number;
-  bytes_copied: number;
-  warnings: ProfileImportWarning[];
-}
-
-export interface ProfileImportItemResult {
-  name: string;
-  source_path: string;
-  status: "imported" | "skipped" | "failed";
-  profile_id: string | null;
-  error: string | null;
-  /** What actually came across. Present when status is "imported". */
-  report?: ProfileImportReport | null;
-}
-
-export interface ProfileImportBatchResult {
-  imported_count: number;
-  skipped_count: number;
-  failed_count: number;
-  results: ProfileImportItemResult[];
-}
-
-export interface ArchiveScanResult {
-  extracted_dir: string;
-  profiles: DetectedProfile[];
-}
-
-export interface ProfileImportProgress {
-  total: number;
-  completed: number;
-  index: number;
-  name: string;
-  status: "importing" | "imported" | "skipped" | "failed";
 }
 
 export interface BrowserReleaseTypes {
@@ -396,157 +130,26 @@ export interface AppUpdateProgress {
   message: string;
 }
 
-export type WayfernOS = "windows" | "macos" | "linux" | "android" | "ios";
+export type CamoufoxOS = "windows" | "macos" | "linux";
 
-export interface WayfernConfig {
+/** Camoufox (Firefox-based anti-detect engine) profile configuration. Mirrors
+ * `CamoufoxConfig` in `camoufox_manager.rs`. The fingerprint comes from a
+ * local Bayesian-network generator, not a launched device. */
+export interface CamoufoxConfig {
   proxy?: string;
   screen_max_width?: number;
   screen_max_height?: number;
   screen_min_width?: number;
   screen_min_height?: number;
-  geoip?: string | boolean; // For compatibility with shared config form
-  block_images?: boolean; // For compatibility with shared config form
+  geoip?: string | boolean;
+  block_images?: boolean;
   block_webrtc?: boolean;
   block_webgl?: boolean;
-  executable_path?: string;
-  fingerprint?: string; // JSON string of the complete fingerprint config
-  randomize_fingerprint_on_launch?: boolean; // Generate new fingerprint on every launch
-  os?: WayfernOS; // Operating system for fingerprint generation
-  geo_proxy_signature?: string; // Internal: routing the fingerprint's location was computed for
-  identity_id?: string; // Internal: UUID the device is derived from on browsers with the identity API
-  identity_baseline?: string; // Internal: derived fingerprint before edits, diffed to recover overrides
-}
-
-// Wayfern fingerprint config - matches the C++ FingerprintData structure
-export interface WayfernFingerprintConfig {
-  // User agent and platform
-  userAgent?: string;
-  platform?: string;
-  platformVersion?: string;
-  brand?: string;
-  brandVersion?: string;
-
-  // Hardware
-  hardwareConcurrency?: number;
-  maxTouchPoints?: number;
-  deviceMemory?: number;
-
-  // Screen
-  screenWidth?: number;
-  screenHeight?: number;
-  screenAvailWidth?: number;
-  screenAvailHeight?: number;
-  screenColorDepth?: number;
-  screenPixelDepth?: number;
-  devicePixelRatio?: number;
-
-  // Window
-  windowOuterWidth?: number;
-  windowOuterHeight?: number;
-  windowInnerWidth?: number;
-  windowInnerHeight?: number;
-  screenX?: number;
-  screenY?: number;
-
-  // Language
-  language?: string;
-  languages?: string[];
-
-  // Browser features
-  doNotTrack?: string;
-  cookieEnabled?: boolean;
-  webdriver?: boolean;
-  pdfViewerEnabled?: boolean;
-
-  // WebGL
-  webglVendor?: string;
-  webglRenderer?: string;
-  webglVersion?: string;
-  webglShadingLanguageVersion?: string;
-  webglParameters?: string; // JSON string
-  webgl2Parameters?: string; // JSON string
-  webglShaderPrecisionFormats?: string; // JSON string
-  webgl2ShaderPrecisionFormats?: string; // JSON string
-
-  // Timezone and geolocation
-  timezone?: string;
-  timezoneOffset?: number;
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-
-  // Media queries / preferences
-  prefersReducedMotion?: boolean;
-  prefersDarkMode?: boolean;
-  prefersContrast?: string;
-  prefersReducedData?: boolean;
-
-  // Color/HDR
-  colorGamutSrgb?: boolean;
-  colorGamutP3?: boolean;
-  colorGamutRec2020?: boolean;
-  hdrSupport?: boolean;
-
-  // Audio
-  audioSampleRate?: number;
-  audioMaxChannelCount?: number;
-
-  // Storage
-  localStorage?: boolean;
-  sessionStorage?: boolean;
-  indexedDb?: boolean;
-
-  // Canvas
-  canvasNoiseSeed?: string;
-
-  // Fonts, plugins, mime types (JSON strings)
-  fonts?: string; // JSON array string
-  plugins?: string; // JSON array string
-  mimeTypes?: string; // JSON array string
-
-  // Battery (optional)
-  batteryCharging?: boolean;
-  batteryChargingTime?: number;
-  batteryDischargingTime?: number;
-  batteryLevel?: number;
-
-  // Voices
-  voices?: string; // JSON array string
-
-  // Vendor info
-  vendor?: string;
-  vendorSub?: string;
-  productSub?: string;
-
-  // Network (optional)
-  connectionEffectiveType?: string;
-  connectionDownlink?: number;
-  connectionRtt?: number;
-
-  // Performance
-  performanceMemory?: number;
-}
-
-export interface WayfernLaunchResult {
-  id: string;
-  processId?: number;
-  profilePath?: string;
-  url?: string;
-  cdp_port?: number;
-}
-
-// Synchronizer types
-export interface SyncFollowerState {
-  profile_id: string;
-  profile_name: string;
-  failed_at_url: string | null;
-}
-
-export interface SyncSessionInfo {
-  id: string;
-  leader_profile_id: string;
-  leader_profile_name: string;
-  followers: SyncFollowerState[];
+  fingerprint?: string; // Flat dotted-key JSON config Camoufox reads via CAMOU_CONFIG_N env vars
+  randomize_fingerprint_on_launch?: boolean;
+  os?: CamoufoxOS; // Camoufox has no mobile fingerprints
+  /** URLs opened as tabs every time the profile launches (quick-launch presets). */
+  preset_tabs?: string[];
 }
 
 // Traffic stats types
@@ -736,6 +339,21 @@ export type ProxyParseResult =
   | { status: "ambiguous"; line: string; possible_formats: string[] }
   | { status: "invalid"; line: string; reason: string };
 
+export interface SubscriptionEntry {
+  name: string;
+  uri: string;
+}
+
+export interface SubscriptionSkip {
+  preview: string;
+  reason: string;
+}
+
+export interface SubscriptionImportResult {
+  entries: SubscriptionEntry[];
+  skipped: SubscriptionSkip[];
+}
+
 // VPN types
 export type VpnType = "WireGuard";
 
@@ -746,8 +364,6 @@ export interface VpnConfig {
   config_data: string; // Raw config content (may be empty in list view)
   created_at: number;
   last_used?: number;
-  sync_enabled?: boolean;
-  last_sync?: number;
 }
 
 export interface VpnImportResult {
@@ -797,11 +413,11 @@ export type ExtensionScanState =
 
 /** An extension found in a profile that could change where the browser connects. */
 export interface DetectedVpnExtension {
-  /** Acknowledgement identity: `donut:<uuid>` or `crx:<id>`. */
+  /** Acknowledgement identity: `salamander:<uuid>` or `crx:<id>`. */
   key: string;
   name: string;
   version: string | null;
-  /** "donut" (managed by Donut) or "browser" (installed in the profile). */
+  /** "salamander" (managed by Salamander) or "browser" (installed in the profile). */
   source: string;
   confidence: VpnExtensionConfidence;
   /** Holds the `proxy` permission outright, so it can change the proxy today. */
@@ -820,7 +436,7 @@ export interface PreLaunchChecks {
 }
 
 /**
- * What happened when the user asked Donut to become the default browser.
+ * What happened when the user asked Salamander to become the default browser.
  *
  * macOS and Linux let a program make the change itself, so the answer there is
  * always "set". Windows reserves the final choice for its own settings page:

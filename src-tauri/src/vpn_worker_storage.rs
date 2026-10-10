@@ -12,6 +12,13 @@ pub struct VpnWorkerConfig {
   pub local_port: Option<u16>,
   pub local_url: Option<String>,
   pub pid: Option<u32>,
+  /// Start time of `pid`, pinning a liveness check to one exact process.
+  /// Without it a recycled PID reads as "my worker is still running" once
+  /// the real worker has died — see the identical field on
+  /// `XrayWorkerConfig`/`ProxyConfig`. `None` on configs written before this
+  /// field existed; those fall back to a bare existence check.
+  #[serde(default)]
+  pub pid_start_time: Option<u64>,
 }
 
 impl VpnWorkerConfig {
@@ -24,6 +31,7 @@ impl VpnWorkerConfig {
       local_port: None,
       local_url: None,
       pid: None,
+      pid_start_time: None,
     }
   }
 }

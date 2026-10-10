@@ -24,9 +24,9 @@ async function diagnosticSources(runRoot) {
   }).catch(() => []);
   for (const session of sessions.filter((entry) => entry.isDirectory())) {
     const root = path.join(runRoot, "sessions", session.name);
-    sources.push(...(await logFiles(path.join(root, "donut", "logs"))));
+    sources.push(...(await logFiles(path.join(root, "salamander", "logs"))));
     sources.push(
-      ...(await logFiles(path.join(root, "tmp"), /^donut-proxy-.*\.log$/iu)),
+      ...(await logFiles(path.join(root, "tmp"), /^salamander-proxy-.*\.log$/iu)),
     );
   }
   return sources;

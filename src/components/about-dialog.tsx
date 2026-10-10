@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { StepTransition } from "@/components/ui/step-transition";
 import licenses from "@/generated/licenses.json";
 import xraySource from "@/generated/xray-source.json";
-import { launchDonutClone } from "@/lib/donut-physics";
+import { launchSalamanderClone } from "@/lib/salamander-crawl";
 import { Logo } from "./icons/logo";
 import { RippleButton } from "./ui/ripple";
 
@@ -36,8 +36,8 @@ interface SystemInfo {
 
 type AboutView = "about" | "licenses";
 
-// Flywheel: each click adds spin; past this speed the donut escapes the
-// dialog and bounces around the window (shared physics with the rail egg).
+// Flywheel: each click adds spin; past this speed the logo escapes the
+// dialog and crawls off around the window (shared physics with the rail egg).
 const SPIN_PER_CLICK = 540; // deg/s
 const ESCAPE_VELOCITY = 2200; // deg/s
 const SPIN_FRICTION = 1.1; // fraction of velocity lost per second
@@ -88,14 +88,13 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       el.style.transform = `rotate(${rotationRef.current}deg)`;
 
       if (velocityRef.current >= ESCAPE_VELOCITY) {
-        // The flywheel wins: the donut tears loose and joins the bounce sim,
-        // keeping its spin.
+        // The flywheel wins: the logo tears loose and joins the crawl sim,
+        // keeping its momentum as its initial launch velocity.
         stopSpin();
         setLogoFlown(true);
-        cancelLaunchRef.current = launchDonutClone(el, {
+        cancelLaunchRef.current = launchSalamanderClone(el, {
           initialVX: Math.random() > 0.5 ? 420 : -420,
           initialVY: -750,
-          spinSpeed: ESCAPE_VELOCITY,
           onExit: () => {
             cancelLaunchRef.current = null;
           },
@@ -214,7 +213,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                 <button
                   ref={logoRef}
                   type="button"
-                  aria-label={t("header.donutLogo")}
+                  aria-label={t("header.salamanderLogo")}
                   onClick={handleLogoClick}
                   className="grid size-16 cursor-pointer place-items-center rounded-full bg-transparent text-foreground select-none will-change-transform"
                   style={logoFlown ? { visibility: "hidden" } : undefined}
@@ -223,7 +222,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                 </button>
 
                 <div className="text-center">
-                  <p className="text-lg font-semibold">Donut Browser</p>
+                  <p className="text-lg font-semibold">Salamander Browser</p>
                   {systemInfo && (
                     <>
                       <p className="text-sm text-muted-foreground">
@@ -251,15 +250,10 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => void openUrl("https://donutbrowser.com")}
-                  >
-                    {t("about.website")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() =>
-                      void openUrl("https://github.com/zhom/donutbrowser")
+                      void openUrl(
+                        "https://github.com/mb-technical-solutions/salamanderbrowser",
+                      )
                     }
                   >
                     {t("about.github")}

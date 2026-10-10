@@ -36,9 +36,6 @@ export type ShortcutId =
   | "goProxies"
   | "goExtensions"
   | "goGroups"
-  | "goCookieBot"
-  | "goIntegrations"
-  | "goAccount"
   | "goSettings";
 
 export const SHORTCUTS: ShortcutDef[] = [
@@ -92,31 +89,6 @@ export const SHORTCUTS: ShortcutDef[] = [
     group: "navigation",
     key: "g",
     mod: true,
-  },
-  {
-    // Mod+B: "bot". Every other letter in the navigation group was taken.
-    id: "goCookieBot",
-    labelKey: "shortcuts.goCookieBot",
-    group: "navigation",
-    key: "b",
-    mod: true,
-  },
-  {
-    id: "goIntegrations",
-    labelKey: "shortcuts.goIntegrations",
-    group: "navigation",
-    key: "i",
-    mod: true,
-  },
-  {
-    // Mod+Shift+A (not Mod+A): plain Mod+A must stay select-all in any
-    // focused text field or table context.
-    id: "goAccount",
-    labelKey: "shortcuts.goAccount",
-    group: "navigation",
-    key: "a",
-    mod: true,
-    shift: true,
   },
   {
     id: "goSettings",

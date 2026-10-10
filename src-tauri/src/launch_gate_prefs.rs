@@ -81,7 +81,7 @@ fn update(mutate: impl FnOnce(&mut LaunchGatePrefs)) {
 pub fn fingerprint_hash(profile: &BrowserProfile) -> String {
   use sha2::{Digest, Sha256};
   let fingerprint = profile
-    .wayfern_config
+    .camoufox_config
     .as_ref()
     .and_then(|c| c.fingerprint.as_deref())
     .unwrap_or("");
@@ -169,10 +169,10 @@ mod tests {
   fn profile_with(fingerprint: &str) -> BrowserProfile {
     let mut profile = BrowserProfile {
       id: uuid::Uuid::new_v4(),
-      browser: "wayfern".into(),
+      browser: "camoufox".into(),
       ..Default::default()
     };
-    profile.wayfern_config = Some(crate::wayfern_manager::WayfernConfig {
+    profile.camoufox_config = Some(crate::camoufox_manager::CamoufoxConfig {
       fingerprint: Some(fingerprint.to_string()),
       ..Default::default()
     });

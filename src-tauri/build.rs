@@ -1,7 +1,7 @@
 fn main() {
   println!("cargo::rustc-check-cfg=cfg(mobile)");
   let build_target = std::env::var("TARGET").expect("Cargo must provide TARGET");
-  println!("cargo:rustc-env=DONUT_BUILD_TARGET={build_target}");
+  println!("cargo:rustc-env=SALAMANDER_BUILD_TARGET={build_target}");
 
   // Ensure dist folder exists for tauri::generate_context!() macro
   // This allows running cargo test without building the frontend first
@@ -38,11 +38,11 @@ fn main() {
   }
 
   // Inject vault password at build time
-  if let Ok(vault_password) = std::env::var("DONUT_BROWSER_VAULT_PASSWORD") {
-    println!("cargo:rustc-env=DONUT_BROWSER_VAULT_PASSWORD={vault_password}");
+  if let Ok(vault_password) = std::env::var("SALAMANDER_BROWSER_VAULT_PASSWORD") {
+    println!("cargo:rustc-env=SALAMANDER_BROWSER_VAULT_PASSWORD={vault_password}");
   } else {
     // Use default password if environment variable is not set
-    println!("cargo:rustc-env=DONUT_BROWSER_VAULT_PASSWORD=donutbrowser-api-vault-password");
+    println!("cargo:rustc-env=SALAMANDER_BROWSER_VAULT_PASSWORD=salamanderbrowser-api-vault-password");
   }
 
   // Tell Cargo to rebuild if the proxy binary source changes
@@ -56,7 +56,7 @@ fn main() {
   println!("cargo:rerun-if-changed=binaries");
 
   // Only run tauri_build if all external binaries exist
-  // This allows building donut-proxy sidecar without the other binaries present
+  // This allows building salamander-proxy sidecar without the other binaries present
   if external_binaries_exist() {
     tauri_build::build();
 
@@ -95,10 +95,10 @@ fn external_binaries_exist() -> bool {
   let binaries_dir = PathBuf::from(&manifest_dir).join("binaries");
 
   // Check for all required external binaries (must match tauri.conf.json externalBin)
-  let donut_proxy_name = if target.contains("windows") {
-    format!("donut-proxy-{}.exe", target)
+  let salamander_proxy_name = if target.contains("windows") {
+    format!("salamander-proxy-{}.exe", target)
   } else {
-    format!("donut-proxy-{}", target)
+    format!("salamander-proxy-{}", target)
   };
   let xray_name = if target.contains("windows") {
     format!("xray-{}.exe", target)
@@ -106,7 +106,7 @@ fn external_binaries_exist() -> bool {
     format!("xray-{}", target)
   };
 
-  binaries_dir.join(&donut_proxy_name).exists() && binaries_dir.join(&xray_name).exists()
+  binaries_dir.join(&salamander_proxy_name).exists() && binaries_dir.join(&xray_name).exists()
 }
 
 fn ensure_dist_folder_exists() {

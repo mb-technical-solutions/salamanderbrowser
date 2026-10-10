@@ -2,13 +2,13 @@
 
 ## Reporting Security Issues
 
-Thanks for helping keep Donut Browser safe.
+Thanks for helping keep Salamander Browser safe.
 
-I take the security of Donut Browser seriously. If you believe you have found a security vulnerability, report it to me through coordinated disclosure.
+I take the security of Salamander Browser seriously. If you believe you have found a security vulnerability, report it to me through coordinated disclosure.
 
 Do not report security vulnerabilities through public GitHub issues, discussions, or pull requests.
 
-Instead, send an email to [contact@donutbrowser.com](mailto:contact@donutbrowser.com) with the subject line "Security Vulnerability Report".
+Instead, open a [private security advisory](https://github.com/mb-technical-solutions/salamanderbrowser/security/advisories/new) on GitHub with the subject line "Security Vulnerability Report".
 
 Include as much of the following as you can:
 
@@ -40,9 +40,9 @@ Say in your email whether AI was involved and what it did. That disclosure is ne
 
 ## Contact
 
-For urgent security matters, contact me at [contact@donutbrowser.com](mailto:contact@donutbrowser.com).
+For urgent security matters, use a [private security advisory](https://github.com/mb-technical-solutions/salamanderbrowser/security/advisories/new).
 
 For general questions about this security policy, you can also reach out through:
 
-- [GitHub Issues](https://github.com/zhom/donutbrowser/issues) (for non-security questions only)
-- [GitHub Discussions](https://github.com/zhom/donutbrowser/discussions)
+- [GitHub Issues](https://github.com/mb-technical-solutions/salamanderbrowser/issues) (for non-security questions only)
+- [GitHub Discussions](https://github.com/mb-technical-solutions/salamanderbrowser/discussions)

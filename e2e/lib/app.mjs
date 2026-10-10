@@ -30,7 +30,7 @@ function isolatedEnvironment(root, extra = {}) {
   const home = path.join(root, "home");
   const temp = path.join(root, "tmp");
   return {
-    DONUTBROWSER_DATA_ROOT: path.join(root, "donut"),
+    SALAMANDERBROWSER_DATA_ROOT: path.join(root, "salamander"),
     HOME: home,
     USERPROFILE: home,
     ...(process.platform === "darwin" ? { CFFIXED_USER_HOME: home } : {}),
@@ -70,7 +70,6 @@ export class AppSession {
     seedVersionCache = true,
     seedDownloadedBrowser = false,
     onboardingCompleted = true,
-    wayfernTermsAccepted = true,
   }) {
     this.name = name;
     this.root = root;
@@ -83,12 +82,11 @@ export class AppSession {
     this.seedVersionCache = seedVersionCache;
     this.seedDownloadedBrowser = seedDownloadedBrowser;
     this.onboardingCompleted = onboardingCompleted;
-    this.wayfernTermsAccepted = wayfernTermsAccepted;
     this.session = null;
   }
 
   get dataRoot() {
-    return path.join(this.root, "donut");
+    return path.join(this.root, "salamander");
   }
 
   async start() {
@@ -125,52 +123,17 @@ export class AppSession {
         }
       });
     }
-    if (this.wayfernTermsAccepted) {
-      const termsFile =
-        process.platform === "darwin"
-          ? path.join(
-              this.root,
-              "home",
-              "Library",
-              "Application Support",
-              "Wayfern",
-              "license-accepted",
-            )
-          : process.platform === "win32"
-            ? path.join(
-                this.root,
-                "windows",
-                "roaming",
-                "Wayfern",
-                "license-accepted",
-              )
-            : path.join(
-                this.root,
-                "xdg",
-                "config",
-                "Wayfern",
-                "license-accepted",
-              );
-      await mkdir(path.dirname(termsFile), { recursive: true });
-      await writeFile(termsFile, `${Math.floor(Date.now() / 1000)}\n`, {
-        flag: "wx",
-      }).catch((error) => {
-        if (error.code !== "EEXIST") {
-          throw error;
-        }
-      });
-    }
     if (this.seedVersionCache) {
       const seededVersion =
         typeof this.seedVersionCache === "string"
           ? this.seedVersionCache
-          : "150.0.7871.100";
+          : "135.0.1-beta.24";
       const versionCache = path.join(
         this.root,
-        "donut",
+        "salamander",
         "cache",
         "version_cache",
-        "wayfern_versions.json",
+        "camoufox_versions.json",
       );
       await mkdir(path.dirname(versionCache), { recursive: true });
       await writeFile(
@@ -187,19 +150,19 @@ export class AppSession {
       });
     }
     if (this.seedDownloadedBrowser) {
-      // Registers a Wayfern version as "downloaded" without installing a
+      // Registers a Camoufox version as "downloaded" without installing a
       // binary. Profile import derives its version from this registry and
       // fails with BROWSER_NOT_DOWNLOADED otherwise, so suites that exercise
       // import but never launch a browser need the entry and nothing else.
       const seededVersion =
         typeof this.seedDownloadedBrowser === "string"
           ? this.seedDownloadedBrowser
-          : "150.0.7871.100";
+          : "135.0.1-beta.24";
       const installDir = path.join(
         this.dataRoot,
         "data",
         "binaries",
-        "wayfern",
+        "camoufox",
         seededVersion,
       );
       await mkdir(installDir, { recursive: true });
@@ -215,9 +178,9 @@ export class AppSession {
         `${JSON.stringify(
           {
             browsers: {
-              wayfern: {
+              camoufox: {
                 [seededVersion]: {
-                  browser: "wayfern",
+                  browser: "camoufox",
                   version: seededVersion,
                   file_path: installDir,
                 },
@@ -235,13 +198,13 @@ export class AppSession {
       });
     }
     const env = isolatedEnvironment(this.root, {
-      DONUT_E2E_DISABLE_STARTUP_NETWORK: "1",
-      ...(process.env.DONUT_E2E_FIXTURE_URL
+      SALAMANDER_E2E_DISABLE_STARTUP_NETWORK: "1",
+      ...(process.env.SALAMANDER_E2E_FIXTURE_URL
         ? {
-            DONUT_E2E_DNS_BLOCKLIST_BASE_URL: `${process.env.DONUT_E2E_FIXTURE_URL}/dns`,
-            ...(process.env.DONUT_E2E_GEOIP_FIXTURE_READY === "1"
+            SALAMANDER_E2E_DNS_BLOCKLIST_BASE_URL: `${process.env.SALAMANDER_E2E_FIXTURE_URL}/dns`,
+            ...(process.env.SALAMANDER_E2E_GEOIP_FIXTURE_READY === "1"
               ? {
-                  DONUT_E2E_GEOIP_DOWNLOAD_URL: `${process.env.DONUT_E2E_FIXTURE_URL}/geoip.mmdb`,
+                  SALAMANDER_E2E_GEOIP_DOWNLOAD_URL: `${process.env.SALAMANDER_E2E_FIXTURE_URL}/geoip.mmdb`,
                 }
               : {}),
           }
@@ -563,14 +526,14 @@ export class AppSession {
 }
 
 export function appFromEnvironment(name, options = {}) {
-  const runRoot = process.env.DONUT_E2E_RUN_ROOT;
-  assert.ok(runRoot, "DONUT_E2E_RUN_ROOT is required");
+  const runRoot = process.env.SALAMANDER_E2E_RUN_ROOT;
+  assert.ok(runRoot, "SALAMANDER_E2E_RUN_ROOT is required");
   return new AppSession({
     name,
     root: options.root ?? path.join(runRoot, "sessions", name),
-    application: process.env.DONUT_E2E_APP,
-    driverUrl: process.env.DONUT_E2E_DRIVER_URL,
-    cwd: process.env.DONUT_E2E_PROJECT_ROOT,
+    application: process.env.SALAMANDER_E2E_APP,
+    driverUrl: process.env.SALAMANDER_E2E_DRIVER_URL,
+    cwd: process.env.SALAMANDER_E2E_PROJECT_ROOT,
     token: process.env.WAYFERN_TEST_TOKEN,
     extraEnv: options.extraEnv,
     args: options.args,

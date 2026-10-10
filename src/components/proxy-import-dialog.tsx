@@ -19,12 +19,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepTransition } from "@/components/ui/step-transition";
+import { translateBackendError } from "@/lib/backend-errors";
 import { getCurrentOS } from "@/lib/browser-utils";
 import { resolveAmbiguousProxyLine } from "@/lib/proxy-string";
 import type {
   ParsedProxyLine,
   ProxyImportResult,
   ProxyParseResult,
+  SubscriptionImportResult,
 } from "@/types";
 import { RippleButton } from "./ui/ripple";
 
@@ -67,6 +69,8 @@ export function ProxyImportDialog({ isOpen, onClose }: ProxyImportDialogProps) {
     { step: "dropzone", direction: 1 },
   );
   const [isDragOver, setIsDragOver] = useState(false);
+  const [subscriptionUrl, setSubscriptionUrl] = useState("");
+  const [isFetchingSubscription, setIsFetchingSubscription] = useState(false);
   const [parsedProxies, setParsedProxies] = useState<ParsedProxyLine[]>([]);
   const [ambiguousProxies, setAmbiguousProxies] = useState<AmbiguousProxy[]>(
     [],
@@ -93,6 +97,8 @@ export function ProxyImportDialog({ isOpen, onClose }: ProxyImportDialogProps) {
     setImportResult(null);
     setIsImporting(false);
     setNamePrefix(t("proxies.importDialog.namePrefixDefault"));
+    setSubscriptionUrl("");
+    setIsFetchingSubscription(false);
   }, [t]);
 
   const processContent = useCallback(
@@ -159,6 +165,36 @@ export function ProxyImportDialog({ isOpen, onClose }: ProxyImportDialogProps) {
     },
     [t],
   );
+
+  const handleFetchSubscription = useCallback(async () => {
+    const url = subscriptionUrl.trim();
+    if (!url) return;
+    setIsFetchingSubscription(true);
+    try {
+      const result = await invoke<SubscriptionImportResult>(
+        "fetch_vless_subscription",
+        { url },
+      );
+      if (result.entries.length === 0) {
+        toast.error(t("proxies.importDialog.subscription.noServers"));
+        return;
+      }
+      if (result.skipped.length > 0) {
+        toast.warning(
+          t("proxies.importDialog.subscription.skippedToast", {
+            count: result.skipped.length,
+          }),
+        );
+      }
+      const content = result.entries.map((entry) => entry.uri).join("\n");
+      await processContent(content, false);
+    } catch (error) {
+      console.error("Failed to fetch subscription:", error);
+      toast.error(translateBackendError(t, error));
+    } finally {
+      setIsFetchingSubscription(false);
+    }
+  }, [subscriptionUrl, processContent, t]);
 
   const handleFileRead = useCallback(
     (file: File) => {
@@ -357,6 +393,44 @@ export function ProxyImportDialog({ isOpen, onClose }: ProxyImportDialogProps) {
               <p className="text-center text-xs text-muted-foreground">
                 {t("proxies.importDialog.pasteHint", { modKey })}
               </p>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">
+                  {t("proxies.importDialog.subscription.divider")}
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subscription-url">
+                  {t("proxies.importDialog.subscription.label")}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="subscription-url"
+                    type="url"
+                    placeholder={t(
+                      "proxies.importDialog.subscription.placeholder",
+                    )}
+                    value={subscriptionUrl}
+                    onChange={(e) => {
+                      setSubscriptionUrl(e.target.value);
+                    }}
+                    disabled={isFetchingSubscription}
+                    autoCapitalize="none"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <LoadingButton
+                    isLoading={isFetchingSubscription}
+                    disabled={!subscriptionUrl.trim()}
+                    onClick={() => void handleFetchSubscription()}
+                  >
+                    {t("proxies.importDialog.subscription.fetchButton")}
+                  </LoadingButton>
+                </div>
+              </div>
             </div>
           )}
 

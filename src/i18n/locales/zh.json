@@ -47,8 +47,6 @@
       "notGranted": "未授权",
       "connected": "已连接",
       "disconnected": "已断开",
-      "synced": "已同步",
-      "syncing": "同步中",
       "pending": "待处理",
       "error": "错误"
     },
@@ -134,60 +132,21 @@
       "title": "默认浏览器",
       "setAsDefault": "设为默认浏览器",
       "alreadyDefault": "已是默认浏览器",
-      "description": "设为默认后，Donut Browser 将处理网页链接并允许您选择使用哪个配置文件。",
-      "setSuccess": "Donut Browser 现在是您的默认浏览器",
+      "description": "设为默认后，Salamander Browser 将处理网页链接并允许您选择使用哪个配置文件。",
+      "setSuccess": "Salamander Browser 现在是您的默认浏览器",
       "setFailed": "无法设置默认浏览器",
       "finishInSystemSettings": "请在 Windows 设置中完成",
-      "finishInSystemSettingsDescription": "Donut Browser 已注册。Windows 设置已打开：在“Web 浏览器”中选择 Donut Browser 即可完成。"
+      "finishInSystemSettingsDescription": "Salamander Browser 已注册。Windows 设置已打开：在“Web 浏览器”中选择 Salamander Browser 即可完成。"
     },
     "permissions": {
       "title": "系统权限",
       "loading": "加载权限中...",
-      "description": "这些权限允许从 Donut Browser 启动的浏览器访问系统资源。每个网站仍会单独请求您的权限。",
+      "description": "这些权限允许从 Salamander Browser 启动的浏览器访问系统资源。每个网站仍会单独请求您的权限。",
       "microphone": "麦克风",
       "microphoneDescription": "浏览器应用程序的麦克风访问权限",
       "camera": "摄像头",
       "cameraDescription": "浏览器应用程序的摄像头访问权限",
       "accessRequested": "已请求 {{permission}} 访问权限"
-    },
-    "integrations": {
-      "title": "集成",
-      "description": "配置本地 API 和 MCP（模型上下文协议）以与外部工具和 AI 助手集成。",
-      "openSettings": "打开集成设置"
-    },
-    "encryption": {
-      "title": "同步加密",
-      "description": "设置密码以启用E2E加密同步。如果您丢失此密码，加密的配置文件将无法恢复。",
-      "passwordSet": "已启用",
-      "passwordSetDescription": "E2E加密密码已设置",
-      "noPassword": "未设置密码",
-      "passwordPlaceholder": "密码（至少8个字符）",
-      "confirmPlaceholder": "确认密码",
-      "setPassword": "设置密码",
-      "changePassword": "更改密码",
-      "removePassword": "删除密码",
-      "removed": "加密密码已删除",
-      "passwordSaved": "加密密码已设置",
-      "passwordMismatch": "密码不匹配",
-      "passwordTooShort": "密码必须至少8个字符",
-      "requiresProOrOwner": "配置文件加密仅适用于Pro用户和团队所有者。",
-      "validatePassword": "验证",
-      "validateDialog": {
-        "title": "验证加密密码",
-        "description": "输入加密密码以验证它是否与此设备上存储的密码匹配。",
-        "submit": "验证",
-        "matchToast": "密码正确",
-        "mismatchToast": "密码不匹配"
-      }
-    },
-    "commercial": {
-      "title": "商业许可",
-      "trialActive": "试用期：剩余 {{days}} 天 {{hours}} 小时",
-      "trialActiveDescription": "试用期内商业使用免费。试用期结束后，所有功能继续正常使用 — 个人使用仍然免费，只有商业使用需要许可证。",
-      "trialExpired": "试用期已过期",
-      "trialExpiredDescription": "个人使用仍然免费。商业使用需要许可证。",
-      "subscriptionActive": "已订阅 — {{plan}} 方案",
-      "subscriptionActiveDescription": "您的 Donut Browser 订阅已激活。在订阅有效期内允许商业使用。"
     },
     "advanced": {
       "title": "高级",
@@ -200,7 +159,7 @@
       "copyLogsDescription": "复制经过脱敏的近期日志包（最多 5 MB）。脱敏无法识别所有类型的个人数据，请在分享前检查内容。"
     },
     "disableAutoUpdates": "禁用应用自动更新",
-    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 Donut Browser 更新。浏览器更新不受影响。",
+    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 Salamander Browser 更新。浏览器更新不受影响。",
     "keepDecryptedProfilesInRam": "在内存中保留已解密的配置文件",
     "keepDecryptedProfilesInRamDescription": "在启动之间保留密码保护配置文件的已解密内存副本,以便更快地启动。无论如何磁盘上的副本始终保持加密。",
     "privacy": {
@@ -222,13 +181,11 @@
       "settings": "设置",
       "proxies": "代理和VPN",
       "groups": "分组",
-      "syncService": "账户",
-      "integrations": "集成",
       "importProfile": "导入配置文件",
       "extensions": "扩展程序"
     },
     "newProfile": "新建",
-    "donutLogo": "Donut Browser 标识",
+    "salamanderLogo": "Salamander Browser 标识",
     "scrollGroupsLeft": "向左滚动分组",
     "scrollGroupsRight": "向右滚动分组"
   },
@@ -252,8 +209,6 @@
       "os": "操作系统",
       "browser": "浏览器",
       "status": "是否正在运行",
-      "sync": "同步模式",
-      "email": "所有者邮箱",
       "version": "浏览器版本",
       "locked": "密码保护",
       "ephemeral": "临时配置文件",
@@ -308,7 +263,6 @@
       "emptyImport": "导入配置文件",
       "emptyFilteredTitle": "未找到配置文件",
       "emptyFilteredHint": "没有符合此分组或搜索的配置文件。请尝试其他筛选条件或新建一个。",
-      "bot": "机器人",
       "profileId": "ID"
     },
     "actions": {
@@ -320,7 +274,6 @@
       "configure": "配置",
       "clone": "克隆配置文件",
       "viewNetwork": "查看网络",
-      "syncSettings": "同步设置",
       "assignToGroup": "分配到组",
       "changeFingerprint": "更改指纹",
       "copyCookiesToProfile": "复制 Cookies 到配置文件",
@@ -328,22 +281,6 @@
       "setPassword": "设置密码",
       "changePassword": "更改密码",
       "removePassword": "移除密码"
-    },
-    "synchronizer": {
-      "launchWithSync": "使用同步器启动",
-      "stopLeader": "停止此配置文件及其所有跟随者",
-      "stopFollower": "正在跟随 {{leaderName}} 的操作",
-      "desyncedTooltip": "在 {{url}} 同步失败",
-      "paidFeature": "同步器是付费功能",
-      "wayfernOnly": "只有 Wayfern 配置文件可以同步",
-      "selectFollowers": "选择跟随者配置文件",
-      "selectFollowersDesc": "选择将复制领导者配置文件操作的配置文件。只能选择已停止的 Wayfern 配置文件。",
-      "leader": "领导者",
-      "follower": "跟随者",
-      "startSession": "开始同步会话",
-      "noFollowers": "请至少选择一个跟随者配置文件",
-      "flakyBadge": "FLAKY",
-      "flakyTooltip": "此配置文件的屏幕分辨率与领导者不同。页面布局可能不同，导致点击和交互可能命中错误的元素。"
     },
     "ephemeral": "临时",
     "ephemeralDescription": "浏览器被强制将配置文件数据写入内存而不是磁盘。请注意,在系统负载较高时,操作系统可能会将部分内存换出到磁盘(swap),因此会话的某些痕迹仍可能被恢复。",
@@ -395,26 +332,11 @@
       "nameDesc": "名称 (Z–A)",
       "newest": "最新优先",
       "oldest": "最早优先"
-    },
-    "remote": {
-      "runningTooltip": "正在远程计算机上运行。停止后配置文件会回到本机。",
-      "pendingSyncTooltip": "正在下载远程会话所做的更改。完成后即可再次使用。"
     }
   },
   "createProfile": {
     "title": "创建新配置文件",
     "configureTitle": "创建新的 {{browser}} 配置文件",
-    "antiDetect": {
-      "title": "防检测浏览器",
-      "description": "选择具有防检测功能的浏览器",
-      "chromium": "Wayfern",
-      "badge": "防检测浏览器"
-    },
-    "regular": {
-      "title": "常规浏览器",
-      "description": "从支持的常规浏览器中选择",
-      "badge": "常规浏览器"
-    },
     "profileName": "配置文件名称",
     "profileNamePlaceholder": "输入配置文件名称",
     "proxy": {
@@ -423,8 +345,7 @@
       "noProxy": "无代理 / VPN",
       "noProxiesAvailable": "没有可用的代理或VPN。添加一个来路由此配置文件的流量。",
       "search": "搜索代理或 VPN...",
-      "notFound": "未找到代理或 VPN。",
-      "searchWithCountries": "搜索代理、VPN 或国家/地区..."
+      "notFound": "未找到代理或 VPN。"
     },
     "launchHook": {
       "label": "启动钩子 URL",
@@ -441,15 +362,30 @@
       "latestDownloading": "正在下载版本 ({{version}})...",
       "upgradeAvailable": "{{browser}} 有新版本（{{version}}）可用。"
     },
-    "chromiumLabel": "Chromium",
-    "chromiumSubtitle": "由 Wayfern 驱动",
+    "chromiumLabel": "Camoufox",
     "platformUnavailable": "{{browser}} 在您的平台上尚不可用。",
     "passwordProtect": {
       "label": "为此配置文件设置密码保护",
       "description": "加密磁盘上的配置文件数据。启动时需要密码。"
     },
     "downloadingSubtitle": "正在下载…",
-    "browsersDownloading": "浏览器仍在下载中。下载完成后即可创建配置文件。"
+    "browsersDownloading": "浏览器仍在下载中。下载完成后即可创建配置文件。",
+    "os": {
+      "label": "操作系统",
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "blockImages": "阻止图片",
+    "blockWebrtc": "阻止 WebRTC",
+    "blockWebgl": "阻止 WebGL",
+    "geoip": "根据代理配置或您的连接（未提供代理时）自动配置位置信息",
+    "presetTabs": {
+      "label": "启动时打开的预设标签页",
+      "google": "谷歌搜索",
+      "youtube": "YouTube",
+      "instagram": "Instagram"
+    }
   },
   "deleteDialog": {
     "title": "删除配置文件",
@@ -468,17 +404,10 @@
       "loading": "正在加载代理...",
       "noneCreated": "尚未创建代理。使用上方按钮创建第一个代理。",
       "usage": "使用情况",
-      "syncCol": "同步",
-      "syncCannotDisable": "此代理被同步的配置文件使用时无法禁用同步",
-      "enableSync": "启用同步",
-      "disableSync": "禁用同步",
       "editProxy": "编辑代理",
       "deleteProxy": "删除代理",
       "cannotDelete_one": "无法删除: 被 {{count}} 个配置文件使用",
       "cannotDelete_other": "无法删除: 被 {{count}} 个配置文件使用",
-      "syncEnabled": "已启用同步",
-      "syncDisabled": "已禁用同步",
-      "updateSyncFailed": "更新同步失败",
       "deleteSuccess": "代理删除成功",
       "deleteFailed": "删除代理失败",
       "deleteTitle": "删除代理",
@@ -555,10 +484,6 @@
       "invalid": "代理无效",
       "lastChecked": "最后检查：{{time}}"
     },
-    "sync": {
-      "enabled": "同步已启用",
-      "disabled": "同步已禁用"
-    },
     "exportDialog": {
       "title": "导出代理",
       "description": "将代理配置导出到文件",
@@ -596,7 +521,15 @@
       "importButton": "导入 {{count}} 个代理",
       "continueButton": "继续",
       "doneButton": "完成",
-      "failed": "导入代理失败"
+      "failed": "导入代理失败",
+      "subscription": {
+        "divider": "或",
+        "label": "从订阅链接导入",
+        "placeholder": "https://provider.example.com/subscribe/abc123",
+        "fetchButton": "获取",
+        "noServers": "该订阅中未找到受支持的 VLESS 服务器。",
+        "skippedToast": "订阅中有 {{count}} 个服务器使用了不受支持的配置，已被跳过。"
+      }
     },
     "bulkDelete": {
       "proxiesTitle": "删除所选代理",
@@ -624,10 +557,6 @@
     "profileCount": "{{count}} 个配置文件",
     "profileCount_plural": "{{count}} 个配置文件",
     "assignProfiles": "分配配置文件",
-    "sync": {
-      "enabled": "同步已启用",
-      "disabled": "同步已禁用"
-    },
     "createTitle": "创建新组",
     "createDescription": "创建新组以组织您的浏览器配置文件。",
     "editTitle": "编辑组",
@@ -656,161 +585,6 @@
     "pageTitle": "配置文件分组",
     "pageDescription": "配置文件分组可让您按客户端、环境或使用场景整理浏览器。在多台设备之间同步分组以便共享。"
   },
-  "sync": {
-    "mode": {
-      "title": "配置文件同步",
-      "description": "管理 \"{{name}}\" 的同步设置",
-      "disabled": "已禁用",
-      "regular": "常规同步",
-      "encrypted": "E2E加密同步",
-      "disabledDescription": "此配置文件不同步",
-      "regularDescription": "快速同步，无加密",
-      "encryptedDescription": "上传前加密。服务器永远不会看到明文数据。",
-      "noPasswordWarning": "未设置E2E密码。请在设置中设置密码。",
-      "passwordRequired": "未设置E2E密码。请先在设置中设置密码。",
-      "enabledToast": "同步已启用",
-      "disabledToast": "同步已禁用",
-      "syncQueued": "同步已排队",
-      "syncNow": "立即同步",
-      "lastSynced": "上次同步",
-      "notConfigured": "同步服务未配置。",
-      "configureService": "配置同步服务"
-    },
-    "title": "同步服务",
-    "config": {
-      "serverUrlRequired": "请输入服务器 URL",
-      "connectionSuccess": "连接成功!",
-      "serverError": "服务器返回了错误",
-      "connectFailed": "连接服务器失败",
-      "storageEndpoint": "存储: {{endpoint}}",
-      "storageUnreachableStatus": "无法连接存储",
-      "storageUnreachable": "服务器可以连接，但此设备无法访问其存储地址 {{endpoint}}。文件传输将会失败。如果你自建服务器，请将 S3_PUBLIC_ENDPOINT 设置为此设备可以访问的地址。",
-      "settingsSaved": "同步设置已保存",
-      "saveFailed": "保存设置失败",
-      "disconnected": "已断开同步",
-      "disconnectFailed": "断开连接失败"
-    },
-    "serverUrl": "服务器 URL",
-    "serverUrlPlaceholder": "https://sync.example.com",
-    "token": "同步令牌",
-    "tokenPlaceholder": "输入您的同步令牌",
-    "status": {
-      "connected": "已连接",
-      "disconnected": "已断开",
-      "syncing": "同步中...",
-      "error": "同步错误"
-    },
-    "description": "连接到同步服务器以在设备之间同步您的配置文件、代理和分组。",
-    "cloud": {
-      "tabLabel": "云端",
-      "selfHostedTabLabel": "自托管",
-      "email": "电子邮件",
-      "deviceLinkInstructions": "点击\"登录\"以在浏览器中打开登录页面。登录后复制显示的代码并粘贴到下方。",
-      "openLogin": "登录",
-      "linkCodeLabel": "登录代码",
-      "linkCodePlaceholder": "粘贴网站的代码",
-      "signInTitle": "登录",
-      "verifyAndLogin": "验证并登录",
-      "loggingIn": "登录中...",
-      "connected": "已连接",
-      "plan": "套餐",
-      "profiles": "配置文件",
-      "profileUsage": "{{used}} / {{limit}}",
-      "manageAccount": "管理账户",
-      "logout": "退出登录",
-      "logoutConfirm": "您确定要退出登录吗？云同步将会停止。",
-      "loginSuccess": "登录成功！",
-      "logoutSuccess": "已成功退出登录。"
-    },
-    "team": {
-      "title": "团队",
-      "name": "团队名称",
-      "role": "角色",
-      "roleOwner": "所有者",
-      "roleAdmin": "管理员",
-      "roleMember": "成员",
-      "manageOnWeb": "在网页控制台管理团队",
-      "profileLocked": "{{email}} 正在使用中",
-      "profileLockedShort": "使用中",
-      "cannotLaunchLocked": "无法启动 — 配置文件正被 {{email}} 使用",
-      "createdBy": "由 {{email}} 创建"
-    },
-    "disabled": "已禁用",
-    "toast": {
-      "profileSynced": "配置文件 '{{name}}' 同步成功",
-      "profileSyncFailed": "同步配置文件 '{{name}}' 失败",
-      "profileSyncFailedWithError": "同步配置文件 '{{name}}' 失败: {{error}}"
-    },
-    "enabledToast": "已启用同步",
-    "disabledToast": "已禁用同步",
-    "enabledDescription": "已启用配置文件同步",
-    "disabledDescription": "已禁用配置文件同步"
-  },
-  "integrations": {
-    "title": "集成",
-    "api": {
-      "title": "本地 API",
-      "description": "启用本地 API 服务器以进行外部集成。",
-      "enabled": "API 已启用",
-      "disabled": "API 已禁用",
-      "port": "端口",
-      "token": "API 令牌",
-      "copyToken": "复制令牌",
-      "regenerateToken": "重新生成令牌"
-    },
-    "mcp": {
-      "title": "MCP 服务器",
-      "description": "启用 MCP（模型上下文协议）服务器以与 AI 助手集成。",
-      "enabled": "MCP 已启用",
-      "disabled": "MCP 已禁用",
-      "port": "端口",
-      "token": "认证令牌",
-      "tokenCopied": "令牌已复制",
-      "url": "MCP 服务器 URL",
-      "urlCopied": "URL 已复制",
-      "config": "MCP 配置",
-      "copyConfig": "复制配置",
-      "clientsLabel": "客户端",
-      "connected": "已连接",
-      "add": "添加",
-      "addedToClient": "已添加到 {{name}}",
-      "removedFromClient": "已从 {{name}} 移除",
-      "removeAriaLabel": "从 {{name}} 移除",
-      "category": {
-        "desktopApp": "桌面应用",
-        "cli": "CLI",
-        "editor": "编辑器",
-        "editorExt": "编辑器扩展"
-      }
-    },
-    "tabApi": "本地 API",
-    "tabMcp": "MCP (AI 助手)",
-    "apiEnableLabel": "启用本地 API 服务器",
-    "apiEnableDescription": "允许通过 REST API 管理配置文件、分组和代理。",
-    "apiPortLabel": "端口",
-    "apiTokenLabel": "认证令牌",
-    "apiTokenHint": "在 Authorization 头中包含: Bearer {{tokenSlot}}",
-    "apiInvalidPort": "无效的端口",
-    "apiInvalidPortDescription": "端口必须在 1 到 65535 之间",
-    "apiPortInUse": "端口 {{port}} 已被占用",
-    "apiFallbackPort": "服务器在备用端口 {{port}} 上启动",
-    "apiStarted": "API 服务器已在端口 {{port}} 上启动",
-    "apiRunning": "API 服务器在端口 {{port}} 上运行",
-    "apiStopped": "API 服务器已停止",
-    "apiToggleFailed": "切换 API 服务器失败",
-    "apiStartFailed": "启动 API 服务器失败",
-    "apiUnknownError": "未知错误",
-    "tokenCopied": "令牌已复制",
-    "mcpEnableLabel": "启用 MCP 服务器 (Model Context Protocol)",
-    "mcpEnableDescription": "允许 Claude Desktop 等 AI 助手控制浏览器。",
-    "mcpAcceptTermsFirst": "(请先在设置中接受 Wayfern 条款)",
-    "mcpStarted": "MCP 服务器已在端口 {{port}} 上启动",
-    "mcpStopped": "MCP 服务器已停止",
-    "mcpToggleFailed": "切换 MCP 服务器失败",
-    "openSettings": "打开集成设置",
-    "apiRunningOn": "运行于",
-    "apiExampleRequest": "示例请求"
-  },
   "import": {
     "title": "导入配置文件",
     "description": "从您的系统导入现有的浏览器配置文件。",
@@ -822,38 +596,6 @@
     "error": "导入配置文件失败"
   },
   "config": {
-    "wayfern": {
-      "title": "Wayfern 配置",
-      "fingerprint": {
-        "title": "指纹",
-        "randomize": "启动时随机化",
-        "randomizeDescription": "每次启动浏览器时生成新的指纹。",
-        "platformPlaceholder": "例如: Win32、MacIntel、Linux x86_64",
-        "timezoneOffsetPlaceholder": "例如: EST (UTC-5) 为 300",
-        "webglRendererPlaceholder": "例如: Intel(R) HD Graphics"
-      },
-      "os": {
-        "title": "操作系统",
-        "description": "用于生成指纹的模拟操作系统。",
-        "windows": "Windows",
-        "macos": "macOS",
-        "linux": "Linux",
-        "android": "Android",
-        "ios": "iOS"
-      },
-      "screen": {
-        "title": "屏幕尺寸",
-        "minWidth": "最小宽度",
-        "maxWidth": "最大宽度",
-        "minHeight": "最小高度",
-        "maxHeight": "最大高度"
-      },
-      "blocking": {
-        "title": "阻止",
-        "webrtc": "阻止 WebRTC",
-        "webgl": "阻止 WebGL"
-      }
-    },
     "shared": {
       "browserBehavior": "浏览器行为",
       "allowAddonsOpenTabs": "允许浏览器附加组件自动打开新标签页"
@@ -876,7 +618,7 @@
       "sourcePlaceholder": "选择要复制 Cookie 的配置文件",
       "running": "(运行中)",
       "targetProfiles": "目标配置文件 ({{count}})",
-      "noOtherTargets": "未选择其他 Wayfern 配置文件",
+      "noOtherTargets": "未选择其他 Camoufox 配置文件",
       "selectSourceFirst": "请先选择源配置文件",
       "selectionStatus": "(已选择 {{selected}} / {{total}})",
       "searchPlaceholder": "搜索域名或 Cookie...",
@@ -1039,8 +781,6 @@
       "downloadComplete": "{{browser}} {{version}} 下载成功！",
       "importSuccess": "成功导入 {{count}} 个项目",
       "exportSuccess": "成功导出 {{count}} 个项目",
-      "syncSuccess": "同步成功完成",
-      "profileSynced": "配置文件 '{{name}}' 同步成功",
       "cacheCleared": "缓存清除成功"
     },
     "error": {
@@ -1059,8 +799,6 @@
       "downloadFailed": "下载 {{browser}} 失败",
       "importFailed": "导入失败",
       "exportFailed": "导出失败",
-      "syncFailed": "同步失败",
-      "profileSyncFailed": "配置文件 '{{name}}' 同步失败",
       "cacheClearFailed": "清除缓存失败",
       "unknown": "发生未知错误"
     },
@@ -1068,9 +806,6 @@
       "downloading": "正在下载 {{browser}} {{version}}",
       "extracting": "正在解压 {{browser}} {{version}}",
       "verifying": "正在验证 {{browser}} {{version}}",
-      "syncing": "同步中...",
-      "syncingProfile": "正在同步配置文件 '{{name}}'...",
-      "syncingProfileWithProgress": "{{count}} 个文件 ({{size}})",
       "updatingVersions": "正在更新浏览器版本..."
     },
     "progress": {
@@ -1090,7 +825,6 @@
     "serverError": "服务器错误。请稍后重试。",
     "unknownError": "发生未知错误。请重试。",
     "noProfilesForUrl": "没有可用的配置文件。请先创建配置文件再打开 URL。",
-    "updateWayfernConfigFailed": "更新 wayfern 配置失败: {{error}}",
     "createProfileFailed": "创建配置文件失败: {{error}}",
     "launchBrowserFailed": "启动浏览器失败: {{error}}",
     "cannotDeleteRunningProfile": "浏览器运行时无法删除配置文件。请先停止浏览器。",
@@ -1098,8 +832,7 @@
     "renameProfileFailed": "重命名配置文件失败: {{error}}",
     "killBrowserFailed": "终止浏览器失败: {{error}}",
     "deleteSelectedProfilesFailed": "删除所选配置文件失败: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Cookie 复制仅适用于 Wayfern 配置文件",
-    "updateSyncSettingsFailed": "更新同步设置失败",
+    "cookieCopyUnsupportedBrowser": "Cookie 复制仅适用于 Camoufox 配置文件",
     "cloneProfileFailed": "克隆配置文件失败: {{error}}",
     "loadSupportedBrowsersFailed": "加载受支持的浏览器失败",
     "setupExtensionListenersFailed": "设置扩展事件监听器失败: {{error}}",
@@ -1113,9 +846,6 @@
     "setupVpnListenersFailed": "设置 VPN 事件监听器失败: {{error}}",
     "themeNotFound": "未找到 Tokyo Night 主题",
     "setProfilePasswordFailed": "设置配置文件密码失败: {{error}}"
-  },
-  "browser": {
-    "wayfern": "Wayfern"
   },
   "fingerprint": {
     "crossOsWarning": "伪装不同操作系统的指纹不太可靠，因为不可能完美模拟所有底层组件。请谨慎使用。",
@@ -1222,7 +952,8 @@
     "regenerateConfirmDescription": "配置文件会保留 Cookie 和登录状态，但会呈现为另一台设备。已经认识此配置文件的网站可能要求你重新登录、进行验证，或封禁账号。请只对尚未使用过的配置文件，或你愿意舍弃的配置文件执行重新生成。此操作无法撤销。",
     "canvasNoiseSeedPlaceholder": "输入用于 canvas 指纹的种子字符串",
     "addFontsPlaceholder": "添加字体...",
-    "enterAsJson": "以 JSON 格式输入 {{title}}"
+    "enterAsJson": "以 JSON 格式输入 {{title}}",
+    "derivedFromIdentity": "根据此配置文件的身份派生，不可编辑。"
   },
   "warnings": {
     "windowResizeTitle": "自定义窗口尺寸",
@@ -1230,20 +961,6 @@
     "dontShowAgain": "不再显示",
     "continue": "继续",
     "cancel": "取消"
-  },
-  "syncAll": {
-    "title": "为现有项目启用同步",
-    "description": "您有未同步的项目。是否要为所有项目启用同步？",
-    "enableAll": "全部启用",
-    "skip": "跳过",
-    "success": "已为所有项目启用同步",
-    "labels": {
-      "proxies": "代理",
-      "vpns": "VPN",
-      "groups": "分组",
-      "extensions": "扩展",
-      "extensionGroups": "扩展分组"
-    }
   },
   "crossOs": {
     "viewOnly": "此配置文件在 {{os}} 上创建，不受此系统支持",
@@ -1265,13 +982,11 @@
       "group": "分组",
       "tags": "标签",
       "note": "备注",
-      "syncStatus": "同步状态",
       "lastLaunched": "上次启动",
       "hostOs": "主机操作系统",
       "ephemeral": "临时",
       "extensionGroup": "扩展程序组",
       "totalSessions": "总会话",
-      "syncMode": "同步模式",
       "proxy": "代理",
       "vpn": "VPN",
       "cookieCount": "存储的 Cookie",
@@ -1303,7 +1018,7 @@
     "launchHook": {
       "title": "启动钩子 URL",
       "label": "启动钩子 URL",
-      "description": "每次启动配置文件时，Donut Browser 都会向此 URL 发送一个 GET 请求。",
+      "description": "每次启动配置文件时，Salamander Browser 都会向此 URL 发送一个 GET 请求。",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "请输入有效的 http:// 或 https:// URL。"
     },
@@ -1326,7 +1041,6 @@
       "network": "网络",
       "cookies": "Cookie",
       "extensions": "扩展",
-      "sync": "同步",
       "automation": "自动化",
       "security": "安全",
       "delete": "删除配置文件",
@@ -1338,7 +1052,6 @@
       "network": "管理此配置文件使用的代理或 VPN。",
       "cookies": "导入、复制或清除此配置文件的 Cookie。",
       "extensions": "选择启动此配置文件时加载的扩展。",
-      "sync": "配置此配置文件如何在设备间同步。",
       "automation": "在启动此配置文件时运行命令。",
       "security": "用密码加密配置文件数据。",
       "launchHook": "每次启动配置文件时向此 URL 发送一个 GET 请求。"
@@ -1357,20 +1070,15 @@
       "cannotWhileRunning": "更改密码前请先停止此配置文件。"
     },
     "fingerprint": {
-      "notSupported": "指纹编辑仅适用于 Wayfern 配置文件。",
       "lockedTitle": "查看和编辑指纹是 Pro 功能",
-      "lockedDescription": "每个配置文件中都会保护你的设备信息。查看和编辑配置文件的指纹需要有效的付费方案。"
-    },
-    "syncStatusValue": {
-      "waiting": "等待中",
-      "syncing": "同步中",
-      "synced": "已同步",
-      "error": "错误"
+      "lockedDescription": "每个配置文件中都会保护你的设备信息。查看和编辑配置文件的指纹需要有效的付费方案。",
+      "camoufoxDescription": "Camoufox 会在创建（或导入）配置文件时在本地生成指纹；目前还没有逐字段编辑器。您可以清除已保存的指纹，以便下次启动时生成新的指纹。",
+      "camoufoxRegenerateButton": "清除指纹（下次启动时重新生成）",
+      "camoufoxRegenerateQueued": "指纹已清除——下次启动此配置文件时将生成新的指纹。"
     },
     "ephemeral": {
       "cookiesUnavailable": "临时配置在浏览器关闭时会被丢弃，因此这里没有可管理的 Cookie。",
       "extensionsUnavailable": "临时配置在浏览器关闭时会被丢弃，因此无法为其分配扩展分组。",
-      "syncUnavailable": "临时配置在浏览器关闭时会被丢弃，因此没有可同步到云端的内容。",
       "hint": "如果需要保留这些数据，请创建普通配置。"
     }
   },
@@ -1432,20 +1140,15 @@
     "selectedFolder": "已选文件夹",
     "selectFolder": "选择文件夹",
     "linkFolder": "直接从该文件夹加载",
-    "linkFolderOff": "文件夹会复制到 Donut，扩展可随身携带并同步到你的其他设备。",
-    "linkFolderOn": "Donut 每次启动都直接从该文件夹加载扩展。你的修改会在下次启动浏览器时生效，但扩展只保留在本机，不会同步。",
+    "linkFolderOff": "文件夹会复制到 Salamander，扩展可随身携带并同步到你的其他设备。",
+    "linkFolderOn": "Salamander 每次启动都直接从该文件夹加载扩展。你的修改会在下次启动浏览器时生效，但扩展只保留在本机，不会同步。",
     "replaceSource": "替换来源",
-    "linkedNoSync": "已链接的扩展只保留在本机，无法同步。",
     "uploadFailed": "添加扩展失败",
     "updateFailed": "更新扩展失败",
     "deleteFailed": "删除扩展失败",
     "groupCreateFailed": "创建扩展组失败",
     "groupUpdateFailed": "更新扩展组失败",
     "groupDeleteFailed": "删除扩展组失败",
-    "syncEnabled": "同步已启用",
-    "syncDisabled": "同步已禁用",
-    "syncEnableTooltip": "启用同步",
-    "syncDisableTooltip": "禁用同步",
     "loadGroupsFailed": "加载扩展组失败",
     "assignGroupFailed": "分配扩展组失败",
     "bulkDelete": {
@@ -1577,7 +1280,6 @@
       "deleteVpn": "删除 VPN",
       "cannotDelete_one": "无法删除: 被 {{count}} 个配置文件使用",
       "cannotDelete_other": "无法删除: 被 {{count}} 个配置文件使用",
-      "syncCannotDisable": "此 VPN 被同步的配置文件使用时无法禁用同步",
       "deleteSuccess": "VPN 删除成功",
       "deleteFailed": "删除 VPN 失败",
       "deleteTitle": "删除 VPN",
@@ -1610,6 +1312,13 @@
     "selectedCount": "已选择 {{count}} 个",
     "scanButton": "扫描",
     "manualHint": "选择配置文件夹、浏览器用户数据文件夹、包含导出配置文件的文件夹或 ZIP 压缩包。",
+    "camoufoxImport": "Camoufox",
+    "camoufoxImportTitle": "导入现有的 Camoufox 配置文件",
+    "camoufoxImportHint": "指向一个现有的 Camoufox（Firefox 系）配置文件夹——例如通过 Python camoufox 库保存的文件夹。Cookie、历史记录、扩展程序和登录信息都会被带过来；除非您在下面粘贴指纹配置，否则将重新生成一个新的指纹。",
+    "camoufoxFingerprintToggle": "使用已保存的指纹配置（高级）",
+    "camoufoxFingerprintHint": "如果您在 Python 会话中通过 camoufox.generate_data() / json.dumps() 保存了扁平化的 JSON 配置，请粘贴到此处。留空则生成新的指纹。",
+    "camoufoxImportButton": "导入 Camoufox 配置文件",
+    "camoufoxImportSuccess": "已将\"{{name}}\"导入为新的 Camoufox 配置文件",
     "selectArchiveTitle": "选择 ZIP 压缩包",
     "noProfilesInLocation": "在此位置未找到配置文件。",
     "selectAtLeastOne": "请至少选择一个要导入的配置文件",
@@ -1656,19 +1365,6 @@
       "storeUnreadable": "某个数据库无法读取，已跳过而不是复制损坏的副本。"
     }
   },
-  "syncTooltips": {
-    "syncing": "同步中...",
-    "syncedAt": "已同步 {{time}}",
-    "synced": "已同步",
-    "waiting": "等待同步",
-    "errorWith": "同步错误: {{error}}",
-    "error": "同步错误",
-    "notSynced": "未同步",
-    "enable": "启用同步",
-    "disable": "禁用同步",
-    "lockedInUse": "同步配置文件正在使用，无法禁用同步",
-    "bulkToggle": "切换同步"
-  },
   "groupManagement": {
     "description": "管理你的配置文件分组",
     "createGroup": "创建分组",
@@ -1678,7 +1374,6 @@
     "profileCount_other": "{{count}} 个配置文件",
     "groupsLabel": "分组",
     "profilesCol": "配置文件",
-    "syncCannotDisable": "此分组被同步的配置文件使用时无法禁用同步",
     "editGroupTooltip": "编辑分组",
     "deleteGroupTooltip": "删除分组",
     "loadFailed": "加载分组失败",
@@ -1743,31 +1438,13 @@
     "badgeUnavailable": "不可用",
     "openButton": "打开"
   },
-  "wayfernTerms": {
-    "title": "Wayfern 条款和条件",
-    "description": "在使用 Donut Browser 之前,你必须阅读并同意 Wayfern 的条款和条件。",
-    "reviewLabel": "请查看以下条款和条件:",
-    "agreeNotice": "点击「我接受」即表示你同意受这些条款约束。",
-    "acceptButton": "我接受",
-    "acceptSuccess": "已成功接受条款",
-    "acceptFailed": "接受条款失败",
-    "tryAgain": "请重试"
-  },
-  "commercialTrial": {
-    "title": "商业试用期已过期",
-    "description": "你的 2 周商业试用期已结束。",
-    "body": "如果你将 Donut Browser 用于商业目的,需要购买商业许可证才能继续。你仍然可以免费用于个人用途。",
-    "understandButton": "我明白了",
-    "failed": "保存确认失败",
-    "tryAgain": "请重试"
-  },
   "permissionDialog": {
     "titleMicrophone": "需要麦克风访问权限",
     "titleCamera": "需要摄像头访问权限",
-    "descMicrophone": "Donut Browser 需要访问你的麦克风以在浏览器中启用麦克风功能。每个想使用麦克风的网站仍会单独请求你的许可。",
-    "descCamera": "Donut Browser 需要访问你的摄像头以在浏览器中启用摄像头功能。每个想使用摄像头的网站仍会单独请求你的许可。",
-    "grantedMicrophone": "权限已授予!从 Donut Browser 启动的浏览器现在可以访问你的麦克风。",
-    "grantedCamera": "权限已授予!从 Donut Browser 启动的浏览器现在可以访问你的摄像头。",
+    "descMicrophone": "Salamander Browser 需要访问你的麦克风以在浏览器中启用麦克风功能。每个想使用麦克风的网站仍会单独请求你的许可。",
+    "descCamera": "Salamander Browser 需要访问你的摄像头以在浏览器中启用摄像头功能。每个想使用摄像头的网站仍会单独请求你的许可。",
+    "grantedMicrophone": "权限已授予!从 Salamander Browser 启动的浏览器现在可以访问你的麦克风。",
+    "grantedCamera": "权限已授予!从 Salamander Browser 启动的浏览器现在可以访问你的摄像头。",
     "notGrantedMicrophone": "未授予权限。点击下方按钮请求访问你的麦克风。",
     "notGrantedCamera": "未授予权限。点击下方按钮请求访问你的摄像头。",
     "doneButton": "完成",
@@ -1847,22 +1524,11 @@
     "tooltipDefault": "检查 VPN 配置有效性"
   },
   "profileTable": {
-    "syncTooltipDisabled": "同步已禁用",
-    "syncTooltipSyncing": "同步中...",
-    "syncTooltipSyncedAt": "已同步 {{time}}",
-    "syncTooltipSynced": "已同步",
-    "syncTooltipWaiting": "等待同步",
-    "syncTooltipErrorWith": "同步错误: {{error}}",
-    "syncTooltipError": "同步错误",
-    "syncTooltipNotSynced": "未同步",
     "noTags": "无标签",
-    "syncTooltipCloseToSync": "关闭配置文件以进行同步",
-    "syncTooltipDisabledWithLast": "同步已禁用,上次同步 {{time}}",
     "addTagsPlaceholder": "添加标签",
     "tagsHeader": "标签",
     "noteHeader": "备注",
-    "vpnsHeading": "VPN",
-    "createByCountryHeading": "按国家创建"
+    "vpnsHeading": "VPN"
   },
   "dataTableActionBar": {
     "selected": "已选择 {{count}}",
@@ -1870,7 +1536,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "更新 Donut Browser 失败",
+      "updateFailed": "更新 Salamander Browser 失败",
       "restartFailed": "重启失败",
       "updateReady": "更新就绪，请重启以应用",
       "manualDownloadRequired": "需要手动下载",
@@ -1963,7 +1629,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "重要:此密码无法恢复",
-      "forgetWarningBody": "Donut Browser 无法重置、恢复或绕过此密码。如果忘记,您将永久无法访问此配置文件的数据。"
+      "forgetWarningBody": "Salamander Browser 无法重置、恢复或绕过此密码。如果忘记,您将永久无法访问此配置文件的数据。"
     },
     "modes": {
       "set": "设置",
@@ -2006,36 +1672,28 @@
     "extensionNotADirectory": "该路径不是文件夹。",
     "extensionManifestMissing": "该文件夹中没有 manifest.json。请选择包含扩展 manifest.json 的文件夹。",
     "extensionManifestInvalid": "无法读取该文件夹中的 manifest.json。",
-    "extensionDirTooLarge": "该文件夹过大，无法复制到 Donut（上限为 256 MB、20,000 个文件）。请改用链接方式加载。",
+    "extensionDirTooLarge": "该文件夹过大，无法复制到 Salamander（上限为 256 MB、20,000 个文件）。请改用链接方式加载。",
     "extensionPathHasComma": "该文件夹路径中包含逗号，Chromium 无法加载。请重命名或移动该文件夹。",
     "extensionLinkRequiresDirectory": "只有文件夹才能就地加载。要添加压缩包，请关闭链接选项。",
-    "extensionLinkedCannotSync": "该扩展是从本机文件夹加载的，没有需要同步的内容。",
-    "cannotModifyCloudManagedProxy": "无法修改云管理代理的同步",
-    "syncLockedByProfile": "在被已同步的配置文件使用时无法禁用同步",
-    "syncNotConfigured": "同步未配置。请先登录或配置自托管服务器。",
     "internal": "出现问题:{{detail}}",
     "invalidLaunchHookUrl": "启动钩子 URL 无效。请使用完整的 http:// 或 https:// URL。",
     "cookieDbLocked": "无法读取 Cookie — 数据库已锁定。请关闭浏览器后重试。",
     "cookieDbUnavailable": "无法读取 Cookie — Cookie 存储不可用。",
     "cookieImportBrowserRunning": "浏览器运行时无法导入 Cookie。请关闭浏览器后重试。",
     "cookieImportProfileProtected": "无法将 Cookie 导入密码保护的配置文件。请先移除密码。",
-    "cookieImportRemoteSession": "远程会话正在占用此配置文件，无法导入 Cookie。请等待同步完成。",
     "cookieImportNoCookies": "在你粘贴的内容中没有找到 Cookie。",
-    "selfHostedRequiresLogout": "在配置自托管服务器之前请先退出 Donut 账户。",
-    "fingerprintRequiresPro": "查看或编辑指纹需要有效的付费方案。所有方案均包含指纹保护。",
     "proxyNotWorking": "所选代理无法使用，因此未创建配置文件。",
-    "proxyPaymentRequired": "所选代理需要付费（402），其订阅可能已过期，因此未创建配置文件。",
     "vpnNotWorking": "所选 VPN 无法使用，因此未创建配置文件。",
-    "camoufoxImportDeprecated": "不再支持导入此类型的配置文件。请改用 Wayfern。",
     "updateChecksumsUnavailable": "无法验证更新 {{version}}：无法获取其校验和文件。更新未安装，稍后将重试。",
     "updateChecksumMismatch": "下载的更新文件 {{file}} 未通过校验和验证，已被丢弃。请重试。",
     "browserChecksumUnavailable": "无法验证 {{browser}} {{version}}：无法获取其校验和文件。下载已停止，稍后将重试。",
     "browserChecksumMismatch": "下载的 {{browser}} {{version}} 压缩包未通过校验和验证，已被丢弃。请重试。",
     "nameCannotBeEmpty": "名称不能为空",
-    "wayfernVersionNotAvailable": "Wayfern 版本 {{requested}} 无法下载。当前版本为 {{current}}。",
     "profileNameExists": "名为“{{name}}”的配置文件已存在",
     "importSourceNotFound": "源路径不存在",
     "importNoItems": "未选择要导入的内容",
+    "camoufoxImportInvalidFolder": "此文件夹看起来不像 Camoufox/Firefox 配置文件",
+    "camoufoxImportCopyFailed": "Camoufox 导入已创建配置文件，但复制文件失败：{{detail}}",
     "browserNotDownloaded": "没有已下载的 {{browser}} 版本。请先下载，然后重试导入。",
     "archiveExtractionFailed": "解压压缩包失败：{{detail}}",
     "unsupportedArchiveFormat": "不支持的压缩包格式。仅支持 ZIP 压缩包。",
@@ -2046,80 +1704,37 @@
     "dnsRulesSaveFailed": "保存 DNS 规则失败。",
     "dnsRulesExportFailed": "导出 DNS 规则失败。",
     "fingerprintMatchFailed": "无法将指纹匹配到代理。",
-    "proxySidecarVersionMismatch": "部分 Donut Browser 文件来自不同版本。请重新安装最新更新；你的配置文件将保持安全。",
+    "proxySidecarVersionMismatch": "部分 Salamander Browser 文件来自不同版本。请重新安装最新更新；你的配置文件将保持安全。",
     "updateProfilesRunning": "安装更新前，请停止所有正在运行的配置文件。",
-    "updatePreparationFailed": "Donut Browser 无法安全停止后台网络进程。请重启电脑，然后再次尝试更新。",
-    "wayfernTermsRequired": "请先接受 Wayfern 条款与条件，再启动 MCP 服务器。",
-    "apiPortUnavailable": "API 服务器找不到可用端口。",
-    "mcpServerAlreadyRunning": "MCP 服务器已在运行。",
-    "mcpServerNotRunning": "MCP 服务器未运行。",
-    "mcpPortUnavailable": "MCP 服务器找不到可用端口。",
-    "mcpConfigurationUnavailable": "MCP 服务器配置不可用。请重启服务器后重试。",
-    "mcpAgentUnknown": "不支持此 MCP 客户端。",
-    "mcpAgentInstallFailed": "无法将 Donut Browser 添加到 MCP 客户端：{{detail}}",
-    "mcpAgentRemoveFailed": "无法从 MCP 客户端移除 Donut Browser：{{detail}}",
+    "updatePreparationFailed": "Salamander Browser 无法安全停止后台网络进程。请重启电脑，然后再次尝试更新。",
     "vlessConfigInvalid": "VLESS URI 无效。",
     "xrayUnavailable": "此系统无法使用 Xray-core。",
     "xrayUnsupportedOs": "VLESS 需要 macOS 12 或更高版本。",
     "xrayStartFailed": "无法启动 Xray-core。",
-    "cloudNotSignedIn": "请先登录你的 Donut Browser 账号再使用此功能。",
-    "cloudUnreachable": "无法连接 Donut Browser 服务器。请检查网络后重试。",
-    "cloudRequestFailed": "请求失败。请稍后再试。",
-    "remoteRateLimited": "请求过于频繁。请稍候再试。",
-    "remoteNoCapacity": "当前没有空闲的远程机器。请几分钟后再试。",
-    "remoteNotEntitled": "你的套餐不包含远程运行。",
-    "remoteInteractiveNotEntitled": "您的套餐中的远程时长仅供 Cookie Bot 使用，不能用于手动远程会话。",
-    "remoteRequiresRemoteExitNode": "此配置文件的代理仅在本机可用（例如 127.0.0.1 或局域网地址）。远程会话在我们的主机上运行，因此需要具有公网地址的代理。",
-    "remoteSessionRefused": "远程机器拒绝了此会话。",
-    "remoteSessionNotFound": "该远程会话已不存在。",
-    "remoteSessionConflict": "此配置文件已在别处打开。",
-    "remoteSyncInProgress": "此配置文件仍在上传到云同步。请等待同步完成后重试。",
-    "remoteHoursExhausted": "本月 {{granted}} 小时远程时长已全部用完（已用 {{used}}）。",
-    "notTeamMember": "你不属于任何团队。",
-    "cookieBotNotEntitled": "你的套餐不包含 Cookie Bot。",
-    "cookieBotNotEnrolled": "此配置文件尚未为 Cookie Bot 配置。",
-    "cookieBotScheduleConflict": "{{email}} 已在 {{time}} 养这个配置文件。",
-    "cookieBotRunInProgress": "此配置文件已有一次运行正在进行。",
-    "cookieBotRunNotFound": "该运行记录已不存在。",
-    "cookieBotInvalidSchedule": "该计划无效。请检查运行时间、日期和时长。",
-    "cookieBotInvalidTimezone": "{{timezone}} 不是服务器可识别的时区。",
-    "cookieBotInvalidPeriod": "该周期无效。请使用类似 2026-08 的月份。",
-    "cookieBotSiteLimit": "请输入 {{min}} 到 {{max}} 个网站，每个都要是完整的 http 或 https 地址。",
-    "cookieBotRequiresCloudSync": "请先为此配置文件开启云同步：远程机器没有其他方式获取它。",
-    "cookieBotEncryptedSyncUnsupported": "此配置文件使用端到端加密同步，远程机器无法解密。请改为常规同步。",
-    "cookieBotUnknownPlatform": "此配置文件没有记录操作系统，无法匹配到机器。",
-    "cookieBotUnsupportedPlatform": "Cookie Bot 无法运行 {{platform}} 配置文件。仅支持 Windows 和 macOS 配置文件。",
-    "cookieBotRequiresExitNode": "请先绑定代理或 VPN。否则运行会从数据中心地址发出，损害配置文件的身份。",
-    "cookieBotRequiresRemoteExitNode": "此配置文件的代理仅在本机可用（例如 127.0.0.1 或局域网地址）。Cookie Bot 在我们的主机上运行，因此需要具有公网地址的代理。",
     "unknownCode": "出现问题: {{code}}",
-    "cookieBotTouchFingerprintUnsupported": "该配置文件声称是触摸设备，机器人无法操作。请使用桌面端指纹。",
-    "profileRunningRemotely": "该配置文件正在远程计算机上运行。请先停止远程会话。",
-    "profileRemoteSyncPending": "远程会话刚刚结束。正在等待其更改下载完成后才能在此打开该配置文件。",
-    "profileLockedByMember": "该配置文件正在被 {{email}} 使用。",
-    "profileLockedElsewhere": "该配置文件正在另一台设备上使用。",
-    "profileLockUnavailable": "无法检查该配置文件是否正在别处使用。请检查网络连接后重试。",
     "fingerprintExitMismatch": "代理出口节点与此配置文件的指纹不匹配。",
     "launchConsentExpired": "该确认已失效。请重新启动。",
     "vpnWorkerStartFailed": "无法启动 VPN 连接：{{detail}}",
     "exitProbeFailed": "无法连接代理出口节点以检查其位置。",
     "vlessUnsupported": {
-      "security": "此 VLESS 服务器未使用 REALITY。Donut 仅支持搭配 REALITY 的 VLESS。",
-      "flow": "此 VLESS 服务器未使用 Donut 所需的 XTLS Vision 流控。",
-      "transport": "Donut 仅支持基于普通 TCP 的 VLESS —— 此服务器使用了其他传输方式（如 WebSocket 或 gRPC）。",
-      "encryption": "此 VLESS 服务器使用了 Donut 不支持的加密设置。",
-      "headerType": "此 VLESS 服务器使用了 Donut 不支持的头部混淆。",
-      "fingerprint": "此 VLESS URI 请求了 Donut 不支持的 TLS 指纹。",
+      "security": "此 VLESS 服务器未使用 REALITY。Salamander 仅支持搭配 REALITY 的 VLESS。",
+      "flow": "此 VLESS 服务器未使用 Salamander 所需的 XTLS Vision 流控。",
+      "transport": "Salamander 仅支持基于普通 TCP 的 VLESS —— 此服务器使用了其他传输方式（如 WebSocket 或 gRPC）。",
+      "encryption": "此 VLESS 服务器使用了 Salamander 不支持的加密设置。",
+      "headerType": "此 VLESS 服务器使用了 Salamander 不支持的头部混淆。",
+      "fingerprint": "此 VLESS URI 请求了 Salamander 不支持的 TLS 指纹。",
       "sni": "VLESS URI 缺少 REALITY 所需的 SNI（sni）。",
       "publicKey": "VLESS URI 缺少 REALITY 公钥（pbk）。",
       "scheme": "这不是 VLESS 链接，必须以 vless:// 开头。",
-      "parameter": "VLESS URI 含有 Donut 不支持的选项。",
-      "malformed": "VLESS URI 无效。"
+      "parameter": "VLESS URI 含有 Salamander 不支持的选项。",
+      "malformed": "VLESS URI 无效。",
+      "alpn": "此 VLESS 服务器请求的 ALPN 协议列表不受 Salamander 支持。",
+      "network": "无法连接服务器以完成此请求。"
     },
-    "camoufoxRemoved": "Camoufox 已不再受支持。请使用 Wayfern 重新创建此配置文件。",
-    "noE2ePasswordSet": "尚未设置端到端加密密码。请先设置后再同步加密数据。",
     "importSourceNotChromium": "该文件夹不是 Chromium 浏览器配置文件",
     "importSourceNotChromiumNamed": "无法导入 {{family}} 配置文件；仅支持基于 Chromium 的浏览器",
-    "importSourceBrowserRunning": "请先关闭 {{browser}}，或选择仍要导入"
+    "importSourceBrowserRunning": "请先关闭 {{browser}}，或选择仍要导入",
+    "vlessSubscriptionFetchFailed": "无法获取该订阅。请检查网址和网络连接后重试。"
   },
   "rail": {
     "profiles": "配置文件",
@@ -2133,14 +1748,10 @@
       "importProfileHint": "从其他工具导入",
       "keyboardShortcuts": "键盘快捷键",
       "keyboardShortcutsHint": "查看所有快捷键",
-      "about": "关于 Donut Browser",
+      "about": "关于 Salamander Browser",
       "aboutHint": "版本和应用信息"
     },
-    "network": "网络",
-    "integrations": "集成",
-    "account": "账号",
-    "cookieBot": "Cookie Bot",
-    "cookieBotRunning": "Cookie Bot — 正在运行"
+    "network": "网络"
   },
   "pageTitle": {
     "proxies": "网络",
@@ -2148,69 +1759,8 @@
     "groups": "分组",
     "vpns": "网络",
     "settings": "设置",
-    "integrations": "集成",
-    "account": "账户",
     "import": "导入配置文件",
-    "shortcuts": "键盘快捷键",
-    "cookieBot": "Cookie Bot"
-  },
-  "encryption": {
-    "required": {
-      "title": "同步已暂停 — 需要密码",
-      "description": "已下载加密数据，但此设备未设置 E2E 密码。打开 设置 → 加密 并输入密码以继续同步。",
-      "openSettings": "打开设置"
-    },
-    "rollover": {
-      "startedTitle": "正在重新加密您的数据",
-      "startedDescription": "我们正在使用新密码重新上传每个已同步项。先是配置文件，然后是代理、分组、VPN 和扩展。",
-      "progressTitle": "重新加密 {{stage}}",
-      "progressDescription": "{{done}} / {{total}}",
-      "completedTitle": "重新加密完成",
-      "completedDescription": "所有已同步的数据都已使用新密码封装。",
-      "stage": {
-        "profiles": "配置文件",
-        "proxies": "代理",
-        "groups": "分组",
-        "vpns": "VPN",
-        "extensions": "扩展",
-        "extension_groups": "扩展组"
-      }
-    }
-  },
-  "account": {
-    "refreshed": "账户已刷新",
-    "loggedOut": "已退出",
-    "signedOut": "未登录",
-    "signedOutDescription": "登录以启用云同步、加密配置文件和团队功能。",
-    "plan": "套餐：{{plan}} · {{period}}",
-    "refresh": "刷新",
-    "logout": "退出",
-    "signIn": "登录",
-    "fields": {
-      "plan": "套餐",
-      "status": "状态",
-      "teamRole": "团队角色",
-      "period": "计费周期",
-      "device": "设备"
-    },
-    "tabs": {
-      "account": "账户",
-      "selfHosted": "自托管",
-      "teamUsage": "团队用量"
-    },
-    "selfHosted": {
-      "title": "自托管同步服务器",
-      "description": "将 Donut 连接到您自己的 donut-sync 服务器，无需使用托管云即可同步配置文件、代理、组和扩展程序。",
-      "disabledWhileLoggedIn": "登录 Donut 账户时无法使用自托管同步。请先退出登录以使用自定义服务器。",
-      "connectionStatus": "连接：",
-      "statusUnknown": "未测试",
-      "testConnection": "测试连接",
-      "disconnect": "断开连接"
-    },
-    "deviceOrdinal": "第 {{ordinal}} 台，共 {{count}} 台",
-    "automationPrimaryOnly": "浏览器自动化仅在您的主设备（设备 1）上运行。请在该设备上退出登录，才能在此设备上使用。",
-    "automationActiveHere": "浏览器自动化已在此设备上启用。",
-    "viewTeamUsage": "查看团队用量"
+    "shortcuts": "键盘快捷键"
   },
   "shortcutsPage": {
     "title": "键盘快捷键",
@@ -2230,7 +1780,7 @@
       "stopProfile": "停止 {{name}}",
       "profileInfo": "信息 — {{name}}",
       "createProfile": "创建配置文件",
-      "about": "关于 Donut Browser"
+      "about": "关于 Salamander Browser"
     }
   },
   "shortcuts": {
@@ -2241,26 +1791,23 @@
     "goProxies": "转到网络",
     "goExtensions": "转到扩展程序",
     "goGroups": "转到分组",
-    "goIntegrations": "转到集成",
-    "goAccount": "转到账户",
-    "goSettings": "转到设置",
-    "goCookieBot": "Cookie Bot"
+    "goSettings": "转到设置"
   },
   "closeConfirm": {
-    "title": "关闭 Donut Browser？",
+    "title": "关闭 Salamander Browser？",
     "description": "您想将应用最小化到系统托盘还是退出？",
     "minimize": "最小化到托盘",
     "quit": "退出"
   },
   "tray": {
-    "show": "显示 Donut Browser",
+    "show": "显示 Salamander Browser",
     "quit": "退出"
   },
   "onboarding": {
     "steps": {
       "createProfile": {
         "title": "创建你的第一个配置文件",
-        "content": "点击这里创建您的第一个配置文件。浏览器请选择 Wayfern——推荐的、具备指纹保护的 Chromium。"
+        "content": "点击这里创建您的第一个配置文件。系统会自动使用具备指纹保护的浏览器 Camoufox。"
       },
       "dnsBlocking": {
         "title": "DNS 拦截",
@@ -2274,13 +1821,13 @@
       "finish": "完成"
     },
     "thankYou": {
-      "title": "感谢您选择 Donut Browser",
+      "title": "感谢您选择 Salamander Browser",
       "body": "希望它能让您的网络浏览更加私密——每个身份彼此独立，数据不会离开您的设备。祝您使用愉快！",
       "cta": "开始浏览"
     }
   },
   "welcome": {
-    "title": "欢迎使用 Donut Browser",
+    "title": "欢迎使用 Salamander Browser",
     "tagline": "一款开源的反检测浏览器，可同时管理多个身份。",
     "skip": "跳过",
     "next": "下一步",
@@ -2293,7 +1840,7 @@
     },
     "ready": {
       "title": "正在准备",
-      "descDownloading": "正在下载你的第一个浏览器（Wayfern）。此一次性设置在后台运行——请稍候。",
+      "descDownloading": "正在下载你的第一个浏览器（Camoufox）。此一次性设置在后台运行——请稍候。",
       "descReady": "你的浏览器已就绪。来创建你的第一个配置文件吧。",
       "cta": "创建我的第一个配置文件",
       "downloading": "正在下载…",
@@ -2316,44 +1863,17 @@
         "proxy": "代理支持（HTTP/SOCKS5）",
         "vpn": "VPN 支持（WireGuard）",
         "profiles": "无限本地配置文件",
-        "api": "配置文件管理 API 和 MCP",
         "openSource": "开源",
         "groups": "配置文件分组",
         "cookies": "Cookie 导入与导出"
       }
-    },
-    "license": {
-      "title": "许可",
-      "body": "Donut Browser 是开源软件，可免费使用。",
-      "agree": "我知道了",
-      "personalTitle": "个人使用",
-      "personalDesc": "永久免费。",
-      "commercialTitle": "商业使用",
-      "trialBadge": "2 周免费",
-      "commercialDesc": "在 2 周评估期内免费。之后需要付费方案，这有助于本项目的持续维护与发展。"
     }
-  },
-  "wayfernBlocked": {
-    "title": "浏览器自动化已暂停",
-    "description": "浏览器自动化一次只能在一台设备上运行，目前有另一台已登录的设备正在使用。请在该设备上退出登录，然后重新启动此配置文件。"
-  },
-  "wayfernConfigDialog": {
-    "titleView": "查看指纹设置 - {{name}} ({{browser}})",
-    "titleConfigure": "配置指纹设置 - {{name}} ({{browser}})",
-    "invalidFingerprint": "无效的指纹配置",
-    "invalidFingerprintDescription": "指纹配置包含无效的 JSON。请检查高级设置。",
-    "saveFailed": "保存配置失败",
-    "unknownError": "发生未知错误"
-  },
-  "cookieCopy": {
-    "noOtherTargets": "未选择其他 Wayfern 配置文件"
   },
   "about": {
     "title": "关于",
     "version": "版本 {{version}}",
     "portableBadge": "便携版",
     "licenseNotice": "开源反检测浏览器。",
-    "website": "官网",
     "github": "GitHub",
     "licenses": "许可证",
     "searchLicenses": "搜索许可证…",
@@ -2372,323 +1892,6 @@
     "matching": "匹配中…",
     "matchSuccess": "指纹已更新以匹配代理。重新启动配置文件以生效。"
   },
-  "cookieBot": {
-    "title": "Cookie Bot",
-    "description": "在远程机器上通宵养号。",
-    "tabs": {
-      "overview": "概览",
-      "schedule": "计划",
-      "activity": "活动",
-      "team": "团队"
-    },
-    "locked": {
-      "title": "Cookie Bot",
-      "hint": "Cookie Bot 在远程机器上通宵养号，无需开着你的电脑也能保住 Cookie 和历史记录。"
-    },
-    "empty": {
-      "title": "尚未加入任何配置文件",
-      "hint": "选一个配置文件，机器人会在远程机器上通宵养号。你的电脑可以关机。",
-      "cta": "加入一个配置文件"
-    },
-    "tonight": {
-      "label": "今晚",
-      "nextRun": "下次运行 {{time}}",
-      "dueCount_one": "{{count}} 个配置文件待运行",
-      "dueCount_other": "{{count}} 个配置文件待运行",
-      "nothingScheduled": "没有安排"
-    },
-    "lastDay": {
-      "label": "最近 24 小时",
-      "none": "还没有运行记录",
-      "ran_one": "{{count}} 次运行",
-      "ran_other": "{{count}} 次运行",
-      "partial_one": "{{count}} 次部分完成",
-      "partial_other": "{{count}} 次部分完成",
-      "failed_one": "{{count}} 次失败",
-      "failed_other": "{{count}} 次失败"
-    },
-    "chart": {
-      "machineTime": "每晚机器时长",
-      "minutes": "{{minutes}} 分钟"
-    },
-    "hours": {
-      "label": "远程时长",
-      "remaining": "{{total}} 小时中还剩 {{remaining}} 小时",
-      "remainingOf": "/ {{total}} 小时",
-      "used": "{{total}} 小时中已用 {{used}} 小时",
-      "resets": "{{date}} 重置",
-      "exhausted": "远程时长已用完。计划仍然保留，将在下个周期恢复。",
-      "exhaustedOn": "远程时长已用完。计划仍然保留，将于 {{date}} 恢复。",
-      "estimate": "每周约 {{hours}} 小时 · 本周期还剩 {{remaining}} 小时",
-      "estimateOverBudget": "每周约需 {{hours}} 小时，但只剩 {{remaining}} 小时",
-      "estimateOnly": "每周约 {{hours}} 小时"
-    },
-    "enrolled": {
-      "columnProfile": "配置文件",
-      "columnCadence": "频率",
-      "columnTime": "时间",
-      "columnNextRun": "下次运行",
-      "columnLastRun": "上次运行",
-      "enrolProfiles": "加入配置文件",
-      "edit": "编辑计划",
-      "neverRun": "从未",
-      "pausedNoHours": "已暂停 — 时长用尽",
-      "profileMissing": "该配置文件不在这台电脑上。"
-    },
-    "schedule": {
-      "empty": "还没有任何安排。",
-      "quietHours_one": "{{count}} 个空闲小时",
-      "quietHours_other": "{{count}} 个空闲小时",
-      "crowded_one": "{{count}} 个配置文件同时开始",
-      "crowded_other": "{{count}} 个配置文件同时开始",
-      "unenrol": "从 Cookie Bot 移除",
-      "unenrolTitle": "将 {{name}} 从 Cookie Bot 移除？",
-      "unenrolDescription": "今晚起停止养号。以往的运行记录仍保留在“活动”中。",
-      "unenrolled": "已从 Cookie Bot 移除"
-    },
-    "status": {
-      "provisioning": "正在准备机器",
-      "ready": "正在加载配置文件",
-      "warming": "养号中",
-      "finished": "正在收尾",
-      "failed": "失败"
-    },
-    "runStatus": {
-      "pending": "排队中",
-      "running": "运行中",
-      "succeeded": "已完成",
-      "partial": "部分完成",
-      "failed": "失败",
-      "skipped": "已跳过",
-      "cancelled": "已停止"
-    },
-    "running": {
-      "label": "正在运行",
-      "more": "另有 {{count}} 个",
-      "stop": "停止运行",
-      "stopped": "运行已停止"
-    },
-    "live": {
-      "idle": "当前没有任务在运行",
-      "streamOffline": "实时更新已离线",
-      "streamOfflineDetail": "实时更新已离线，正在重新连接。下方的运行记录可能不是最新的。",
-      "unnamedSession": "远程会话",
-      "notStartedYet": "机器尚未报告开始时间。",
-      "sitesProgress": "{{total}} 个网站中的 {{visited}} 个",
-      "sitesUnknown": "尚未报告网站信息",
-      "consentHandled_one": "已处理 {{count}} 个同意提示",
-      "consentHandled_other": "已处理 {{count}} 个同意提示",
-      "consentUnknown": "尚未报告同意提示",
-      "billed": "已计费 {{duration}}",
-      "billedUnknown": "尚未报告计费时长",
-      "chunk": "第 {{index}} 段，共 {{total}} 段"
-    },
-    "history": {
-      "title": "运行记录",
-      "allProfiles": "所有配置文件",
-      "searchPlaceholder": "搜索配置文件…",
-      "filterAll": "全部运行",
-      "filterComplete": "已完成",
-      "filterPartial": "部分完成",
-      "filterFailed": "失败",
-      "columnStarted": "开始",
-      "columnProfile": "配置文件",
-      "columnDuration": "时长",
-      "columnSites": "网站",
-      "columnStatus": "状态",
-      "columnOperator": "操作者",
-      "empty": "还没有运行记录。",
-      "noMatch": "没有符合此筛选条件的运行。",
-      "unknownProfile": "未知配置文件",
-      "outcome": "原因：{{reason}}",
-      "sitesVisited": "{{visited}}/{{total}}",
-      "sitesFailed_one": "{{count}} 个网站无法访问",
-      "sitesFailed_other": "{{count}} 个网站无法访问",
-      "consentHandled_one": "已处理 {{count}} 个同意提示",
-      "consentHandled_other": "已处理 {{count}} 个同意提示",
-      "sitesUnknown": "暂无数据"
-    },
-    "duration": {
-      "hm": "{{hours}} 小时 {{minutes}} 分",
-      "ms": "{{minutes}} 分 {{seconds}} 秒",
-      "s": "{{seconds}} 秒"
-    },
-    "picker": {
-      "title": "加入配置文件",
-      "description": "选择机器人应在夜间养号的配置文件。",
-      "searchPlaceholder": "搜索配置文件…",
-      "noProfiles": "没有匹配的配置文件。",
-      "alreadyEnrolled": "已加入",
-      "continue_one": "继续（{{count}} 个）",
-      "continue_other": "继续（{{count}} 个）"
-    },
-    "enrol": {
-      "titleOne": "加入 {{name}}",
-      "titleCount_one": "加入 {{count}} 个配置文件",
-      "titleCount_other": "加入 {{count}} 个配置文件",
-      "editTitle": "编辑计划",
-      "description": "机器人会在远程机器上打开配置文件，浏览你列出的网站。你的电脑可以关机。",
-      "summaryNightly": "每晚 {{time}} 运行，每次最多 {{minutes}} 分钟。",
-      "summaryWeeknights": "周一至周五 {{time}} 运行，每次最多 {{minutes}} 分钟。",
-      "summaryAlternate": "隔晚 {{time}} 运行，每次最多 {{minutes}} 分钟。",
-      "summaryCustom_one": "每周 {{count}} 晚，于 {{time}} 运行，每次最多 {{minutes}} 分钟。",
-      "summaryCustom_other": "每周 {{count}} 晚，于 {{time}} 运行，每次最多 {{minutes}} 分钟。",
-      "confirm": "今晚起加入",
-      "confirmSome": "今晚加入 {{total}} 个中的 {{eligible}} 个",
-      "fixFirst": "请先解决这些问题",
-      "saving": "正在加入…",
-      "saved": "计划已保存",
-      "enrolled_one": "已加入 {{count}} 个配置文件",
-      "enrolled_other": "已加入 {{count}} 个配置文件",
-      "adjust": "调整计划",
-      "cadenceLabel": "频率",
-      "cadenceNightly": "每晚",
-      "cadenceWeeknights": "工作日夜间",
-      "cadenceAlternate": "隔晚一次",
-      "cadenceCustom_one": "每周 {{count}} 晚",
-      "cadenceCustom_other": "每周 {{count}} 晚",
-      "timeLabel": "开始时间",
-      "timeHint": "按各配置文件指纹所在时区计算。",
-      "maxMinutesLabel": "最长分钟数",
-      "intensityLabel": "深度",
-      "sitesLabel": "网站",
-      "sitesPlaceholder": "每行一个网址",
-      "sitesHint_one": "{{count}} 个网站。只会访问你在这里列出的页面。",
-      "sitesHint_other": "{{count}} 个网站。只会访问你在这里列出的页面。",
-      "sitesTooMany": "最多 {{max}} 个网站。",
-      "presetsUnavailable": "无法加载深度预设。请稍后再试。",
-      "confirmBulkTitle_one": "将 {{count}} 个配置文件加入 Cookie Bot？",
-      "confirmBulkTitle_other": "将 {{count}} 个配置文件加入 Cookie Bot？",
-      "confirmBulkDescription_one": "这会占用共享远程时长预订一次夜间运行。时间和网站将在下一步选择。",
-      "confirmBulkDescription_other": "这会占用共享远程时长预订 {{count}} 次夜间运行。时间和网站将在下一步选择。",
-      "confirmBulkButton_one": "继续（{{count}} 个配置文件）",
-      "confirmBulkButton_other": "继续（{{count}} 个配置文件）",
-      "sitesRequired": "请至少添加一个网站。",
-      "addSitesFirst": "请先添加网站",
-      "presetsMissing": "深度预设不可用",
-      "sourceOwn": "我的列表",
-      "sourceCurated": "精选",
-      "sourceSaved": "已保存",
-      "curatedEmpty": "目前没有可用的精选列表。",
-      "curatedNote": "由我们持续维护的精选列表。每个配置文件都会从中抽取各自的样本，因此不会有两个配置文件浏览同一组网站——这正是让列表本身不会变成特征的原因。地址只保留在我们这边。",
-      "savedEmpty": "还没有保存任何内容。请在“我的列表”中输入列表，然后从那里保存。",
-      "savedNote": "保存计划时会把网站复制到计划中，因此以后编辑列表不会影响已有的计划。",
-      "savedUnavailable": "无法加载你保存的列表。",
-      "saveAsList": "保存为列表",
-      "listNamePlaceholder": "为该列表命名",
-      "listSaved": "已保存列表",
-      "listRenamed": "已重命名列表",
-      "listDeleted": "已删除列表",
-      "listRename": "重命名",
-      "listDeleteConfirm": "删除？",
-      "templateMissing": "该保存的列表已不存在。请另选一个。",
-      "templateNameTaken": "你已经有同名的列表。",
-      "templateNameInvalid": "列表名称不超过 {{max}} 个字符。",
-      "calendarLabel": "运行时间",
-      "daysLabel": "星期",
-      "addSlot": "添加时间",
-      "slotsFull": "最多 {{max}} 个开始时间。",
-      "removeSlot": "移除此时间",
-      "pickListFirst": "请先选择列表",
-      "finishCalendarFirst": "请先完成计划",
-      "duplicateSlot": "有两行的星期和时间相同",
-      "listSites_one": "{{count}} 个网站",
-      "listSites_other": "{{count}} 个网站",
-      "summarySlots_one": "每周运行 {{count}} 次，每次最多 {{minutes}} 分钟。",
-      "summarySlots_other": "每周运行 {{count}} 次，每次最多 {{minutes}} 分钟。",
-      "templateNameInvalidNoMax": "该名称不能用于已保存的列表。"
-    },
-    "preset": {
-      "light": "轻度",
-      "balanced": "标准",
-      "deep": "深度"
-    },
-    "template": {
-      "lowIntentPurchaser": "低购买意向买家",
-      "lowIntentPurchaserHint": "把配置文件定位为对价格敏感的买家：比价、优惠券、返现和二手转卖网站，并通过聚合站点而非直接访问零售商。"
-    },
-    "preflight": {
-      "ineligible_one": "{{count}} 个配置文件无法远程运行",
-      "ineligible_other": "{{count}} 个配置文件无法远程运行",
-      "reasonSync": "同步已关闭",
-      "reasonEncrypted": "端到端加密",
-      "reasonNoFingerprint": "没有记录操作系统",
-      "reasonCrossOs": "为 {{os}} 创建 — 没有匹配的远程机器",
-      "reasonNoExitNode": "没有代理或 VPN",
-      "fixSync": "开启同步",
-      "fixEncrypted": "打开同步设置",
-      "fixProxy": "绑定代理",
-      "fixFailed": "无法应用该修复。",
-      "exitNodeHint": "没有代理或 VPN 时，流量会从机器集群自己的数据中心地址发出。来自托管网络的长时间流量对配置文件身份的损害，比完全不养号还要大。"
-    },
-    "conflict": {
-      "title": "{{email}} 已在 {{time}} 养这个配置文件",
-      "detail": "同一个配置文件上有两份计划会重复消耗时长，并可能在运行中冲突。",
-      "keepTheirs": "使用对方的计划",
-      "replace": "用我的替换",
-      "replaceForbidden": "只有团队所有者或管理员才能更改他人的计划。",
-      "askThem": "复制 {{email}}",
-      "emailCopied": "已复制邮箱",
-      "copyFailed": "无法复制该地址。"
-    },
-    "actionBar": {
-      "enrol": "加入 Cookie Bot",
-      "proRequired": "Cookie Bot 需要付费套餐",
-      "noneEligible": "所选配置文件都无法远程养号"
-    },
-    "actions": {
-      "enrol": "加入 Cookie Bot",
-      "editSchedule": "编辑计划",
-      "runNow": "立即运行",
-      "runStarted": "已开始运行",
-      "viewActivity": "查看活动",
-      "runNotStarted": "运行未开始：{{reason}}"
-    },
-    "state": {
-      "enrolled": "已加入",
-      "notEnrolled": "未加入",
-      "paused": "已暂停",
-      "summary": "{{cadence}} {{time}}",
-      "rowMenu": "{{name}} 的 Cookie Bot 选项",
-      "blocked": "无法运行：{{reason}}"
-    },
-    "team": {
-      "title": "团队用量",
-      "pooled_one": "{{total}} 小时中已用 {{used}} 小时，{{count}} 个席位",
-      "pooled_other": "{{total}} 小时中已用 {{used}} 小时，由 {{count}} 个席位共享",
-      "hours": "{{hours}} 小时",
-      "legendBot": "Cookie Bot",
-      "legendInteractive": "手动使用",
-      "columnMember": "成员",
-      "columnRuns": "运行次数",
-      "columnHours": "时长",
-      "columnShare": "占比",
-      "noActivity": "此期间没有远程会话。",
-      "soloNote": "目前只显示你自己的用量。邀请队友后可按成员查看时长分配。",
-      "runsFailed": "· {{n}} 次失败"
-    },
-    "closeReason": {
-      "stoppedByUser": "已手动停止",
-      "maxDuration": "已达时间上限",
-      "other": "已结束：{{reason}}"
-    },
-    "outcome": {
-      "notEntitled": "当前套餐不包含此功能",
-      "syncDisabled": "该配置文件已关闭云同步",
-      "encryptedSync": "不支持端到端加密同步",
-      "proxyRequired": "未绑定代理或 VPN",
-      "touchFingerprint": "不支持触摸设备指纹",
-      "platformUnsupported": "没有机器可运行该配置文件的系统",
-      "noSites": "没有要访问的网站",
-      "quotaExhausted": "远程时长已用完",
-      "profileLocked": "该配置文件已在别处打开",
-      "noCapacity": "没有空闲机器",
-      "managerError": "机器集群未能启动浏览器",
-      "budgetExceeded": "当晚的时长预算已用完",
-      "cancelledByUser": "已手动停止",
-      "unknown": "未知原因（{{code}}）"
-    }
-  },
   "prelaunchGate": {
     "titleBlocked": "启动已阻止",
     "titleWarning": "启动前请注意",
@@ -2699,16 +1902,16 @@
     "vpnExtensionConfirmed": "已知的 VPN 或代理工具",
     "vpnExtensionLikely": "疑似 VPN 或代理工具",
     "vpnExtensionCapability": "拥有代理权限",
-    "vpnExtensionExplainer": "如果其中之一将流量转发到别处，浏览器的真实位置将不再与创建此配置文件时使用的时区、语言和地理位置一致，而 Donut 无法从外部察觉。",
+    "vpnExtensionExplainer": "如果其中之一将流量转发到别处，浏览器的真实位置将不再与创建此配置文件时使用的时区、语言和地理位置一致，而 Salamander 无法从外部察觉。",
     "proxyCapableHeading": "可以更改代理的扩展",
-    "proxyCapableIntro": "它们看起来不是 VPN，但拥有 Chromium 的代理权限，下载管理器和调试工具同样需要该权限。Donut 无法判断它们是否在使用它：",
-    "sourceDonut": "由 Donut 管理",
+    "proxyCapableIntro": "它们看起来不是 VPN，但拥有 Chromium 的代理权限，下载管理器和调试工具同样需要该权限。Salamander 无法判断它们是否在使用它：",
+    "sourceSalamander": "由 Salamander 管理",
     "sourceBrowser": "已安装在配置文件中",
     "measurementUnreliable": "此配置文件中有扩展拥有代理权限，因此出口检测结果可能并非浏览器实际使用的线路。",
-    "scanIncompleteEncrypted": "此配置文件已加密，因此只能检查由 Donut 管理的扩展。",
-    "scanIncompleteEphemeral": "此配置文件尚无数据，因此只能检查由 Donut 管理的扩展。",
+    "scanIncompleteEncrypted": "此配置文件已加密，因此只能检查由 Salamander 管理的扩展。",
+    "scanIncompleteEphemeral": "此配置文件尚无数据，因此只能检查由 Salamander 管理的扩展。",
     "scanIncompletePartial": "扩展扫描被中断，可能有部分扩展未列出。",
-    "probePending": "尚未测量代理出口。Donut 会在启动过程中检查，如不匹配则停止。",
+    "probePending": "尚未测量代理出口。Salamander 会在启动过程中检查，如不匹配则停止。",
     "launchAnyway": "仍要启动",
     "dontBlockAgain": "不再因这一完全相同的不匹配而阻止",
     "dontWarnExtensions": "不再就这些扩展发出警告",
@@ -2716,6 +1919,6 @@
     "cancelledSummary": "已取消 {{total}} 次启动中的 {{cancelled}} 次",
     "vpnExtensionEntry": " {{version}} — {{capability}}、{{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}、{{source}}",
-    "scanIncompleteMissing": "此配置文件尚未启动过，因此只能检查由 Donut 管理的扩展。"
+    "scanIncompleteMissing": "此配置文件尚未启动过，因此只能检查由 Salamander 管理的扩展。"
   }
 }

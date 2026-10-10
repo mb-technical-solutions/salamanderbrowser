@@ -19,8 +19,8 @@ import { crc32 } from "node:zlib";
 export const TEST_BROWSER_VERSION = "150.0.7871.100";
 
 export function defaultWayfernPath(projectRoot) {
-  if (process.env.DONUT_E2E_WAYFERN_PATH) {
-    return path.resolve(process.env.DONUT_E2E_WAYFERN_PATH);
+  if (process.env.SALAMANDER_E2E_WAYFERN_PATH) {
+    return path.resolve(process.env.SALAMANDER_E2E_WAYFERN_PATH);
   }
   const fixtureRoot = path.join(projectRoot, ".cache", "e2e-wayfern-fixture");
   return process.platform === "darwin"
@@ -81,7 +81,7 @@ async function cloneAppBundle(source, destination) {
 }
 
 async function cacheDownloadedWayfern(app, projectRoot, version) {
-  if (process.env.DONUT_E2E_WAYFERN_PATH) return;
+  if (process.env.SALAMANDER_E2E_WAYFERN_PATH) return;
   const destination = defaultWayfernPath(projectRoot);
   if (existsSync(destination)) return;
 
@@ -278,7 +278,7 @@ export function buildStoredZip(entries) {
   return Buffer.concat([...locals, directory, end]);
 }
 
-export const OVERSIZED_EXTENSION_NAME = "Donut E2E Oversized Fixture";
+export const OVERSIZED_EXTENSION_NAME = "Salamander E2E Oversized Fixture";
 
 /**
  * A valid Manifest V3 ZIP padded past the 2 MiB body limit axum applies by
@@ -312,9 +312,9 @@ export function oversizedExtensionZipBase64(paddingBytes = 3 * 1024 * 1024) {
 // placeholders to. Deliberately free of the `__MSG_` marker so a test can
 // assert the stored record carries no placeholder anywhere.
 export const LOCALIZED_EXTENSION_MESSAGES = {
-  extName: "Donut E2E Localized Blocker",
+  extName: "Salamander E2E Localized Blocker",
   extDescription: "Resolved from the default locale, not the manifest",
-  extAuthor: "Donut E2E Localization",
+  extAuthor: "Salamander E2E Localization",
 };
 
 /**
@@ -385,7 +385,7 @@ export function extensionIconPngBase64() {
  */
 export async function writeUnpackedExtension(
   directory,
-  { name = "Donut E2E Unpacked", version = "1.0.0" } = {},
+  { name = "Salamander E2E Unpacked", version = "1.0.0" } = {},
 ) {
   const absolute = path.resolve(directory);
   await mkdir(path.join(absolute, "icons"), { recursive: true });
@@ -407,9 +407,9 @@ export async function writeUnpackedExtension(
   await writeFile(
     path.join(absolute, "background.js"),
     [
-      "globalThis.__donutE2eExtension = chrome.runtime.id;",
+      "globalThis.__salamanderE2eExtension = chrome.runtime.id;",
       "chrome.runtime.onInstalled.addListener(() => {",
-      "  console.log('donut e2e extension installed');",
+      "  console.log('salamander e2e extension installed');",
       "});",
       "",
     ].join("\n"),

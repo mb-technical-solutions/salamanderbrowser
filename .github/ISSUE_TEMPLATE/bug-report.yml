@@ -41,17 +41,17 @@ body:
   - type: input
     id: version
     attributes:
-      label: Donut Browser version
+      label: Salamander Browser version
       placeholder: e.g. 0.17.6 or nightly-2026-03-21
     validations:
       required: true
 
   - type: input
-    id: wayfern_version
+    id: camoufox_version
     attributes:
-      label: Wayfern version
+      label: Camoufox version
       description: Settings → About, or the version shown when creating a profile. Use "unknown" if not browser-specific.
-      placeholder: e.g. 138.0.7204.50 or unknown
+      placeholder: e.g. 135.0-beta.24 or unknown
     validations:
       required: true
 

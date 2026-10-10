@@ -21,7 +21,7 @@ after(async () => {
 });
 
 test("shared E2E diagnostics contain only redacted text logs", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "donut-diagnostics-test-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "salamander-diagnostics-test-"));
   roots.push(root);
   const secretUrl = "http://real-user:real-password@proxy.example:8080";
   const token = ["github", "pat", "example", "token", "0123456789"].join("_");
@@ -37,10 +37,10 @@ test("shared E2E diagnostics contain only redacted text logs", async () => {
 
   await Promise.all([
     mkdir(path.join(root, "logs"), { recursive: true }),
-    mkdir(path.join(root, "sessions", "network", "donut", "logs"), {
+    mkdir(path.join(root, "sessions", "network", "salamander", "logs"), {
       recursive: true,
     }),
-    mkdir(path.join(root, "sessions", "network", "donut", "data", "proxies"), {
+    mkdir(path.join(root, "sessions", "network", "salamander", "data", "proxies"), {
       recursive: true,
     }),
     mkdir(path.join(root, "sessions", "network", "artifacts"), {
@@ -50,7 +50,7 @@ test("shared E2E diagnostics contain only redacted text logs", async () => {
   await Promise.all([
     writeFile(path.join(root, "logs", "driver.log"), logText),
     writeFile(
-      path.join(root, "sessions", "network", "donut", "logs", "app.log"),
+      path.join(root, "sessions", "network", "salamander", "logs", "app.log"),
       logText,
     ),
     writeFile(
@@ -58,7 +58,7 @@ test("shared E2E diagnostics contain only redacted text logs", async () => {
         root,
         "sessions",
         "network",
-        "donut",
+        "salamander",
         "data",
         "proxies",
         "real.json",

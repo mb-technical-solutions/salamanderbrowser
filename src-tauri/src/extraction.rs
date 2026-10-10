@@ -190,68 +190,18 @@ impl Extractor {
   // NOTE: We intentionally do not rename or sanitize ZIP entry paths.
   // We only ensure paths are enclosed within the destination using zip's enclosed_name.
 
-  /// Ensure the extracted files are in the correct directory structure expected by verification
+  /// Ensure the extracted files are in the correct directory structure expected by verification.
+  ///
+  /// Camoufox (the only engine left after Wayfern's removal) is extracted
+  /// directly under its version directory already, so there is nothing to
+  /// reorganize; this is a no-op kept only because `extract_browser` calls it
+  /// unconditionally on Linux.
   #[cfg(target_os = "linux")]
   async fn ensure_correct_directory_structure(
     &self,
-    dest_dir: &Path,
-    exe_path: &Path,
+    _dest_dir: &Path,
+    _exe_path: &Path,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Determine browser type from the destination directory path
-    let browser_type = if dest_dir.to_string_lossy().contains("wayfern") {
-      "wayfern"
-    } else {
-      return Ok(());
-    };
-
-    // For Wayfern on Linux, we expect the executable directly under version directory
-    // e.g., binaries/wayfern/<version>/wayfern, without an extra subdirectory
-    if browser_type == "wayfern" {
-      return Ok(());
-    }
-
-    let expected_subdir = dest_dir.join(browser_type);
-
-    // If the executable is not in the expected subdirectory, create the structure
-    if !exe_path.starts_with(&expected_subdir) {
-      log::info!("Reorganizing directory structure for {}", browser_type);
-
-      // Create the expected subdirectory
-      std::fs::create_dir_all(&expected_subdir)?;
-
-      // Move all files from the root to the subdirectory
-      if let Ok(entries) = std::fs::read_dir(dest_dir) {
-        for entry in entries.flatten() {
-          let path = entry.path();
-          let file_name = match path.file_name() {
-            Some(name) => name,
-            None => continue,
-          };
-
-          // Skip the subdirectory we just created
-          if path == expected_subdir {
-            continue;
-          }
-
-          let target_path = expected_subdir.join(file_name);
-
-          // Move the file/directory
-          if let Err(e) = std::fs::rename(&path, &target_path) {
-            log::info!(
-              "Warning: Failed to move {} to {}: {}",
-              path.display(),
-              target_path.display(),
-              e
-            );
-          } else {
-            log::info!("Moved {} to {}", path.display(), target_path.display());
-          }
-        }
-      }
-
-      log::info!("Directory structure reorganized for {}", browser_type);
-    }
-
     Ok(())
   }
 
@@ -529,7 +479,7 @@ impl Extractor {
 
     // Create a temporary mount point
     let mount_point = std::env::temp_dir().join(format!(
-      "donut_mount_{}",
+      "salamander_mount_{}",
       std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -606,7 +556,7 @@ impl Extractor {
     // the copy itself. Without it, `cp -R` preserves quarantine from the
     // mounted DMG, which then has to be removed with `xattr -dr` — and that
     // removexattr syscall on a signed .app bundle trips macOS Sequoia's App
-    // Management TCC notification ("Donut.app was prevented from modifying
+    // Management TCC notification ("Salamander.app was prevented from modifying
     // apps on your Mac"). Stripping at copy time is silent.
     let copy_src = app_entry.to_str().unwrap().to_string();
     let copy_dst = app_path.to_str().unwrap().to_string();
@@ -649,7 +599,7 @@ impl Extractor {
     // Remove the macOS quarantine attribute so Gatekeeper doesn't block launch
     // — but only if it's actually present. A no-op `removexattr` syscall on a
     // signed .app bundle still trips macOS Sequoia's App Management privacy
-    // prompt ("Donut.app was prevented from modifying apps on your Mac"),
+    // prompt ("Salamander.app was prevented from modifying apps on your Mac"),
     // even when no modification actually happens, so we gate the call behind
     // a read-only `getxattr` check.
     if has_quarantine_attr(&app_path) {
@@ -1174,9 +1124,9 @@ impl Extractor {
       dest_dir.display()
     );
 
-    // Look for .exe files, preferring main browser executables. Wayfern is the
-    // current name; chromium/chrome cover builds extracted before the rename.
-    let priority_exe_names = ["wayfern.exe", "chromium.exe", "chrome.exe"];
+    // Look for .exe files, preferring the main browser executable. Upstream
+    // Camoufox releases ship `camoufox.exe` at the archive root.
+    let priority_exe_names = ["camoufox.exe"];
 
     // First try priority executable names
     for exe_name in &priority_exe_names {
@@ -1238,11 +1188,7 @@ impl Extractor {
               .to_lowercase();
 
             // Check if it's a browser executable
-            if file_name.contains("chrome")
-              || file_name.contains("chromium")
-              || file_name.contains("browser")
-              || file_name.contains("wayfern")
-            {
+            if file_name.contains("camoufox") || file_name.contains("browser") {
               return Ok(path);
             }
           } else if path.is_dir() {
@@ -1287,20 +1233,10 @@ impl Extractor {
   ) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
     log::info!("Searching for Linux executable in: {}", dest_dir.display());
 
-    // Enhanced list of common browser executable names, Wayfern first since it
-    // is the current name. Chrome/Chromium cover builds extracted before the
-    // rename.
-    let exe_names = [
-      // Wayfern variants (current naming)
-      "wayfern",
-      "wayfern-bin",
-      "wayfern-browser",
-      // Chrome/Chromium variants (builds extracted before the rename)
-      "chrome",
-      "chromium",
-      "chromium-browser",
-      "chromium-bin",
-    ];
+    // Upstream Camoufox releases ship the binary named `camoufox` or
+    // `camoufox-bin` at the archive root (see `browser.rs`'s own executable
+    // resolution, which matches these same two names).
+    let exe_names = ["camoufox", "camoufox-bin"];
 
     // First, try direct lookup in the main directory
     for exe_name in &exe_names {
@@ -1319,16 +1255,12 @@ impl Extractor {
       "opt",
       "sbin",
       "usr/sbin",
-      "wayfern",
-      "wayfern-linux",
-      "chrome",
-      "chromium",
-      "chrome-linux",
+      "camoufox",
+      "camoufox-linux",
       ".",
       "./",
       "Browser",
       "browser",
-      "usr/lib/chromium",
       "usr/share/applications",
       "usr/bin",
       "AppRun",
@@ -1421,7 +1353,7 @@ impl Extractor {
             if name_lower.contains("chrome")
               || name_lower.contains("brave")
               || name_lower.contains("zen")
-              || name_lower.contains("wayfern")
+              || name_lower.contains("camoufox")
               || name_lower.ends_with(".appimage")
               || !name_lower.contains('.')
             {
@@ -1475,7 +1407,7 @@ impl Extractor {
             if name_lower.contains("chrome")
               || name_lower.contains("brave")
               || name_lower.contains("zen")
-              || name_lower.contains("wayfern")
+              || name_lower.contains("camoufox")
               || file_name.ends_with(".AppImage")
             {
               log::info!(
@@ -1992,17 +1924,17 @@ mod tests {
     let extractor = Extractor::instance();
     let temp_dir = TempDir::new().unwrap();
 
-    // Create a Wayfern.app directory
-    let wayfern_app = temp_dir.path().join("Wayfern.app");
-    create_dir_all(&wayfern_app).unwrap();
+    // Create a Camoufox.app directory
+    let camoufox_app = temp_dir.path().join("Camoufox.app");
+    create_dir_all(&camoufox_app).unwrap();
 
     // Create the standard macOS app structure
-    let contents_dir = wayfern_app.join("Contents");
+    let contents_dir = camoufox_app.join("Contents");
     let macos_dir = contents_dir.join("MacOS");
     create_dir_all(&macos_dir).unwrap();
 
     // Create the executable
-    let executable = macos_dir.join("Wayfern");
+    let executable = macos_dir.join("Camoufox");
     File::create(&executable).unwrap();
 
     // Test finding the app
@@ -2010,7 +1942,7 @@ mod tests {
     assert!(result.is_ok());
 
     let found_app = result.unwrap();
-    assert_eq!(found_app.file_name().unwrap(), "Wayfern.app");
+    assert_eq!(found_app.file_name().unwrap(), "Camoufox.app");
     assert!(found_app.exists());
   }
 

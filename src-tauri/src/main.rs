@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-  donutbrowser_lib::run()
+  salamanderbrowser_lib::run()
 }

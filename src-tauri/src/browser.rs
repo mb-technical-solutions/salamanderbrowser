@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProxySettings {
   pub proxy_type: String,
   pub host: String,
@@ -15,13 +14,13 @@ pub struct ProxySettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BrowserType {
-  Wayfern,
+  Camoufox,
 }
 
 impl BrowserType {
   pub fn as_str(&self) -> &'static str {
     match self {
-      BrowserType::Wayfern => "wayfern",
+      BrowserType::Camoufox => "camoufox",
     }
   }
 
@@ -29,13 +28,13 @@ impl BrowserType {
   /// the wrong thing to put in a message the user reads.
   pub fn display_name(&self) -> &'static str {
     match self {
-      BrowserType::Wayfern => "Wayfern",
+      BrowserType::Camoufox => "Camoufox",
     }
   }
 
   pub fn from_str(s: &str) -> Result<Self, String> {
     match s {
-      "wayfern" => Ok(BrowserType::Wayfern),
+      "camoufox" => Ok(BrowserType::Camoufox),
       _ => Err(format!("Unknown browser type: {s}")),
     }
   }
@@ -61,39 +60,77 @@ pub trait Browser: Send + Sync {
 mod macos {
   use super::*;
 
-  pub fn get_wayfern_executable_path(
+  #[allow(dead_code)]
+  pub fn prepare_executable(_executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    // On macOS, no special preparation needed
+    Ok(())
+  }
+
+  /// Camoufox ships as `Camoufox.app`, with an architecture-specific
+  /// executable inside `Contents/MacOS` on universal-ish release layouts
+  /// (the release zip is per-arch, but a build extracted onto the wrong
+  /// machine can leave an incompatible binary sitting there).
+  pub fn get_camoufox_executable_path(
     install_dir: &Path,
   ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    // Newer builds ship as Wayfern.app; older ones as Chromium.app. Either way,
-    // find the .app bundle in the version directory.
     let app_path = std::fs::read_dir(install_dir)?
       .filter_map(Result::ok)
       .find(|entry| entry.path().extension().is_some_and(|ext| ext == "app"))
-      .ok_or("Wayfern app not found")?;
+      .ok_or("Camoufox app not found")?;
 
-    // Construct the browser executable path
     let mut executable_dir = app_path.path();
     executable_dir.push("Contents");
     executable_dir.push("MacOS");
 
-    // Find the main executable inside Contents/MacOS. The renamed builds name it
-    // `Wayfern`; older Chromium-named builds name it `Chromium`. Helper binaries
-    // such as `chrome_crashpad_handler` contain neither token and are skipped.
-    let executable_path = std::fs::read_dir(&executable_dir)?
+    let candidates: Vec<PathBuf> = std::fs::read_dir(&executable_dir)?
       .filter_map(Result::ok)
-      .find(|entry| {
+      .filter(|entry| {
         let binding = entry.file_name();
         let name = binding.to_string_lossy();
-        name.contains("Wayfern") || name.contains("Chromium")
+        name.starts_with("camoufox") || name.contains("Camoufox")
       })
       .map(|entry| entry.path())
-      .ok_or("No Wayfern executable found in MacOS directory")?;
+      .collect();
 
-    Ok(executable_path)
+    let current_arch = if cfg!(target_arch = "x86_64") {
+      "x86_64"
+    } else if cfg!(target_arch = "aarch64") {
+      "arm64"
+    } else {
+      return Err("Unsupported architecture".into());
+    };
+
+    for candidate in &candidates {
+      if let Ok(output) = std::process::Command::new("file").arg(candidate).output() {
+        if output.status.success() {
+          if let Ok(output_str) = String::from_utf8(output.stdout) {
+            let is_compatible = if current_arch == "x86_64" {
+              output_str.contains("x86_64") || output_str.contains("i386")
+            } else {
+              output_str.contains("arm64") || output_str.contains("aarch64")
+            };
+            if is_compatible {
+              return Ok(candidate.clone());
+            }
+            log::warn!(
+              "Skipping incompatible Camoufox executable: {} (architecture: {})",
+              candidate.display(),
+              output_str.trim()
+            );
+          }
+        }
+      }
+    }
+
+    // `file` unavailable or nothing matched: fall back to the first candidate
+    // rather than failing outright.
+    candidates
+      .into_iter()
+      .next()
+      .ok_or_else(|| "No Camoufox executable found in MacOS directory".into())
   }
 
-  pub fn is_wayfern_version_downloaded(install_dir: &Path) -> bool {
-    // On macOS, check for the .app bundle (Wayfern.app or legacy Chromium.app)
+  pub fn is_camoufox_version_downloaded(install_dir: &Path) -> bool {
     if let Ok(entries) = std::fs::read_dir(install_dir) {
       for entry in entries.flatten() {
         if entry.path().extension().is_some_and(|ext| ext == "app") {
@@ -103,55 +140,12 @@ mod macos {
     }
     false
   }
-
-  #[allow(dead_code)]
-  pub fn prepare_executable(_executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // On macOS, no special preparation needed
-    Ok(())
-  }
 }
 
 #[cfg(target_os = "linux")]
 mod linux {
   use super::*;
   use std::os::unix::fs::PermissionsExt;
-
-  /// Candidate paths for the Wayfern executable on Linux, in priority order.
-  /// Newer builds ship the binary named `wayfern`; the `chromium`/`chrome` names
-  /// are retained as fallbacks so versions extracted before the rename still
-  /// launch. Each name is probed at the version root and in the subdirectory
-  /// layouts the archive may unpack into.
-  fn wayfern_executable_candidates(install_dir: &Path) -> Vec<PathBuf> {
-    const NAMES: [&str; 3] = ["wayfern", "chromium", "chrome"];
-    let dirs = [
-      install_dir.to_path_buf(),
-      install_dir.join("wayfern"),
-      install_dir.join("wayfern-linux"),
-      install_dir.join("chrome-linux"),
-    ];
-    dirs
-      .iter()
-      .flat_map(|dir| NAMES.iter().map(move |name| dir.join(name)))
-      .collect()
-  }
-
-  pub fn get_wayfern_executable_path(
-    install_dir: &Path,
-  ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    for executable_path in wayfern_executable_candidates(install_dir) {
-      if executable_path.exists() && executable_path.is_file() {
-        return Ok(executable_path);
-      }
-    }
-
-    Err(format!("Wayfern executable not found in {}", install_dir.display()).into())
-  }
-
-  pub fn is_wayfern_version_downloaded(install_dir: &Path) -> bool {
-    wayfern_executable_candidates(install_dir)
-      .iter()
-      .any(|exe_path| exe_path.exists() && exe_path.is_file())
-  }
 
   #[allow(dead_code)]
   pub fn prepare_executable(executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -173,25 +167,16 @@ mod linux {
     );
     Ok(())
   }
-}
 
-#[cfg(target_os = "windows")]
-mod windows {
-  use super::*;
-
-  /// Candidate paths for the Wayfern executable on Windows, in priority order.
-  /// Newer builds ship `wayfern.exe`; the `chromium.exe`/`chrome.exe` names are
-  /// retained as fallbacks so versions extracted before the rename still launch.
-  /// Each name is probed at the version root and in the subdirectory layouts the
-  /// archive may unpack into.
-  fn wayfern_executable_candidates(install_dir: &Path) -> Vec<PathBuf> {
-    const NAMES: [&str; 3] = ["wayfern.exe", "chromium.exe", "chrome.exe"];
+  /// Candidate paths for the Camoufox executable on Linux, in priority order.
+  /// Upstream releases ship the binary named `camoufox` or `camoufox-bin` at
+  /// the archive root, or nested under a `camoufox/` subdirectory.
+  fn camoufox_executable_candidates(install_dir: &Path) -> Vec<PathBuf> {
+    const NAMES: [&str; 2] = ["camoufox", "camoufox-bin"];
     let dirs = [
       install_dir.to_path_buf(),
-      install_dir.join("bin"),
-      install_dir.join("wayfern"),
-      install_dir.join("wayfern-win"),
-      install_dir.join("chrome-win"),
+      install_dir.join("camoufox"),
+      install_dir.join("camoufox-linux"),
     ];
     dirs
       .iter()
@@ -199,90 +184,131 @@ mod windows {
       .collect()
   }
 
-  /// Whether `path` is an .exe whose name looks like the browser (Wayfern or a
-  /// legacy Chromium-named build). Guards against archives wrongly given a
-  /// `*.exe` name by requiring a valid PE header.
-  fn is_wayfern_exe(path: &Path) -> bool {
-    if path.extension().is_none_or(|ext| ext != "exe") || !is_pe_executable(path) {
-      return false;
-    }
-    let name = path
-      .file_stem()
-      .unwrap_or_default()
-      .to_string_lossy()
-      .to_lowercase();
-    name.contains("wayfern") || name.contains("chromium") || name.contains("chrome")
-  }
-
-  pub fn get_wayfern_executable_path(
+  pub fn get_camoufox_executable_path(
     install_dir: &Path,
   ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    for path in wayfern_executable_candidates(install_dir) {
-      if path.exists() && path.is_file() {
-        return Ok(path);
+    for executable_path in camoufox_executable_candidates(install_dir) {
+      if executable_path.exists() && executable_path.is_file() {
+        return Ok(executable_path);
       }
     }
 
-    // Look for any .exe file that might be the browser
-    if let Ok(entries) = std::fs::read_dir(install_dir) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if is_wayfern_exe(&path) {
-          return Ok(path);
-        }
-      }
-    }
-
-    Err("Wayfern executable not found in Windows installation directory".into())
+    Err(format!("Camoufox executable not found in {}", install_dir.display()).into())
   }
 
-  pub fn is_wayfern_version_downloaded(install_dir: &Path) -> bool {
-    if wayfern_executable_candidates(install_dir)
+  pub fn is_camoufox_version_downloaded(install_dir: &Path) -> bool {
+    camoufox_executable_candidates(install_dir)
       .iter()
-      .any(|exe_path| exe_path.exists() && exe_path.is_file() && has_sibling_dll(exe_path))
-    {
-      return true;
-    }
-
-    // Check for any .exe file that looks like the browser
-    if let Ok(entries) = std::fs::read_dir(install_dir) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if is_wayfern_exe(&path) && has_sibling_dll(&path) {
-          return true;
-        }
-      }
-    }
-
-    false
+      .any(|exe_path| exe_path.exists() && exe_path.is_file())
   }
+}
+
+#[cfg(target_os = "windows")]
+mod windows {
+  use super::*;
 
   #[allow(dead_code)]
   pub fn prepare_executable(_executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // On Windows, no special preparation needed
     Ok(())
   }
+
+  /// Candidate paths for the Camoufox executable on Windows, in priority
+  /// order. Upstream releases ship `camoufox.exe` at the archive root, or
+  /// nested under a `camoufox\` subdirectory.
+  fn camoufox_executable_candidates(install_dir: &Path) -> Vec<PathBuf> {
+    const NAMES: [&str; 1] = ["camoufox.exe"];
+    let dirs = [
+      install_dir.to_path_buf(),
+      install_dir.join("camoufox"),
+      install_dir.join("camoufox-win"),
+    ];
+    dirs
+      .iter()
+      .flat_map(|dir| NAMES.iter().map(move |name| dir.join(name)))
+      .collect()
+  }
+
+  pub fn get_camoufox_executable_path(
+    install_dir: &Path,
+  ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    for path in camoufox_executable_candidates(install_dir) {
+      if path.exists() && path.is_file() {
+        return Ok(path);
+      }
+    }
+
+    // Look for any .exe file that might be the browser.
+    if let Ok(entries) = std::fs::read_dir(install_dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "exe") && is_pe_executable(&path) {
+          let name = path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+          if name.starts_with("camoufox") {
+            return Ok(path);
+          }
+        }
+      }
+    }
+
+    Err("Camoufox executable not found in Windows installation directory".into())
+  }
+
+  pub fn is_camoufox_version_downloaded(install_dir: &Path) -> bool {
+    if camoufox_executable_candidates(install_dir)
+      .iter()
+      .any(|exe_path| exe_path.exists() && exe_path.is_file() && has_sibling_dll(exe_path))
+    {
+      return true;
+    }
+
+    if let Ok(entries) = std::fs::read_dir(install_dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "exe") && is_pe_executable(&path) {
+          let name = path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+          if name.starts_with("camoufox") && has_sibling_dll(&path) {
+            return true;
+          }
+        }
+      }
+    }
+
+    false
+  }
 }
 
-/// Wayfern is a Chromium-based anti-detect browser with CDP-based fingerprint injection
-pub struct WayfernBrowser;
+/// Camoufox is a Firefox-based anti-detect browser. Fingerprint injection
+/// happens via `CAMOU_CONFIG_N` environment variables set by
+/// `camoufox_manager::launch_camoufox`, which is the actual launch path used
+/// at runtime; `create_launch_args` below only exists to satisfy the
+/// `Browser` trait and is not used for a real launch.
+pub struct CamoufoxBrowser;
 
-impl WayfernBrowser {
+impl CamoufoxBrowser {
   pub fn new() -> Self {
     Self
   }
 }
 
-impl Browser for WayfernBrowser {
+impl Browser for CamoufoxBrowser {
   fn get_executable_path(&self, install_dir: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
     #[cfg(target_os = "macos")]
-    return macos::get_wayfern_executable_path(install_dir);
+    return macos::get_camoufox_executable_path(install_dir);
 
     #[cfg(target_os = "linux")]
-    return linux::get_wayfern_executable_path(install_dir);
+    return linux::get_camoufox_executable_path(install_dir);
 
     #[cfg(target_os = "windows")]
-    return windows::get_wayfern_executable_path(install_dir);
+    return windows::get_camoufox_executable_path(install_dir);
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     Err("Unsupported platform".into())
@@ -291,46 +317,23 @@ impl Browser for WayfernBrowser {
   fn create_launch_args(
     &self,
     profile_path: &str,
-    proxy_settings: Option<&ProxySettings>,
+    _proxy_settings: Option<&ProxySettings>,
     url: Option<String>,
     remote_debugging_port: Option<u16>,
     headless: bool,
   ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    // Wayfern uses Chromium-style arguments
     let mut args = vec![
-      format!("--user-data-dir={}", profile_path),
-      "--no-default-browser-check".to_string(),
-      "--disable-background-mode".to_string(),
-      "--disable-component-update".to_string(),
-      "--disable-background-timer-throttling".to_string(),
-      "--crash-server-url=".to_string(),
-      "--disable-updater".to_string(),
-      "--disable-session-crashed-bubble".to_string(),
-      "--hide-crash-restore-bubble".to_string(),
-      "--disable-infobars".to_string(),
-      // Wayfern-specific args for automation
-      "--disable-features=DialMediaRouteProvider".to_string(),
-      "--use-mock-keychain".to_string(),
-      "--password-store=basic".to_string(),
+      "-profile".to_string(),
+      profile_path.to_string(),
+      "-no-remote".to_string(),
     ];
 
-    // Add remote debugging port (required for CDP fingerprint injection)
     if let Some(port) = remote_debugging_port {
-      args.push("--remote-debugging-address=127.0.0.1".to_string());
       args.push(format!("--remote-debugging-port={port}"));
     }
 
-    // Add headless mode if requested
     if headless {
-      args.push("--headless=new".to_string());
-    }
-
-    // Add proxy configuration if provided
-    if let Some(proxy) = proxy_settings {
-      args.push(format!(
-        "--proxy-server=http://{}:{}",
-        proxy.host, proxy.port
-      ));
+      args.push("--headless".to_string());
     }
 
     if let Some(url) = url {
@@ -341,16 +344,16 @@ impl Browser for WayfernBrowser {
   }
 
   fn is_version_downloaded(&self, version: &str, binaries_dir: &Path) -> bool {
-    let install_dir = binaries_dir.join("wayfern").join(version);
+    let install_dir = binaries_dir.join("camoufox").join(version);
 
     #[cfg(target_os = "macos")]
-    return macos::is_wayfern_version_downloaded(&install_dir);
+    return macos::is_camoufox_version_downloaded(&install_dir);
 
     #[cfg(target_os = "linux")]
-    return linux::is_wayfern_version_downloaded(&install_dir);
+    return linux::is_camoufox_version_downloaded(&install_dir);
 
     #[cfg(target_os = "windows")]
-    return windows::is_wayfern_version_downloaded(&install_dir);
+    return windows::is_camoufox_version_downloaded(&install_dir);
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     false
@@ -384,22 +387,17 @@ impl BrowserFactory {
 
   pub fn create_browser(&self, browser_type: BrowserType) -> Box<dyn Browser> {
     match browser_type {
-      BrowserType::Wayfern => Box::new(WayfernBrowser::new()),
+      BrowserType::Camoufox => Box::new(CamoufoxBrowser::new()),
     }
   }
 }
 
 /// Whether the directory holding `exe_path` also contains at least one `.dll`.
 ///
-/// A Chromium build on Windows cannot start without its sibling libraries
-/// (`chrome.dll` and friends) and its `.manifest`; a lone `.exe` is a gutted
-/// install, and launching it fails inside the Windows loader with os error
-/// 14001 (`ERROR_SXS_CANT_GEN_ACTCTX`, "side-by-side configuration is
-/// incorrect"). Treating such a directory as downloaded is what made that state
-/// permanent: the registry rescan re-added it as a healthy install, so no
-/// re-download was ever offered. The check is scoped to the executable's own
-/// directory because the payload may sit at the version root or in a `bin/`,
-/// `wayfern/`, `wayfern-win/` or `chrome-win/` subdirectory.
+/// A gutted install (the `.exe` survived a cleanup pass that deleted every
+/// `.dll`) is not a healthy one; treating it as downloaded is what made that
+/// state permanent, since the registry rescan would re-add it as healthy and
+/// no re-download would ever be offered.
 #[cfg(any(target_os = "windows", test))]
 fn has_sibling_dll(exe_path: &Path) -> bool {
   let Some(dir) = exe_path.parent() else {
@@ -492,176 +490,16 @@ pub struct GithubAsset {
   pub created_at: Option<String>,
   #[serde(default)]
   pub updated_at: Option<String>,
+  /// GitHub's SHA-256 digest for the uploaded asset (for example
+  /// `sha256:abc123...`). Camoufox publishes this in the release API rather
+  /// than as a `.sha256` sidecar file.
+  #[serde(default)]
+  pub digest: Option<String>,
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  #[cfg(target_os = "macos")]
-  #[test]
-  fn test_wayfern_named_app_bundle_is_found() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    // New release layout: Wayfern.app/Contents/MacOS/Wayfern
-    let macos_dir = install_dir
-      .join("Wayfern.app")
-      .join("Contents")
-      .join("MacOS");
-    std::fs::create_dir_all(&macos_dir).unwrap();
-    std::fs::File::create(macos_dir.join("Wayfern")).unwrap();
-    // Helper binaries in the same dir must not be picked as the main executable.
-    std::fs::File::create(macos_dir.join("chrome_crashpad_handler")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("Wayfern executable should be found");
-    assert_eq!(exe.file_name().unwrap().to_str().unwrap(), "Wayfern");
-  }
-
-  #[cfg(target_os = "macos")]
-  #[test]
-  fn test_legacy_chromium_app_bundle_still_found() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    // Builds extracted before the rename keep the Chromium.app layout.
-    let macos_dir = install_dir
-      .join("Chromium.app")
-      .join("Contents")
-      .join("MacOS");
-    std::fs::create_dir_all(&macos_dir).unwrap();
-    std::fs::File::create(macos_dir.join("Chromium")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("legacy Chromium executable should still be found");
-    assert_eq!(exe.file_name().unwrap().to_str().unwrap(), "Chromium");
-  }
-
-  #[cfg(target_os = "linux")]
-  #[test]
-  fn test_wayfern_linux_executable_preferred_over_legacy() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    // Both the new `wayfern` and a legacy `chrome` are present; wayfern wins.
-    std::fs::File::create(install_dir.join("chrome")).unwrap();
-    std::fs::File::create(install_dir.join("wayfern")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("Wayfern executable should be found");
-    assert_eq!(exe.file_name().unwrap().to_str().unwrap(), "wayfern");
-  }
-
-  #[cfg(target_os = "linux")]
-  #[test]
-  fn test_wayfern_linux_subdir_layout_found() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    // Archive that unpacks into a wayfern-linux/ subdirectory.
-    let subdir = install_dir.join("wayfern-linux");
-    std::fs::create_dir_all(&subdir).unwrap();
-    std::fs::File::create(subdir.join("wayfern")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("Wayfern executable in subdir should be found");
-    assert!(exe.ends_with(std::path::Path::new("wayfern-linux").join("wayfern")));
-  }
-
-  #[cfg(target_os = "windows")]
-  #[test]
-  fn test_wayfern_windows_executable_preferred_over_legacy() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    std::fs::File::create(install_dir.join("chrome.exe")).unwrap();
-    std::fs::File::create(install_dir.join("wayfern.exe")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("Wayfern executable should be found");
-    assert_eq!(exe.file_name().unwrap().to_str().unwrap(), "wayfern.exe");
-  }
-
-  #[cfg(target_os = "windows")]
-  #[test]
-  fn test_wayfern_windows_subdir_layout_found() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    // Archive that unpacks into a wayfern-win/ subdirectory.
-    let subdir = install_dir.join("wayfern-win");
-    std::fs::create_dir_all(&subdir).unwrap();
-    std::fs::File::create(subdir.join("wayfern.exe")).unwrap();
-
-    let exe = WayfernBrowser::new()
-      .get_executable_path(install_dir)
-      .expect("Wayfern executable in subdir should be found");
-    assert!(exe.ends_with(std::path::Path::new("wayfern-win").join("wayfern.exe")));
-  }
-
-  /// A gutted Windows install (the `.exe` survived a cleanup pass that deleted
-  /// every `.dll` and the `.manifest`) must not read as downloaded, otherwise it
-  /// is re-registered as healthy and launching it fails with os error 14001.
-  /// Runs on every platform because the predicate is platform-independent.
-  #[test]
-  fn test_lone_exe_is_not_a_valid_windows_install() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    let exe = install_dir.join("chrome.exe");
-    std::fs::File::create(&exe).unwrap();
-    assert!(
-      !has_sibling_dll(&exe),
-      "an .exe with no sibling .dll is a gutted install"
-    );
-
-    std::fs::File::create(install_dir.join("chrome.dll")).unwrap();
-    assert!(
-      has_sibling_dll(&exe),
-      "an .exe next to its libraries is a complete install"
-    );
-  }
-
-  /// The DLL check is scoped to the executable's own directory, so the nested
-  /// `chrome-win/` and `wayfern-win/` layouts are not falsely rejected because
-  /// the version root happens to hold no libraries.
-  #[test]
-  fn test_sibling_dll_check_is_scoped_to_the_executable_directory() {
-    use tempfile::TempDir;
-    let temp = TempDir::new().unwrap();
-    let install_dir = temp.path();
-
-    let subdir = install_dir.join("chrome-win");
-    std::fs::create_dir_all(&subdir).unwrap();
-    let exe = subdir.join("chrome.exe");
-    std::fs::File::create(&exe).unwrap();
-    std::fs::File::create(subdir.join("CHROME.DLL")).unwrap();
-
-    assert!(
-      has_sibling_dll(&exe),
-      "libraries beside the executable count regardless of case or nesting"
-    );
-
-    let root_exe = install_dir.join("chrome.exe");
-    std::fs::File::create(&root_exe).unwrap();
-    assert!(
-      !has_sibling_dll(&root_exe),
-      "libraries in a sibling subdirectory must not validate a bare root .exe"
-    );
-  }
 
   #[test]
   fn test_proxy_settings_serialization() {
@@ -692,13 +530,13 @@ mod tests {
   }
 
   #[test]
-  fn test_wayfern_config_has_no_executable_path() {
-    // Verify WayfernConfig does not store executable_path
-    let config = crate::wayfern_manager::WayfernConfig::default();
+  fn test_camoufox_config_has_no_executable_path() {
+    // Verify CamoufoxConfig does not store executable_path
+    let config = crate::camoufox_manager::CamoufoxConfig::default();
     let json = serde_json::to_value(&config).unwrap();
     assert!(
       json.get("executable_path").is_none(),
-      "WayfernConfig should not have executable_path field"
+      "CamoufoxConfig should not have executable_path field"
     );
   }
 
@@ -709,7 +547,7 @@ mod tests {
     let profile = BrowserProfile {
       id: uuid::Uuid::parse_str("12345678-1234-1234-1234-123456789abc").unwrap(),
       name: "test".to_string(),
-      browser: "wayfern".to_string(),
+      browser: "camoufox".to_string(),
       version: "1.0.0".to_string(),
       proxy_id: None,
       vpn_id: None,
@@ -717,20 +555,16 @@ mod tests {
       process_id: None,
       last_launch: None,
       release_type: "stable".to_string(),
-      wayfern_config: None,
+      camoufox_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
-      sync_mode: crate::profile::types::SyncMode::Disabled,
       encryption_salt: None,
-      last_sync: None,
       host_os: None,
       ephemeral: false,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
-      created_by_id: None,
-      created_by_email: None,
       dns_blocklist: None,
       password_protected: false,
       clear_on_close: false,

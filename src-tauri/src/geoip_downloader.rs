@@ -81,7 +81,7 @@ impl GeoIPDownloader {
     now.saturating_sub(timestamp) > SEVEN_DAYS
   }
 
-  /// Check if GeoIP database is missing or stale for Wayfern fingerprint geo.
+  /// Check if GeoIP database is missing or stale for Camoufox fingerprint geo.
   pub fn check_missing_geoip_database(
     &self,
   ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
@@ -89,7 +89,7 @@ impl GeoIPDownloader {
       .list_profiles()
       .map_err(|e| format!("Failed to list profiles: {e}"))?;
 
-    let needs_geoip = profiles.iter().any(|profile| profile.browser == "wayfern");
+    let needs_geoip = profiles.iter().any(|profile| profile.browser == "camoufox");
 
     if needs_geoip {
       return Ok(!Self::is_geoip_database_available() || Self::is_geoip_stale());
@@ -142,7 +142,7 @@ impl GeoIPDownloader {
     );
 
     #[cfg(feature = "e2e")]
-    let fixture_url = std::env::var("DONUT_E2E_GEOIP_DOWNLOAD_URL")
+    let fixture_url = std::env::var("SALAMANDER_E2E_GEOIP_DOWNLOAD_URL")
       .ok()
       .filter(|url| !url.is_empty());
     #[cfg(not(feature = "e2e"))]
@@ -274,7 +274,7 @@ impl GeoIPDownloader {
     let response = self
       .client
       .get(&url)
-      .header("User-Agent", "Mozilla/5.0 (compatible; donutbrowser)")
+      .header("User-Agent", "Mozilla/5.0 (compatible; salamanderbrowser)")
       .send()
       .await?;
 
@@ -335,6 +335,7 @@ mod tests {
         created_at: Some("2023-01-01T00:00:00Z".to_string()),
         updated_at: Some("2023-01-01T00:00:00Z".to_string()),
         browser_download_url: "https://example.com/GeoLite2-City.mmdb".to_string(),
+        digest: None,
       }],
     }
   }
@@ -361,7 +362,7 @@ mod tests {
     let response = downloader
       .client
       .get(&url)
-      .header("User-Agent", "Mozilla/5.0 (compatible; donutbrowser)")
+      .header("User-Agent", "Mozilla/5.0 (compatible; salamanderbrowser)")
       .send()
       .await
       .expect("Request should succeed");

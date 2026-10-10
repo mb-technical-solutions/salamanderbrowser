@@ -66,9 +66,7 @@ pub struct ExitCacheKey {
 /// port and credentials are regenerated per launch.
 pub fn exit_cache_key(profile: &BrowserProfile) -> Option<ExitCacheKey> {
   if let Some(proxy_id) = &profile.proxy_id {
-    let settings = PROXY_MANAGER
-      .resolve_proxy_for_profile(proxy_id, &profile.id.to_string())
-      .or_else(|| PROXY_MANAGER.get_proxy_settings_by_id(proxy_id))?;
+    let settings = PROXY_MANAGER.get_proxy_settings_by_id(proxy_id)?;
     // build_proxy_url returns the VLESS URI verbatim for vless proxies, so one
     // call covers every transport.
     return Some(ExitCacheKey {
@@ -139,7 +137,7 @@ fn probe_url(settings: &crate::browser::ProxySettings) -> Option<String> {
 /// (`geolocation::LocaleSelector`), not a hand-written country->language table.
 /// The generator picks a language at random weighted by CLDR speaker share, so
 /// any table naming one "expected" language per country flags fingerprints
-/// Donut itself produced — roughly 10% of US profiles legitimately get `es-US`
+/// Salamander itself produced — roughly 10% of US profiles legitimately get `es-US`
 /// and ~23% of Canadian ones get `fr-CA`. `None` means the country has no CLDR
 /// data and the check is skipped.
 fn language_matches_country(cc: &str, language: &str) -> Option<bool> {
@@ -147,8 +145,13 @@ fn language_matches_country(cc: &str, language: &str) -> Option<bool> {
 }
 
 /// Extract (timezone, language) from a profile's stored fingerprint JSON.
+///
+/// Camoufox's fingerprint is the flat, dotted-key config it reads via
+/// `CAMOU_CONFIG_N` env vars (see `geolocation::Geolocation::as_config`),
+/// so the keys are `"timezone"` and `"locale:language"` rather than the
+/// nested shape a device-synthesized fingerprint would use.
 fn fingerprint_locale(profile: &BrowserProfile) -> (Option<String>, Option<String>) {
-  let Some(config) = &profile.wayfern_config else {
+  let Some(config) = &profile.camoufox_config else {
     return (None, None);
   };
   let Some(fp_str) = &config.fingerprint else {
@@ -162,7 +165,7 @@ fn fingerprint_locale(profile: &BrowserProfile) -> (Option<String>, Option<Strin
     .and_then(|v| v.as_str())
     .map(str::to_string);
   let language = fp
-    .get("language")
+    .get("locale:language")
     .and_then(|v| v.as_str())
     .map(str::to_string);
   (timezone, language)
@@ -235,6 +238,11 @@ pub fn check_profile_consistency_cached(profile: &BrowserProfile) -> Consistency
 }
 
 /// Drop any cached exit for this profile, so the next check re-measures.
+///
+/// Currently unreachable: its only caller was `match_profile_fingerprint_to_exit`,
+/// which no longer rewrites a fingerprint in place (that relied on a
+/// Wayfern-only CDP refresh with no Camoufox equivalent — see that function).
+#[allow(dead_code)]
 pub fn invalidate_exit_cache(profile: &BrowserProfile) {
   if let Some(key) = exit_cache_key(profile) {
     exit_cache().remove(&key.scope);
@@ -350,44 +358,23 @@ pub async fn probe_direct_and_check(profile: &BrowserProfile) -> Result<Consiste
 #[tauri::command]
 pub async fn match_profile_fingerprint_to_exit(
   profile_id: String,
-  exit_ip: String,
+  _exit_ip: String,
 ) -> Result<(), String> {
+  // No Camoufox equivalent exists yet: Wayfern's version of this rewrote just
+  // the geo-related keys of a device-synthesized fingerprint in place via a
+  // CDP round-trip. Camoufox's fingerprint is a flat, locally generated
+  // config with no such refresh mechanism built — regenerating it outright
+  // would also change every other field, not just location. Surface a clean,
+  // translatable error rather than silently doing nothing.
   let manager = crate::profile::ProfileManager::instance();
-  let mut profile = manager
+  let _profile = manager
     .list_profiles()
     .map_err(|e| e.to_string())?
     .into_iter()
     .find(|p| p.id.to_string() == profile_id)
     .ok_or_else(|| serde_json::json!({ "code": "PROFILE_NOT_FOUND" }).to_string())?;
 
-  let mut config = profile
-    .wayfern_config
-    .clone()
-    .filter(|c| c.fingerprint.is_some())
-    .ok_or_else(|| serde_json::json!({ "code": "FINGERPRINT_MATCH_FAILED" }).to_string())?;
-  let fingerprint = config.fingerprint.clone().unwrap();
-
-  let geoip_override = serde_json::Value::String(exit_ip);
-  let refreshed = crate::wayfern_manager::WayfernManager::refresh_fingerprint_geolocation(
-    &fingerprint,
-    None,
-    Some(&geoip_override),
-  )
-  .await
-  .ok_or_else(|| serde_json::json!({ "code": "FINGERPRINT_MATCH_FAILED" }).to_string())?;
-
-  config.fingerprint = Some(refreshed);
-  profile.wayfern_config = Some(config);
-  manager.save_profile(&profile).map_err(|e| {
-    serde_json::json!({ "code": "INTERNAL_ERROR", "params": { "detail": e.to_string() } })
-      .to_string()
-  })?;
-
-  // The stored verdict was computed against the fingerprint we just rewrote.
-  // Leaving it would re-block the very launch this fix exists to unblock.
-  invalidate_exit_cache(&profile);
-
-  Ok(())
+  Err(serde_json::json!({ "code": "FINGERPRINT_MATCH_FAILED" }).to_string())
 }
 
 #[cfg(test)]
@@ -406,7 +393,7 @@ mod tests {
     // These are not the "expected" language for the country, but the generator
     // samples the CLDR distribution and produces them routinely — CLDR puts es
     // at 9.6% in the US and fr at 30% in Canada. Flagging them warns the user
-    // about a fingerprint Donut itself created.
+    // about a fingerprint Salamander itself created.
     assert_eq!(language_matches_country("US", "es-US"), Some(true));
     assert_eq!(language_matches_country("CA", "fr-CA"), Some(true));
     assert_eq!(language_matches_country("CA", "en-CA"), Some(true));
@@ -513,12 +500,12 @@ mod tests {
     let mut profile = BrowserProfile {
       id: uuid::Uuid::new_v4(),
       name: "p".into(),
-      browser: "wayfern".into(),
+      browser: "camoufox".into(),
       ..Default::default()
     };
-    profile.wayfern_config = Some(crate::wayfern_manager::WayfernConfig {
+    profile.camoufox_config = Some(crate::camoufox_manager::CamoufoxConfig {
       fingerprint: Some(
-        serde_json::json!({ "timezone": timezone, "language": language }).to_string(),
+        serde_json::json!({ "timezone": timezone, "locale:language": language }).to_string(),
       ),
       ..Default::default()
     });
@@ -569,7 +556,7 @@ mod tests {
     // reported as a mismatch and so must never block a launch.
     let profile = BrowserProfile {
       id: uuid::Uuid::new_v4(),
-      browser: "wayfern".into(),
+      browser: "camoufox".into(),
       ..Default::default()
     };
     let result = compare_exit_to_fingerprint(

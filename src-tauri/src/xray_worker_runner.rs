@@ -250,7 +250,7 @@ async fn spawn_xray_worker(
     pid_start_time: None,
     armed: true,
   };
-  let username = format!("donut_{}", uuid::Uuid::new_v4().simple());
+  let username = format!("salamander_{}", uuid::Uuid::new_v4().simple());
   let password = uuid::Uuid::new_v4().simple().to_string();
   let mut config = XrayWorkerConfig::new(
     id.clone(),
@@ -268,7 +268,7 @@ async fn spawn_xray_worker(
   save_xray_worker_config(&config)
     .map_err(|error| structured_error_with_detail("XRAY_START_FAILED", error))?;
 
-  let supervisor = find_sidecar_executable("donut-proxy")
+  let supervisor = find_sidecar_executable("salamander-proxy")
     .map_err(|_| structured_error("PROXY_SIDECAR_VERSION_MISMATCH"))?;
   let config_path = xray_worker_config_path(&id);
   let log_file = create_xray_worker_log(&id)

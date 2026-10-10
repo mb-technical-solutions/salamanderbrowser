@@ -99,6 +99,6 @@ copy_binary() {
   fi
 }
 
-# Copy donut-proxy binary
-copy_binary "donut-proxy"
+# Copy salamander-proxy binary
+copy_binary "salamander-proxy"
 

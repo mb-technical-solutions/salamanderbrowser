@@ -10,7 +10,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +23,6 @@ import {
   LuLink,
   LuPencil,
   LuPuzzle,
-  LuRefreshCw,
   LuTrash2,
   LuUpload,
 } from "react-icons/lu";
@@ -33,7 +31,6 @@ import {
   DataTableActionBarAction,
   DataTableActionBarSelection,
 } from "@/components/data-table-action-bar";
-import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import {
   AnimatedTabs,
   AnimatedTabsContent,
@@ -54,7 +51,6 @@ import {
 import { FadingScrollArea } from "@/components/ui/fading-scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ProBadge } from "@/components/ui/pro-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -83,8 +79,6 @@ import type { Extension, ExtensionGroup } from "@/types";
 import { DeleteConfirmationDialog } from "./delete-confirmation-dialog";
 import { RippleButton } from "./ui/ripple";
 
-type SyncStatus = "disabled" | "syncing" | "synced" | "error" | "waiting";
-
 /** A payload staged in the UI, before it is handed to the backend. */
 type PendingSource =
   | { kind: "archive"; fileName: string; data: number[] }
@@ -95,51 +89,6 @@ const ARCHIVE_EXTENSIONS = [".crx", ".zip"];
 function pathBaseName(path: string): string {
   const segments = path.split(/[/\\]/).filter(Boolean);
   return segments[segments.length - 1] ?? path;
-}
-
-function getSyncStatusDot(
-  item: { sync_enabled?: boolean; last_sync?: number },
-  liveStatus: SyncStatus | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): { color: string; tooltip: string; animate: boolean } {
-  const status = liveStatus ?? (item.sync_enabled ? "synced" : "disabled");
-
-  switch (status) {
-    case "syncing":
-      return {
-        color: "bg-warning",
-        tooltip: t("profileTable.syncTooltipSyncing"),
-        animate: true,
-      };
-    case "synced":
-      return {
-        color: "bg-success",
-        tooltip: item.last_sync
-          ? t("profileTable.syncTooltipSyncedAt", {
-              time: new Date(item.last_sync * 1000).toLocaleString(),
-            })
-          : t("profileTable.syncTooltipSynced"),
-        animate: false,
-      };
-    case "waiting":
-      return {
-        color: "bg-warning",
-        tooltip: t("profileTable.syncTooltipWaiting"),
-        animate: false,
-      };
-    case "error":
-      return {
-        color: "bg-destructive",
-        tooltip: t("profileTable.syncTooltipError"),
-        animate: false,
-      };
-    default:
-      return {
-        color: "bg-muted-foreground",
-        tooltip: t("profileTable.syncTooltipNotSynced"),
-        animate: false,
-      };
-  }
 }
 
 interface ExtensionManagementDialogProps {
@@ -215,17 +164,6 @@ export function ExtensionManagementDialog({
     {},
   );
 
-  // Sync state
-  const [extSyncStatus, setExtSyncStatus] = useState<
-    Record<string, SyncStatus>
-  >({});
-  const [isTogglingExtSync, setIsTogglingExtSync] = useState<
-    Record<string, boolean>
-  >({});
-  const [isTogglingGroupSync, setIsTogglingGroupSync] = useState<
-    Record<string, boolean>
-  >({});
-
   // Tab — keyed off `initialTab` so remounting the dialog with a new initial
   // tab (e.g. via the Mod+E shortcut toggle) jumps to that tab.
   const [activeTab, setActiveTab] = useState<"extensions" | "groups">(
@@ -285,29 +223,6 @@ export function ExtensionManagementDialog({
     }
   }, [extensions, loadIcons]);
 
-  // Listen for extension sync status events
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    const setupListener = async () => {
-      unlisten = await listen<{ id: string; status: string }>(
-        "extension-sync-status",
-        (event) => {
-          const { id, status } = event.payload;
-          setExtSyncStatus((prev) => ({
-            ...prev,
-            [id]: status as SyncStatus,
-          }));
-        },
-      );
-    };
-
-    void setupListener();
-    return () => {
-      unlisten?.();
-    };
-  }, []);
-
   /** Structured backend codes win; anything else falls back to a local message
    * so the user never sees a raw Rust string. */
   const showActionError = useCallback(
@@ -331,52 +246,6 @@ export function ExtensionManagementDialog({
     setPendingUpdateSource(null);
     setEditLinkFolder(false);
   }, []);
-
-  const handleToggleExtSync = useCallback(
-    async (ext: Extension) => {
-      setIsTogglingExtSync((prev) => ({ ...prev, [ext.id]: true }));
-      try {
-        await invoke("set_extension_sync_enabled", {
-          extensionId: ext.id,
-          enabled: !ext.sync_enabled,
-        });
-        showSuccessToast(
-          ext.sync_enabled
-            ? t("extensions.syncDisabled")
-            : t("extensions.syncEnabled"),
-        );
-        void loadData();
-      } catch (err) {
-        showActionError(err, t("proxies.management.updateSyncFailed"));
-      } finally {
-        setIsTogglingExtSync((prev) => ({ ...prev, [ext.id]: false }));
-      }
-    },
-    [loadData, showActionError, t],
-  );
-
-  const handleToggleGroupSync = useCallback(
-    async (group: ExtensionGroup) => {
-      setIsTogglingGroupSync((prev) => ({ ...prev, [group.id]: true }));
-      try {
-        await invoke("set_extension_group_sync_enabled", {
-          extensionGroupId: group.id,
-          enabled: !group.sync_enabled,
-        });
-        showSuccessToast(
-          group.sync_enabled
-            ? t("extensions.syncDisabled")
-            : t("extensions.syncEnabled"),
-        );
-        void loadData();
-      } catch (err) {
-        showActionError(err, t("proxies.management.updateSyncFailed"));
-      } finally {
-        setIsTogglingGroupSync((prev) => ({ ...prev, [group.id]: false }));
-      }
-    },
-    [loadData, showActionError, t],
-  );
 
   const handleUpdateExtension = useCallback(async () => {
     if (!editingExtension || !editExtensionName.trim()) return;
@@ -686,75 +555,6 @@ export function ExtensionManagementDialog({
     }
   }, [selectedGroups, loadData, showActionError, t]);
 
-  const handleBulkToggleExtSync = useCallback(async () => {
-    if (selectedExtensions.length === 0) return;
-    const allOn = selectedExtensions.every((e) => e.sync_enabled);
-    const targetEnabled = !allOn;
-    // A linked extension has no payload to upload, so enabling sync on one is
-    // refused by the backend. Skip them instead of failing the whole batch.
-    const targets = targetEnabled
-      ? selectedExtensions.filter((ext) => !ext.linked_path)
-      : selectedExtensions;
-    if (targets.length === 0) {
-      showErrorToast(t("extensions.linkedNoSync"));
-      return;
-    }
-    const results = await Promise.allSettled(
-      targets.map((ext) =>
-        invoke("set_extension_sync_enabled", {
-          extensionId: ext.id,
-          enabled: targetEnabled,
-        }),
-      ),
-    );
-    const firstRejection = results.find((r) => r.status === "rejected") as
-      | PromiseRejectedResult
-      | undefined;
-    if (firstRejection) {
-      showActionError(
-        firstRejection.reason,
-        t("proxies.management.updateSyncFailed"),
-      );
-    } else {
-      showSuccessToast(
-        targetEnabled
-          ? t("extensions.syncEnabled")
-          : t("extensions.syncDisabled"),
-      );
-    }
-    void loadData();
-  }, [selectedExtensions, loadData, showActionError, t]);
-
-  const handleBulkToggleGroupSync = useCallback(async () => {
-    if (selectedGroups.length === 0) return;
-    const allOn = selectedGroups.every((g) => g.sync_enabled);
-    const targetEnabled = !allOn;
-    const results = await Promise.allSettled(
-      selectedGroups.map((group) =>
-        invoke("set_extension_group_sync_enabled", {
-          extensionGroupId: group.id,
-          enabled: targetEnabled,
-        }),
-      ),
-    );
-    const firstRejection = results.find((r) => r.status === "rejected") as
-      | PromiseRejectedResult
-      | undefined;
-    if (firstRejection) {
-      showActionError(
-        firstRejection.reason,
-        t("proxies.management.updateSyncFailed"),
-      );
-    } else {
-      showSuccessToast(
-        targetEnabled
-          ? t("extensions.syncEnabled")
-          : t("extensions.syncDisabled"),
-      );
-    }
-    void loadData();
-  }, [selectedGroups, loadData, showActionError, t]);
-
   const renderCompatIcons = useCallback(
     (compat: string[]) => {
       const hasChromium = compat.includes("chromium");
@@ -912,53 +712,6 @@ export function ExtensionManagementDialog({
         cell: ({ row }) => renderSource(row.original),
       },
       {
-        id: "sync",
-        size: 88,
-        enableSorting: false,
-        header: () => null,
-        cell: ({ row }) => {
-          const ext = row.original;
-          const syncDot = getSyncStatusDot(ext, extSyncStatus[ext.id], t);
-          const isLinked = Boolean(ext.linked_path);
-          return (
-            <div className="flex shrink-0 items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`size-2 rounded-full shrink-0 ${syncDot.color} ${
-                      syncDot.animate ? "animate-pulse" : ""
-                    }`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{syncDot.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex shrink-0 items-center">
-                    <AnimatedSwitch
-                      checked={ext.sync_enabled}
-                      onCheckedChange={() => void handleToggleExtSync(ext)}
-                      disabled={isLinked || isTogglingExtSync[ext.id]}
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {isLinked
-                      ? t("extensions.linkedNoSync")
-                      : ext.sync_enabled
-                        ? t("syncTooltips.disable")
-                        : t("syncTooltips.enable")}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          );
-        },
-      },
-      {
         id: "actions",
         size: 80,
         enableSorting: false,
@@ -1007,9 +760,6 @@ export function ExtensionManagementDialog({
     ],
     [
       t,
-      extSyncStatus,
-      isTogglingExtSync,
-      handleToggleExtSync,
       renderExtensionIcon,
       renderCompatIcons,
       renderSource,
@@ -1137,54 +887,6 @@ export function ExtensionManagementDialog({
         },
       },
       {
-        id: "sync",
-        size: 88,
-        enableSorting: false,
-        header: () => null,
-        cell: ({ row }) => {
-          const group = row.original;
-          const groupSyncDot = getSyncStatusDot(
-            group,
-            extSyncStatus[group.id],
-            t,
-          );
-          return (
-            <div className="flex shrink-0 items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`size-2 rounded-full shrink-0 ${groupSyncDot.color} ${
-                      groupSyncDot.animate ? "animate-pulse" : ""
-                    }`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{groupSyncDot.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex shrink-0 items-center">
-                    <AnimatedSwitch
-                      checked={group.sync_enabled}
-                      onCheckedChange={() => void handleToggleGroupSync(group)}
-                      disabled={isTogglingGroupSync[group.id]}
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {group.sync_enabled
-                      ? t("syncTooltips.disable")
-                      : t("syncTooltips.enable")}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          );
-        },
-      },
-      {
         id: "actions",
         size: 80,
         enableSorting: false,
@@ -1230,14 +932,7 @@ export function ExtensionManagementDialog({
         },
       },
     ],
-    [
-      t,
-      extensions,
-      extSyncStatus,
-      isTogglingGroupSync,
-      handleToggleGroupSync,
-      renderExtensionIcon,
-    ],
+    [t, extensions, renderExtensionIcon],
   );
 
   const groupTable = useReactTable({
@@ -1261,7 +956,6 @@ export function ExtensionManagementDialog({
               <DialogTitle className="flex items-center gap-2">
                 <LuPuzzle className="size-5" />
                 {t("extensions.title")}
-                {limitedMode && <ProBadge />}
               </DialogTitle>
               <DialogDescription>
                 {t("extensions.description")}
@@ -1279,7 +973,6 @@ export function ExtensionManagementDialog({
                 <div className="absolute inset-x-0 bottom-0 z-2 h-6 bg-linear-to-t from-background to-transparent" />
                 <div className="absolute inset-0 z-3 flex items-center justify-center">
                   <div className="flex items-center gap-2 rounded-md bg-background/80 px-3 py-1.5">
-                    <ProBadge />
                     <span className="text-sm font-medium text-muted-foreground">
                       {t("extensions.proRequired")}
                     </span>
@@ -2098,15 +1791,6 @@ export function ExtensionManagementDialog({
         <DataTableActionBar table={extTable}>
           <DataTableActionBarSelection table={extTable} />
           <DataTableActionBarAction
-            tooltip={t("syncTooltips.bulkToggle")}
-            size="icon"
-            onClick={() => {
-              void handleBulkToggleExtSync();
-            }}
-          >
-            <LuRefreshCw />
-          </DataTableActionBarAction>
-          <DataTableActionBarAction
             tooltip={t("common.buttons.delete")}
             variant="destructive"
             size="icon"
@@ -2123,15 +1807,6 @@ export function ExtensionManagementDialog({
       {isOpen && activeTab === "groups" && (
         <DataTableActionBar table={groupTable}>
           <DataTableActionBarSelection table={groupTable} />
-          <DataTableActionBarAction
-            tooltip={t("syncTooltips.bulkToggle")}
-            size="icon"
-            onClick={() => {
-              void handleBulkToggleGroupSync();
-            }}
-          >
-            <LuRefreshCw />
-          </DataTableActionBarAction>
           <DataTableActionBarAction
             tooltip={t("common.buttons.delete")}
             variant="destructive"

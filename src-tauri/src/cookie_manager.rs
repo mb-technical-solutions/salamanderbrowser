@@ -7,101 +7,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 
-/// Chromium cookie decryption support for reading existing encrypted cookies.
-/// Writes always go through the plaintext `value` column (see `write_chrome_cookies`),
-/// so no encryption path is needed here — Chromium reads plaintext when
-/// `encrypted_value` is empty, regardless of what other cookies store.
-pub mod chrome_decrypt {
-  use aes::cipher::{block_padding::Pkcs7, BlockModeDecrypt, KeyIvInit};
-  use ring::pbkdf2;
-  use sha2::{Digest, Sha256};
-  use std::num::NonZeroU32;
-  use std::path::Path;
-
-  type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
-
-  /// PBKDF2 iteration count for deriving the AES key from the password stored
-  /// in `os_crypt_key`. Must match Chromium's `OSCryptImpl` on each platform:
-  /// macOS uses 1003 iterations, Linux uses 1. Getting this wrong produces a
-  /// different AES key → silent decryption failure → empty cookie values.
-  /// See `components/os_crypt/sync/os_crypt_{mac.mm,linux.cc}` in Chromium.
-  #[cfg(target_os = "macos")]
-  const PBKDF2_ITERATIONS: u32 = 1003;
-  #[cfg(not(target_os = "macos"))]
-  const PBKDF2_ITERATIONS: u32 = 1;
-
-  const KEY_LEN: usize = 16; // AES-128
-  const SALT: &[u8] = b"saltysalt";
-  const IV: [u8; 16] = [b' '; 16]; // 16 spaces
-  const HOST_HASH_LEN: usize = 32; // SHA-256 output length
-
-  fn derive_key(password: &[u8]) -> [u8; KEY_LEN] {
-    let mut key = [0u8; KEY_LEN];
-    // Using ring::pbkdf2 instead of the `pbkdf2` crate to avoid digest
-    // version conflicts between sha1 0.11 (digest 0.11) and pbkdf2 0.12
-    // (digest 0.10). ring's implementation is self-contained.
-    pbkdf2::derive(
-      pbkdf2::PBKDF2_HMAC_SHA1,
-      NonZeroU32::new(PBKDF2_ITERATIONS).expect("iterations must be non-zero"),
-      SALT,
-      password,
-      &mut key,
-    );
-    key
-  }
-
-  pub fn get_encryption_key(profile_data_path: &Path) -> Option<[u8; KEY_LEN]> {
-    let key_file = profile_data_path.join("os_crypt_key");
-    // Read as raw bytes and do NOT trim — Chromium's `ReadFileToString`
-    // passes the exact file contents to `Pbkdf2(file_contents)`. Any
-    // normalisation we do here would produce a different derived key.
-    let contents = std::fs::read(&key_file).ok()?;
-    if contents.is_empty() {
-      return None;
-    }
-    Some(derive_key(&contents))
-  }
-
-  /// Decrypt a Chrome encrypted cookie value.
-  ///
-  /// Chromium prefixes encrypted values with "v10" / "v11" and, since ~M100,
-  /// prepends `SHA-256(host_key)` to the plaintext before encryption as an
-  /// integrity check. After decryption we verify and strip those 32 bytes
-  /// when present. Passing `host_key` is required to do that verification —
-  /// without it we'd return 32 bytes of hash noise plus the actual value,
-  /// which is not valid UTF-8 and gets thrown away.
-  pub fn decrypt(encrypted: &[u8], host_key: &str, key: &[u8; KEY_LEN]) -> Option<String> {
-    if encrypted.len() < 3 {
-      return None;
-    }
-    let prefix = &encrypted[..3];
-    if prefix != b"v10" && prefix != b"v11" {
-      return None;
-    }
-    let ciphertext = &encrypted[3..];
-    if ciphertext.is_empty() {
-      return Some(String::new());
-    }
-
-    let mut buf = ciphertext.to_vec();
-    let decrypted = Aes128CbcDec::new(key.into(), &IV.into())
-      .decrypt_padded::<Pkcs7>(&mut buf)
-      .ok()?;
-
-    // Strip the SHA-256(host_key) integrity prefix if present. Older cookies
-    // (pre-M100) didn't have this prefix, so we fall back to the raw bytes
-    // when the first 32 bytes don't match the expected hash.
-    if decrypted.len() >= HOST_HASH_LEN {
-      let expected: [u8; HOST_HASH_LEN] = Sha256::digest(host_key.as_bytes()).into();
-      if decrypted[..HOST_HASH_LEN] == expected {
-        return String::from_utf8(decrypted[HOST_HASH_LEN..].to_vec()).ok();
-      }
-    }
-
-    String::from_utf8(decrypted.to_vec()).ok()
-  }
-}
-
 /// Unified cookie representation that works across both browser types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnifiedCookie {
@@ -172,14 +77,6 @@ pub struct SelectedCookie {
 pub struct CookieCopyResult {
   pub target_profile_id: String,
   pub cookies_copied: usize,
-  pub cookies_replaced: usize,
-  pub errors: Vec<String>,
-}
-
-/// Result of a cookie import operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CookieImportResult {
-  pub cookies_imported: usize,
   pub cookies_replaced: usize,
   pub errors: Vec<String>,
 }
@@ -276,43 +173,22 @@ pub struct CookiePasteImportResult {
 pub struct CookieManager;
 
 impl CookieManager {
-  /// Windows epoch offset: seconds between 1601-01-01 and 1970-01-01
-  const WINDOWS_EPOCH_DIFF: i64 = 11644473600;
-
-  fn get_chrome_encryption_key(profile: &BrowserProfile, profiles_dir: &Path) -> Option<[u8; 16]> {
-    let profile_data_path = profile.get_profile_data_path(profiles_dir);
-    chrome_decrypt::get_encryption_key(&profile_data_path)
-  }
-
-  fn wayfern_cookie_path(profile_data_path: &Path) -> PathBuf {
-    let default_dir = profile_data_path.join("Default");
-    #[cfg(target_os = "windows")]
-    {
-      default_dir.join("Network").join("Cookies")
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-      default_dir.join("Cookies")
-    }
-  }
-
   /// Get the cookie database path for a profile (read-side: errors if missing).
   fn get_cookie_db_path(profile: &BrowserProfile, profiles_dir: &Path) -> Result<PathBuf, String> {
     let profile_data_path = profile.get_profile_data_path(profiles_dir);
 
-    match profile.browser.as_str() {
-      "wayfern" => {
-        let path = Self::wayfern_cookie_path(&profile_data_path);
-        if path.exists() {
-          Ok(path)
-        } else {
-          Err(format!("Cookie database not found at: {}", path.display()))
-        }
-      }
-      _ => Err(format!(
+    if profile.browser.as_str() != "camoufox" {
+      return Err(format!(
         "Unsupported browser type for cookie operations: {}",
         profile.browser
-      )),
+      ));
+    }
+
+    let path = profile_data_path.join("cookies.sqlite");
+    if path.exists() {
+      Ok(path)
+    } else {
+      Err(format!("Cookie database not found at: {}", path.display()))
     }
   }
 
@@ -326,29 +202,22 @@ impl CookieManager {
   ) -> Result<PathBuf, String> {
     let profile_data_path = profile.get_profile_data_path(profiles_dir);
 
-    match profile.browser.as_str() {
-      "wayfern" => {
-        let path = Self::wayfern_cookie_path(&profile_data_path);
-        if !path.exists() {
-          Self::create_empty_chrome_cookies_db(&path)?;
-        }
-        Ok(path)
-      }
-      _ => Err(format!(
+    if profile.browser.as_str() != "camoufox" {
+      return Err(format!(
         "Unsupported browser type for cookie operations: {}",
         profile.browser
-      )),
+      ));
     }
+
+    let path = profile_data_path.join("cookies.sqlite");
+    if !path.exists() {
+      Self::create_empty_firefox_cookies_db(&path)?;
+    }
+    Ok(path)
   }
 
-  /// Create an empty Chromium-format Cookies SQLite database at `path`.
-  ///
-  /// Schema matches what recent Chromium versions write on first launch:
-  /// the `cookies` table, the `meta` table with version info, and the
-  /// `host_key/top_frame_site_key/name/path` unique index. Chromium's cookie
-  /// store migration code will upgrade this forward when Wayfern first
-  /// launches the profile.
-  fn create_empty_chrome_cookies_db(path: &Path) -> Result<(), String> {
+  /// Create an empty Firefox-format cookies.sqlite database at `path`.
+  fn create_empty_firefox_cookies_db(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
       std::fs::create_dir_all(parent)
         .map_err(|e| format!("Failed to create cookie directory: {e}"))?;
@@ -357,111 +226,54 @@ impl CookieManager {
       Connection::open(path).map_err(|e| format!("Failed to create cookie database: {e}"))?;
     conn
       .execute_batch(
-        "CREATE TABLE cookies(
-          creation_utc INTEGER NOT NULL,
-          host_key TEXT NOT NULL,
-          top_frame_site_key TEXT NOT NULL,
-          name TEXT NOT NULL,
-          value TEXT NOT NULL,
-          encrypted_value BLOB NOT NULL DEFAULT '',
-          path TEXT NOT NULL,
-          expires_utc INTEGER NOT NULL,
-          is_secure INTEGER NOT NULL,
-          is_httponly INTEGER NOT NULL,
-          last_access_utc INTEGER NOT NULL,
-          has_expires INTEGER NOT NULL DEFAULT 1,
-          is_persistent INTEGER NOT NULL DEFAULT 1,
-          priority INTEGER NOT NULL DEFAULT 1,
-          samesite INTEGER NOT NULL DEFAULT -1,
-          source_scheme INTEGER NOT NULL DEFAULT 0,
-          source_port INTEGER NOT NULL DEFAULT -1,
-          last_update_utc INTEGER NOT NULL DEFAULT 0,
-          source_type INTEGER NOT NULL DEFAULT 0,
-          has_cross_site_ancestor INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE UNIQUE INDEX cookies_unique_index
-          ON cookies(host_key, top_frame_site_key, name, path);
-        CREATE TABLE meta(
-          key LONGVARCHAR NOT NULL UNIQUE PRIMARY KEY,
-          value LONGVARCHAR
-        );
-        INSERT INTO meta VALUES('version', '23');
-        INSERT INTO meta VALUES('last_compatible_version', '23');",
+        "CREATE TABLE moz_cookies (
+          id INTEGER PRIMARY KEY,
+          originAttributes TEXT NOT NULL DEFAULT '',
+          name TEXT,
+          value TEXT,
+          host TEXT,
+          path TEXT,
+          expiry INTEGER,
+          lastAccessed INTEGER,
+          creationTime INTEGER,
+          isSecure INTEGER,
+          isHttpOnly INTEGER,
+          inBrowserElement INTEGER DEFAULT 0,
+          sameSite INTEGER DEFAULT 0,
+          rawSameSite INTEGER DEFAULT 0,
+          schemeMap INTEGER DEFAULT 0,
+          CONSTRAINT moz_uniqueid UNIQUE (name, host, path, originAttributes)
+        );",
       )
       .map_err(|e| format!("Failed to initialize cookie database schema: {e}"))?;
     Ok(())
   }
 
-  /// Convert Chrome timestamp (Windows epoch, microseconds) to Unix timestamp (seconds)
-  fn chrome_time_to_unix(chrome_time: i64) -> i64 {
-    if chrome_time == 0 {
-      return 0;
-    }
-    (chrome_time / 1_000_000) - Self::WINDOWS_EPOCH_DIFF
-  }
-
-  /// Convert Unix timestamp (seconds) to Chrome timestamp (Windows epoch, microseconds)
-  fn unix_to_chrome_time(unix_time: i64) -> i64 {
-    if unix_time == 0 {
-      return 0;
-    }
-    (unix_time + Self::WINDOWS_EPOCH_DIFF) * 1_000_000
-  }
-
-  /// Read cookies from a Chrome/Wayfern profile.
-  /// Handles encrypted cookies by decrypting encrypted_value using the profile's encryption key.
-  fn read_chrome_cookies(
-    db_path: &Path,
-    encryption_key: Option<&[u8; 16]>,
-  ) -> Result<Vec<UnifiedCookie>, String> {
+  /// Read cookies from a Camoufox (Firefox-format) profile.
+  fn read_firefox_cookies(db_path: &Path) -> Result<Vec<UnifiedCookie>, String> {
     let conn = Connection::open(db_path).map_err(|e| format!("Failed to open database: {e}"))?;
 
     let mut stmt = conn
       .prepare(
-        "SELECT name, value, host_key, path, expires_utc, is_secure,
-                is_httponly, samesite, creation_utc, last_access_utc, encrypted_value
-         FROM cookies",
+        "SELECT name, value, host, path, expiry, isSecure, isHttpOnly,
+                sameSite, creationTime, lastAccessed
+         FROM moz_cookies",
       )
       .map_err(|e| format!("Failed to prepare statement: {e}"))?;
 
     let cookies = stmt
       .query_map([], |row| {
-        let name: String = row.get(0)?;
-        let plaintext_value: String = row.get(1)?;
-        let domain: String = row.get(2)?;
-        let path: String = row.get(3)?;
-        let expires_utc: i64 = row.get(4)?;
-        let is_secure: i32 = row.get(5)?;
-        let is_httponly: i32 = row.get(6)?;
-        let samesite: i32 = row.get(7)?;
-        let creation_utc: i64 = row.get(8)?;
-        let last_access_utc: i64 = row.get(9)?;
-        let encrypted_value: Vec<u8> = row.get(10)?;
-
-        // Use plaintext value if available, otherwise decrypt encrypted_value.
-        // Decryption needs the host_key (domain) to verify and strip the
-        // SHA-256 integrity prefix Chromium prepends before encryption.
-        let value = if !plaintext_value.is_empty() {
-          plaintext_value
-        } else if !encrypted_value.is_empty() {
-          encryption_key
-            .and_then(|key| chrome_decrypt::decrypt(&encrypted_value, &domain, key))
-            .unwrap_or_default()
-        } else {
-          String::new()
-        };
-
         Ok(UnifiedCookie {
-          name,
-          value,
-          domain,
-          path,
-          expires: Self::chrome_time_to_unix(expires_utc),
-          is_secure: is_secure != 0,
-          is_http_only: is_httponly != 0,
-          same_site: samesite,
-          creation_time: Self::chrome_time_to_unix(creation_utc),
-          last_accessed: Self::chrome_time_to_unix(last_access_utc),
+          name: row.get(0)?,
+          value: row.get(1)?,
+          domain: row.get(2)?,
+          path: row.get(3)?,
+          expires: row.get(4)?,
+          is_secure: row.get::<_, i32>(5)? != 0,
+          is_http_only: row.get::<_, i32>(6)? != 0,
+          same_site: row.get(7)?,
+          creation_time: row.get::<_, i64>(8)? / 1_000_000,
+          last_accessed: row.get::<_, i64>(9)? / 1_000_000,
         })
       })
       .map_err(|e| format!("Failed to query cookies: {e}"))?
@@ -471,20 +283,16 @@ impl CookieManager {
     Ok(cookies)
   }
 
-  /// Write cookies to a Chrome/Wayfern profile.
+  /// Write cookies to a Camoufox (Firefox-format) profile.
   ///
-  /// Always writes values as plaintext in the `value` column with an empty
-  /// `encrypted_value`. Chromium reads plaintext on a per-row basis when
-  /// `encrypted_value` is empty, so this mixes cleanly with any pre-existing
-  /// encrypted cookies in the database. We avoid encrypting on write because
-  /// the os_crypt key derivation between Wayfern's runtime and an external
-  /// writer is not guaranteed to match, and a ciphertext Chromium can't
-  /// decrypt silently produces an empty cookie value at runtime.
+  /// Firefox's `moz_cookies.expiry` is "seconds since Unix epoch", so
+  /// `expiry = 0` is interpreted as 1970-01-01 and purged on read. To let
+  /// imported session cookies survive browser restart, rewrite them to a
+  /// far-future expiry.
   ///
-  /// The whole write runs in one transaction, so a row that fails cannot leave
-  /// half a paste applied — the half that would matter is the half holding the
-  /// login.
-  fn write_chrome_cookies(
+  /// `schemeMap` is a bitfield (1 = HTTP, 2 = HTTPS, 3 = both). Setting it
+  /// based on `is_secure` preserves Firefox's scheme-bound cookie enforcement.
+  fn write_firefox_cookies(
     db_path: &Path,
     cookies: &[UnifiedCookie],
     mode: CookieWriteMode,
@@ -500,97 +308,72 @@ impl CookieManager {
     if mode == CookieWriteMode::ReplaceMatchingSites {
       for host in Self::replace_host_keys(cookies) {
         counts.deleted += tx
-          .execute("DELETE FROM cookies WHERE host_key = ?1", params![host])
+          .execute("DELETE FROM moz_cookies WHERE host = ?1", params![host])
           .map_err(|e| format!("Failed to clear existing cookies: {e}"))?;
       }
     }
 
     let now = Self::now_secs();
     // Session cookies get 30 days of persistence so they survive restart.
-    // routinely exported as a session cookie; writing it as memory-only
-    // (is_persistent = 0) makes Chromium drop it on the next flush, so the
-    // imported account silently signs out on relaunch. Persisting it with a real
-    // expiry keeps it alive (expires_utc=0 would otherwise mean 1601-01-01).
     let session_cookie_expiry = now + 30 * 86400;
 
     for cookie in cookies {
-      let expires = if cookie.expires > 0 {
+      let expiry = if cookie.expires > 0 {
         cookie.expires
       } else {
         session_cookie_expiry
       };
-      let has_expires = 1;
-      let is_persistent = 1;
-      // HTTPS cookies use 443, HTTP uses 80. source_port participates in
-      // Chromium's scheme-bound cookie enforcement.
-      let source_port: i32 = if cookie.is_secure { 443 } else { 80 };
-      let source_scheme: i32 = if cookie.is_secure { 2 } else { 1 };
+      // schemeMap bitfield: 1 = HTTP, 2 = HTTPS
+      let scheme_map: i32 = if cookie.is_secure { 2 } else { 1 };
 
-      // Four columns, matching the store's own unique index. A three-column
-      // probe collapses every top-frame partition of one host/name/path into a
-      // single arbitrary row: the rest keep their old values and the write
-      // still reports one replacement.
       let existing: Option<i64> = tx
         .query_row(
-          "SELECT rowid FROM cookies
-           WHERE host_key = ?1 AND top_frame_site_key = '' AND name = ?2 AND path = ?3",
+          "SELECT id FROM moz_cookies WHERE host = ?1 AND name = ?2 AND path = ?3",
           params![&cookie.domain, &cookie.name, &cookie.path],
           |row| row.get(0),
         )
         .ok();
 
-      if let Some(rowid) = existing {
-        // creation_utc is deliberately not written: Chromium evicts by it, so
-        // refreshing a cookie must not make it look brand new.
+      if let Some(id) = existing {
         tx.execute(
-          "UPDATE cookies SET value = ?1, encrypted_value = x'', expires_utc = ?2, is_secure = ?3,
-                     is_httponly = ?4, samesite = ?5, last_access_utc = ?6, last_update_utc = ?7,
-                     has_expires = ?8, is_persistent = ?9, source_scheme = ?10, source_port = ?11
-                     WHERE rowid = ?12",
+          "UPDATE moz_cookies SET value = ?1, expiry = ?2, isSecure = ?3,
+                   isHttpOnly = ?4, sameSite = ?5, rawSameSite = ?5,
+                   lastAccessed = ?6, schemeMap = ?7
+                   WHERE id = ?8",
           params![
             &cookie.value,
-            Self::unix_to_chrome_time(expires),
+            expiry,
             cookie.is_secure as i32,
             cookie.is_http_only as i32,
             cookie.same_site,
-            Self::unix_to_chrome_time(cookie.last_accessed),
-            Self::unix_to_chrome_time(now),
-            has_expires,
-            is_persistent,
-            source_scheme,
-            source_port,
-            rowid,
+            cookie.last_accessed * 1_000_000,
+            scheme_map,
+            id,
           ],
         )
         .map_err(|e| format!("Failed to update cookie: {e}"))?;
         counts.overwritten += 1;
       } else {
         tx.execute(
-            "INSERT INTO cookies
-                     (creation_utc, host_key, top_frame_site_key, name, value, encrypted_value,
-                      path, expires_utc, is_secure, is_httponly, last_access_utc, has_expires,
-                      is_persistent, priority, samesite, source_scheme, source_port, source_type,
-                      has_cross_site_ancestor, last_update_utc)
-                     VALUES (?1, ?2, '', ?3, ?4, x'', ?5, ?6, ?7, ?8, ?9, ?10, ?11, 1, ?12, ?13, ?14, 0, 0, ?15)",
-            params![
-              Self::unix_to_chrome_time(cookie.creation_time),
-              &cookie.domain,
-              &cookie.name,
-              &cookie.value,
-              &cookie.path,
-              Self::unix_to_chrome_time(expires),
-              cookie.is_secure as i32,
-              cookie.is_http_only as i32,
-              Self::unix_to_chrome_time(cookie.last_accessed),
-              has_expires,
-              is_persistent,
-              cookie.same_site,
-              source_scheme,
-              source_port,
-              Self::unix_to_chrome_time(now),
-            ],
-          )
-          .map_err(|e| format!("Failed to insert cookie: {e}"))?;
+          "INSERT INTO moz_cookies
+                   (originAttributes, name, value, host, path, expiry, lastAccessed,
+                    creationTime, isSecure, isHttpOnly, sameSite, rawSameSite, schemeMap)
+                   VALUES ('', ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, ?11)",
+          params![
+            &cookie.name,
+            &cookie.value,
+            &cookie.domain,
+            &cookie.path,
+            expiry,
+            cookie.last_accessed * 1_000_000,
+            cookie.creation_time * 1_000_000,
+            cookie.is_secure as i32,
+            cookie.is_http_only as i32,
+            cookie.same_site,
+            scheme_map,
+          ],
+        )
+        .map_err(|e| format!("Failed to insert cookie: {e}"))?;
         counts.added += 1;
       }
     }
@@ -630,7 +413,7 @@ impl CookieManager {
     for host in Self::replace_host_keys(cookies) {
       let count: i64 = conn
         .query_row(
-          "SELECT COUNT(*) FROM cookies WHERE host_key = ?1",
+          "SELECT COUNT(*) FROM moz_cookies WHERE host = ?1",
           params![host],
           |row| row.get(0),
         )
@@ -656,10 +439,7 @@ impl CookieManager {
     let db_path = Self::get_cookie_db_path(profile, &profiles_dir)?;
 
     let cookies = match profile.browser.as_str() {
-      "wayfern" => {
-        let key = Self::get_chrome_encryption_key(profile, &profiles_dir);
-        Self::read_chrome_cookies(&db_path, key.as_ref())?
-      }
+      "camoufox" => Self::read_firefox_cookies(&db_path)?,
       _ => return Err(format!("Unsupported browser type: {}", profile.browser)),
     };
 
@@ -762,9 +542,9 @@ impl CookieManager {
     let conn = Self::open_cookie_db_readonly(&db_path)?;
 
     let (count_sql, domain_sql) = match profile.browser.as_str() {
-      "wayfern" => (
-        "SELECT COUNT(*) FROM cookies",
-        "SELECT host_key, COUNT(*) FROM cookies GROUP BY host_key ORDER BY COUNT(*) DESC, host_key ASC",
+      "camoufox" => (
+        "SELECT COUNT(*) FROM moz_cookies",
+        "SELECT host, COUNT(*) FROM moz_cookies GROUP BY host ORDER BY COUNT(*) DESC, host ASC",
       ),
       _ => {
         return Err(
@@ -836,10 +616,7 @@ impl CookieManager {
 
     let source_db_path = Self::get_cookie_db_path(source, &profiles_dir)?;
     let all_cookies = match source.browser.as_str() {
-      "wayfern" => {
-        let key = Self::get_chrome_encryption_key(source, &profiles_dir);
-        Self::read_chrome_cookies(&source_db_path, key.as_ref())?
-      }
+      "camoufox" => Self::read_firefox_cookies(&source_db_path)?,
       _ => return Err(format!("Unsupported browser type: {}", source.browser)),
     };
 
@@ -907,8 +684,8 @@ impl CookieManager {
       };
 
       let write_result = match target.browser.as_str() {
-        "wayfern" => {
-          Self::write_chrome_cookies(&target_db_path, &cookies_to_copy, CookieWriteMode::Merge)
+        "camoufox" => {
+          Self::write_firefox_cookies(&target_db_path, &cookies_to_copy, CookieWriteMode::Merge)
         }
         _ => {
           results.push(CookieCopyResult {
@@ -1031,13 +808,6 @@ impl CookieManager {
     if profile.password_protected {
       return Some(crate::backend_error("COOKIE_IMPORT_PROFILE_PROTECTED"));
     }
-    // A remote session owns this profile until its work has been pulled back.
-    // Writing locally makes every local mtime newer, so the next sync uploads
-    // the pre-session copy and deletes the session's cookies. See
-    // `remote_handoff`.
-    if crate::remote_handoff::state_for(&profile.id.to_string()).is_some() {
-      return Some(crate::backend_error("COOKIE_IMPORT_REMOTE_SESSION"));
-    }
     None
   }
 
@@ -1138,7 +908,8 @@ impl CookieManager {
     cookies: &[UnifiedCookie],
     mode: CookieWriteMode,
   ) -> Result<CookieWriteCounts, String> {
-    if profile.browser.as_str() != "wayfern" {
+    let browser = profile.browser.clone();
+    if browser != "camoufox" {
       return Err(crate::backend_error_with_detail(
         "COOKIE_DB_UNAVAILABLE",
         format!("unsupported browser: {}", profile.browser),
@@ -1151,10 +922,10 @@ impl CookieManager {
         .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))?;
     let owned: Vec<UnifiedCookie> = cookies.to_vec();
 
-    tokio::task::spawn_blocking(move || Self::write_chrome_cookies(&db_path, &owned, mode))
-      .await
-      .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))?
-      .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))
+    tokio::task::spawn_blocking(move || Self::write_firefox_cookies(&db_path, &owned, mode))
+    .await
+    .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))?
+    .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))
   }
 
   fn now_secs() -> i64 {
@@ -1162,42 +933,6 @@ impl CookieManager {
       .duration_since(std::time::UNIX_EPOCH)
       .map(|d| d.as_secs() as i64)
       .unwrap_or(0)
-  }
-
-  /// Public API: Import cookies from a file's contents, with auto-detection.
-  ///
-  /// The paste parser backs this too, so a `cookies.txt` dragged into the
-  /// dialog and one pasted into the textarea are read by the same code.
-  pub async fn import_cookies(
-    app_handle: &AppHandle,
-    profile_id: &str,
-    content: &str,
-  ) -> Result<CookieImportResult, String> {
-    let result = Self::import_paste(
-      app_handle,
-      profile_id,
-      content,
-      None,
-      CookieWriteMode::Merge,
-      true,
-    )
-    .await?;
-
-    Ok(CookieImportResult {
-      cookies_imported: result.added,
-      cookies_replaced: result.overwritten,
-      // The file dialog has no room for a per-line report, so it gets the codes
-      // of the things that went wrong and nothing else.
-      errors: result
-        .issues
-        .into_iter()
-        .filter(|i| !matches!(i.severity, crate::cookie_paste::IssueSeverity::Info))
-        .map(|i| match i.source {
-          Some(source) => format!("{source}: {}", i.code),
-          None => i.code,
-        })
-        .collect(),
-    })
   }
 
   /// Public API: Export cookies from a profile in the specified format
@@ -1223,7 +958,7 @@ mod tests {
   #[cfg(target_os = "macos")]
   const SYNTHETIC_COOKIE_VALUE: &str = "synthetic-cookie-value";
   #[cfg(target_os = "macos")]
-  const SYNTHETIC_OS_CRYPT_PASSWORD: &[u8] = b"donut-synthetic-cookie-key";
+  const SYNTHETIC_OS_CRYPT_PASSWORD: &[u8] = b"salamander-synthetic-cookie-key";
   #[cfg(target_os = "macos")]
   const SYNTHETIC_ENCRYPTED_COOKIE_HEX: &str = "763130d83b9fd3e6d1b1c793769f55251f5e9d1193be72c0c08ea32e2cf068a85d9d0b97d8b2e6deca93a2b3c290e98e1a851f83d5566f9aa9314befe56dc6bdbd423d";
 
@@ -1392,538 +1127,4 @@ mod tests {
     assert_eq!(parsed[0].same_site, -1);
   }
 
-  #[test]
-  fn test_chrome_time_to_unix() {
-    assert_eq!(CookieManager::chrome_time_to_unix(0), 0);
-    let chrome_time: i64 = (1700000000 + CookieManager::WINDOWS_EPOCH_DIFF) * 1_000_000;
-    assert_eq!(CookieManager::chrome_time_to_unix(chrome_time), 1700000000);
-  }
-
-  #[test]
-  fn test_unix_to_chrome_time() {
-    assert_eq!(CookieManager::unix_to_chrome_time(0), 0);
-    let expected = (1700000000 + CookieManager::WINDOWS_EPOCH_DIFF) * 1_000_000;
-    assert_eq!(CookieManager::unix_to_chrome_time(1700000000), expected);
-  }
-
-  #[test]
-  fn test_chrome_time_roundtrip() {
-    let unix = 1700000000_i64;
-    let chrome = CookieManager::unix_to_chrome_time(unix);
-    assert_eq!(CookieManager::chrome_time_to_unix(chrome), unix);
-  }
-
-  /// Set up a minimal Chrome cookie SQLite schema for testing writes.
-  fn create_chrome_cookies_db(path: &Path) {
-    let conn = Connection::open(path).unwrap();
-    conn
-      .execute_batch(
-        "CREATE TABLE cookies (
-          creation_utc INTEGER NOT NULL,
-          host_key TEXT NOT NULL,
-          top_frame_site_key TEXT NOT NULL,
-          name TEXT NOT NULL,
-          value TEXT NOT NULL,
-          encrypted_value BLOB NOT NULL DEFAULT '',
-          path TEXT NOT NULL,
-          expires_utc INTEGER NOT NULL,
-          is_secure INTEGER NOT NULL,
-          is_httponly INTEGER NOT NULL,
-          last_access_utc INTEGER NOT NULL,
-          has_expires INTEGER NOT NULL DEFAULT 1,
-          is_persistent INTEGER NOT NULL DEFAULT 1,
-          priority INTEGER NOT NULL DEFAULT 1,
-          samesite INTEGER NOT NULL DEFAULT -1,
-          source_scheme INTEGER NOT NULL DEFAULT 0,
-          source_port INTEGER NOT NULL DEFAULT -1,
-          last_update_utc INTEGER NOT NULL DEFAULT 0,
-          source_type INTEGER NOT NULL DEFAULT 0,
-          has_cross_site_ancestor INTEGER NOT NULL DEFAULT 0
-        );",
-      )
-      .unwrap();
-  }
-
-  #[test]
-  fn test_write_chrome_cookies_stores_plaintext_values() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    let cookies = vec![UnifiedCookie {
-      name: "c_user".to_string(),
-      value: "100012345".to_string(),
-      domain: ".facebook.com".to_string(),
-      path: "/".to_string(),
-      expires: 1800000000,
-      is_secure: true,
-      is_http_only: true,
-      same_site: 0,
-      creation_time: 1700000000,
-      last_accessed: 1700000000,
-    }];
-
-    let counts =
-      CookieManager::write_chrome_cookies(&tmp, &cookies, CookieWriteMode::Merge).unwrap();
-    assert_eq!(counts.added, 1);
-    assert_eq!(counts.overwritten, 0);
-
-    let conn = Connection::open(&tmp).unwrap();
-    let (value, encrypted, has_expires, is_persistent, source_scheme, source_port): (
-      String,
-      Vec<u8>,
-      i32,
-      i32,
-      i32,
-      i32,
-    ) = conn
-      .query_row(
-        "SELECT value, encrypted_value, has_expires, is_persistent, source_scheme, source_port
-         FROM cookies WHERE name = ?1",
-        params!["c_user"],
-        |row| {
-          Ok((
-            row.get(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
-            row.get(4)?,
-            row.get(5)?,
-          ))
-        },
-      )
-      .unwrap();
-
-    // Core fix: plaintext in value, empty encrypted_value
-    assert_eq!(value, "100012345");
-    assert!(encrypted.is_empty());
-    // Persistent cookie since expires > 0
-    assert_eq!(has_expires, 1);
-    assert_eq!(is_persistent, 1);
-    // Secure cookie gets HTTPS scheme + port 443
-    assert_eq!(source_scheme, 2);
-    assert_eq!(source_port, 443);
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  #[test]
-  fn test_write_chrome_cookies_session_cookie_persisted() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    let cookies = vec![UnifiedCookie {
-      name: "session".to_string(),
-      value: "abc".to_string(),
-      domain: ".example.com".to_string(),
-      path: "/".to_string(),
-      expires: 0, // session cookie
-      is_secure: false,
-      is_http_only: false,
-      same_site: 0,
-      creation_time: 1700000000,
-      last_accessed: 1700000000,
-    }];
-
-    CookieManager::write_chrome_cookies(&tmp, &cookies, CookieWriteMode::Merge).unwrap();
-
-    let conn = Connection::open(&tmp).unwrap();
-    let (has_expires, is_persistent, expires_utc, source_scheme, source_port): (
-      i32,
-      i32,
-      i64,
-      i32,
-      i32,
-    ) = conn
-      .query_row(
-        "SELECT has_expires, is_persistent, expires_utc, source_scheme, source_port
-         FROM cookies WHERE name = ?1",
-        params!["session"],
-        |row| {
-          Ok((
-            row.get(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
-            row.get(4)?,
-          ))
-        },
-      )
-      .unwrap();
-
-    // Imported session cookies are promoted to persistent with a far-future
-    // expiry so an imported login survives relaunch.
-    assert_eq!(has_expires, 1);
-    assert_eq!(is_persistent, 1);
-    // Must be a real future expiry, not 0 (which Chromium reads as 1601-01-01).
-    assert!(expires_utc > 0);
-    // Non-secure cookie uses HTTP scheme + port 80
-    assert_eq!(source_scheme, 1);
-    assert_eq!(source_port, 80);
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  #[test]
-  fn test_write_chrome_cookies_replaces_existing() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    let cookie = UnifiedCookie {
-      name: "token".to_string(),
-      value: "v1".to_string(),
-      domain: ".example.com".to_string(),
-      path: "/".to_string(),
-      expires: 1800000000,
-      is_secure: true,
-      is_http_only: false,
-      same_site: 1,
-      creation_time: 1700000000,
-      last_accessed: 1700000000,
-    };
-
-    let counts = CookieManager::write_chrome_cookies(
-      &tmp,
-      std::slice::from_ref(&cookie),
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-    assert_eq!(counts.added, 1);
-
-    let mut updated = cookie.clone();
-    updated.value = "v2".to_string();
-    let counts = CookieManager::write_chrome_cookies(
-      &tmp,
-      std::slice::from_ref(&updated),
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-    assert_eq!(counts.added, 0);
-    assert_eq!(counts.overwritten, 1);
-
-    let conn = Connection::open(&tmp).unwrap();
-    let (value, encrypted): (String, Vec<u8>) = conn
-      .query_row(
-        "SELECT value, encrypted_value FROM cookies WHERE name = ?1",
-        params!["token"],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-      )
-      .unwrap();
-    assert_eq!(value, "v2");
-    assert!(encrypted.is_empty());
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  fn cookie(domain: &str, name: &str, value: &str) -> UnifiedCookie {
-    UnifiedCookie {
-      name: name.to_string(),
-      value: value.to_string(),
-      domain: domain.to_string(),
-      path: "/".to_string(),
-      expires: 1900000000,
-      is_secure: true,
-      is_http_only: false,
-      same_site: -1,
-      creation_time: 1700000000,
-      last_accessed: 1700000000,
-    }
-  }
-
-  fn host_keys(db_path: &Path) -> Vec<String> {
-    let conn = Connection::open(db_path).unwrap();
-    let mut stmt = conn
-      .prepare("SELECT host_key || '|' || name FROM cookies ORDER BY host_key, name")
-      .unwrap();
-    let rows: Vec<String> = stmt
-      .query_map([], |row| row.get(0))
-      .unwrap()
-      .collect::<Result<_, _>>()
-      .unwrap();
-    rows
-  }
-
-  /// Replace mode clears both spellings of the pasted site and nothing else:
-  /// not a subdomain, not another site.
-  #[test]
-  fn test_write_chrome_cookies_replace_matching_sites_scope() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    let seeded = vec![
-      cookie(".example.com", "dotted", "old"),
-      cookie("example.com", "undotted", "old"),
-      cookie("app.example.com", "subdomain", "keep"),
-      cookie(".other.com", "elsewhere", "keep"),
-    ];
-    CookieManager::write_chrome_cookies(&tmp, &seeded, CookieWriteMode::Merge).unwrap();
-
-    // A paste that names only the undotted form must still clear the dotted one.
-    let counts = CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie("example.com", "fresh", "new")],
-      CookieWriteMode::ReplaceMatchingSites,
-    )
-    .unwrap();
-    assert_eq!(counts.deleted, 2);
-    assert_eq!(counts.added, 1);
-    assert_eq!(counts.overwritten, 0);
-
-    assert_eq!(
-      host_keys(&tmp),
-      vec![
-        ".other.com|elsewhere".to_string(),
-        "app.example.com|subdomain".to_string(),
-        "example.com|fresh".to_string(),
-      ]
-    );
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  #[test]
-  fn test_write_chrome_cookies_merge_deletes_nothing() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie(".example.com", "existing", "old")],
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-    let counts = CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie("example.com", "fresh", "new")],
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-
-    assert_eq!(counts.deleted, 0);
-    assert_eq!(counts.added, 1);
-    assert_eq!(host_keys(&tmp).len(), 2);
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  /// The store's unique index is four columns wide. A three-column probe made
-  /// one partitioned cookie stand in for all of them, so the others silently
-  /// kept their stale values.
-  #[test]
-  fn test_write_chrome_cookies_probe_is_partition_aware() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    let conn = Connection::open(&tmp).unwrap();
-    conn
-      .execute(
-        "INSERT INTO cookies
-           (creation_utc, host_key, top_frame_site_key, name, value, encrypted_value, path,
-            expires_utc, is_secure, is_httponly, last_access_utc)
-         VALUES (1, '.example.com', 'https://partner.example', 'sid', 'partitioned', x'', '/',
-                 0, 1, 0, 0)",
-        [],
-      )
-      .unwrap();
-    drop(conn);
-
-    let counts = CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie(".example.com", "sid", "unpartitioned")],
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-    assert_eq!(counts.added, 1, "the partitioned row is a different cookie");
-    assert_eq!(counts.overwritten, 0);
-
-    let conn = Connection::open(&tmp).unwrap();
-    let partitioned: String = conn
-      .query_row(
-        "SELECT value FROM cookies WHERE top_frame_site_key = 'https://partner.example'",
-        [],
-        |row| row.get(0),
-      )
-      .unwrap();
-    assert_eq!(partitioned, "partitioned");
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  /// Chromium evicts by creation_utc, so refreshing a cookie must not reset it.
-  #[test]
-  fn test_write_chrome_cookies_preserves_creation_time() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-
-    CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie(".example.com", "sid", "v1")],
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-    let original = CookieManager::unix_to_chrome_time(1700000000);
-
-    let mut refreshed = cookie(".example.com", "sid", "v2");
-    refreshed.creation_time = 1800000000;
-    CookieManager::write_chrome_cookies(&tmp, &[refreshed], CookieWriteMode::Merge).unwrap();
-
-    let conn = Connection::open(&tmp).unwrap();
-    let (creation, value): (i64, String) = conn
-      .query_row(
-        "SELECT creation_utc, value FROM cookies WHERE name = 'sid'",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-      )
-      .unwrap();
-    assert_eq!(creation, original);
-    assert_eq!(value, "v2");
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  /// A write that fails partway must leave the store exactly as it was, and in
-  /// replace mode that includes the deletes it had already issued.
-  #[test]
-  fn test_write_chrome_cookies_rolls_back_on_failure() {
-    let tmp = std::env::temp_dir().join(format!("donut_cookie_test_{}.db", uuid::Uuid::new_v4()));
-    create_chrome_cookies_db(&tmp);
-    CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie(".example.com", "existing", "keep")],
-      CookieWriteMode::Merge,
-    )
-    .unwrap();
-
-    // NOT NULL on `path` is what makes the second insert fail; the first one
-    // and the replace-mode deletes have to unwind with it.
-    let mut broken = cookie(".example.com", "second", "v");
-    broken.path = String::new();
-    let conn = Connection::open(&tmp).unwrap();
-    conn
-      .execute(
-        "CREATE UNIQUE INDEX no_empty_path ON cookies(path) WHERE path = ''",
-        [],
-      )
-      .unwrap();
-    conn
-      .execute(
-        "INSERT INTO cookies
-           (creation_utc, host_key, top_frame_site_key, name, value, encrypted_value, path,
-            expires_utc, is_secure, is_httponly, last_access_utc)
-         VALUES (1, '.blocker.com', '', 'blocker', 'v', x'', '', 0, 0, 0, 0)",
-        [],
-      )
-      .unwrap();
-    drop(conn);
-
-    let result = CookieManager::write_chrome_cookies(
-      &tmp,
-      &[cookie(".example.com", "first", "v"), broken],
-      CookieWriteMode::ReplaceMatchingSites,
-    );
-    assert!(result.is_err());
-
-    assert_eq!(
-      host_keys(&tmp),
-      vec![
-        ".blocker.com|blocker".to_string(),
-        ".example.com|existing".to_string(),
-      ],
-      "neither the delete nor the first insert may survive a failed write"
-    );
-
-    let _ = std::fs::remove_file(&tmp);
-  }
-
-  #[test]
-  #[cfg(target_os = "macos")]
-  fn test_decrypt_v10_cookie_with_synthetic_vector() {
-    let profile_dir =
-      std::env::temp_dir().join(format!("donut_decrypt_vector_{}", uuid::Uuid::new_v4()));
-    std::fs::create_dir_all(&profile_dir).unwrap();
-    std::fs::write(
-      profile_dir.join("os_crypt_key"),
-      SYNTHETIC_OS_CRYPT_PASSWORD,
-    )
-    .unwrap();
-
-    let key = chrome_decrypt::get_encryption_key(&profile_dir)
-      .expect("should derive key from os_crypt_key file");
-
-    let decrypted =
-      chrome_decrypt::decrypt(&synthetic_encrypted_cookie(), SYNTHETIC_COOKIE_HOST, &key)
-        .expect("decryption must succeed with correct key and host");
-    assert_eq!(decrypted, SYNTHETIC_COOKIE_VALUE);
-
-    let _ = std::fs::remove_dir_all(&profile_dir);
-  }
-
-  #[test]
-  #[cfg(target_os = "macos")]
-  fn test_decrypt_with_wrong_host_returns_none_or_raw() {
-    let profile_dir =
-      std::env::temp_dir().join(format!("donut_decrypt_wrong_host_{}", uuid::Uuid::new_v4()));
-    std::fs::create_dir_all(&profile_dir).unwrap();
-    std::fs::write(
-      profile_dir.join("os_crypt_key"),
-      SYNTHETIC_OS_CRYPT_PASSWORD,
-    )
-    .unwrap();
-
-    let key = chrome_decrypt::get_encryption_key(&profile_dir).unwrap();
-    let result =
-      chrome_decrypt::decrypt(&synthetic_encrypted_cookie(), ".wrong.example.test", &key);
-    assert!(
-      result.as_deref() != Some(SYNTHETIC_COOKIE_VALUE),
-      "decrypt must not return the cookie value when host_key is wrong"
-    );
-
-    let _ = std::fs::remove_dir_all(&profile_dir);
-  }
-
-  /// Regression: a brand-new Wayfern profile has no `Default/Cookies` file
-  /// yet (Chromium only writes it on first launch). Copying/importing into
-  /// such a profile must create the file on demand.
-  #[test]
-  fn test_create_empty_chrome_cookies_db_then_write() {
-    let dir = std::env::temp_dir().join(format!("donut_empty_chrome_{}", uuid::Uuid::new_v4()));
-    let db_path = dir.join("Default").join("Cookies");
-    assert!(!db_path.exists());
-
-    CookieManager::create_empty_chrome_cookies_db(&db_path).unwrap();
-    assert!(db_path.exists());
-
-    // Round-trip: write a cookie into the freshly created DB, read it back.
-    let cookies = vec![UnifiedCookie {
-      name: "auth".to_string(),
-      value: "token123".to_string(),
-      domain: ".example.com".to_string(),
-      path: "/".to_string(),
-      expires: 1900000000,
-      is_secure: true,
-      is_http_only: true,
-      same_site: 0,
-      creation_time: 1700000000,
-      last_accessed: 1700000000,
-    }];
-    let counts =
-      CookieManager::write_chrome_cookies(&db_path, &cookies, CookieWriteMode::Merge).unwrap();
-    assert_eq!(counts.added, 1);
-    assert_eq!(counts.overwritten, 0);
-
-    let read = CookieManager::read_chrome_cookies(&db_path, None).unwrap();
-    assert_eq!(read.len(), 1);
-    assert_eq!(read[0].value, "token123");
-
-    // Schema sanity: `meta` table with version row exists so Chromium's
-    // cookie store migration code can upgrade this on first launch.
-    let conn = Connection::open(&db_path).unwrap();
-    let version: String = conn
-      .query_row("SELECT value FROM meta WHERE key = 'version'", [], |row| {
-        row.get(0)
-      })
-      .unwrap();
-    assert!(!version.is_empty());
-
-    let _ = std::fs::remove_dir_all(&dir);
-  }
 }

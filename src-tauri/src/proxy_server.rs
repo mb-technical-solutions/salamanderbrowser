@@ -1191,7 +1191,7 @@ fn build_reqwest_client_with_proxy(
       Proxy::http(upstream_url)?
     }
     "socks5" => {
-      // Donut: force REMOTE (proxy-side) DNS for plaintext HTTP over a SOCKS5
+      // Salamander: force REMOTE (proxy-side) DNS for plaintext HTTP over a SOCKS5
       // upstream. reqwest maps the bare `socks5` scheme to DnsResolve::Local,
       // which resolves the destination hostname on the HOST (getaddrinfo) BEFORE
       // connecting — leaking the destination domain to the host's DNS resolver
@@ -1215,7 +1215,7 @@ fn build_reqwest_client_with_proxy(
     }
   };
 
-  Ok(client_builder.proxy(proxy).build()?)
+  Ok(client_builder.no_proxy().proxy(proxy).build()?)
 }
 
 /// Handle a single proxy connection (used by both the proxy worker and in-process proxy checks).
@@ -1439,7 +1439,7 @@ pub async fn run_proxy_server(config: ProxyConfig) -> Result<(), Box<dyn std::er
 
   log::info!("Successfully bound to port {}", actual_port);
 
-  // Protocol served to the browser: "socks5" (Wayfern) or "http" (default).
+  // Protocol served to the consumer: "socks5" or "http" (default).
   let local_protocol = config.local_protocol_or_default();
   let serve_socks5 = local_protocol == "socks5";
 
@@ -1763,14 +1763,14 @@ async fn handle_connect_from_buffer(
 }
 
 /// How often the self-reaping supervisor re-checks its owner. Overridable via
-/// `DONUT_PROXY_WATCHDOG_INTERVAL_MS` so lifecycle tests can observe a real
+/// `SALAMANDER_PROXY_WATCHDOG_INTERVAL_MS` so lifecycle tests can observe a real
 /// worker reaping itself in seconds instead of a minute; the floor keeps a
 /// mistyped value from turning the supervisor into a spin loop.
 const WATCHDOG_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
 const WATCHDOG_POLL_INTERVAL_FLOOR: std::time::Duration = std::time::Duration::from_millis(100);
 
 fn watchdog_poll_interval() -> std::time::Duration {
-  std::env::var("DONUT_PROXY_WATCHDOG_INTERVAL_MS")
+  std::env::var("SALAMANDER_PROXY_WATCHDOG_INTERVAL_MS")
     .ok()
     .and_then(|raw| raw.trim().parse::<u64>().ok())
     .map(std::time::Duration::from_millis)
