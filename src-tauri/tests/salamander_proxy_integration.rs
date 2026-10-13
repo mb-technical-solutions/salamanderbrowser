@@ -208,7 +208,8 @@ impl Drop for XrayChainCleanup {
       salamanderbrowser_lib::proxy_storage::delete_proxy_config(&id);
     }
     if let Some(id) = self.xray_id.take() {
-      if let Some(config) = salamanderbrowser_lib::xray_worker_storage::get_xray_worker_config(&id) {
+      if let Some(config) = salamanderbrowser_lib::xray_worker_storage::get_xray_worker_config(&id)
+      {
         if let Some(pid) = config.pid {
           terminate_process_tree(pid);
         }
@@ -294,7 +295,8 @@ async fn test_xray_reality_chain_and_local_traffic_monitoring(
   };
 
   let isolated_root = tempfile::tempdir()?;
-  let _data_root = EnvironmentRestore::set_path("SALAMANDERBROWSER_DATA_ROOT", isolated_root.path());
+  let _data_root =
+    EnvironmentRestore::set_path("SALAMANDERBROWSER_DATA_ROOT", isolated_root.path());
   let _binary_path = setup_test().await.map_err(|error| error.to_string())?;
   let profile_id = format!("xray-integration-{}", uuid::Uuid::new_v4());
   let payload = b"salamander-xray-monitor-payload";
@@ -1818,8 +1820,10 @@ async fn wait_for_worker_exit(proxy_id: &str, timeout: Duration) -> bool {
 /// Start a direct worker with the short watchdog interval and return its config.
 async fn start_lifecycle_worker(
   profile_id: &str,
-) -> Result<salamanderbrowser_lib::proxy_storage::ProxyConfig, Box<dyn std::error::Error + Send + Sync>>
-{
+) -> Result<
+  salamanderbrowser_lib::proxy_storage::ProxyConfig,
+  Box<dyn std::error::Error + Send + Sync>,
+> {
   std::env::set_var(
     "SALAMANDER_PROXY_WATCHDOG_INTERVAL_MS",
     TEST_WATCHDOG_INTERVAL_MS,
@@ -1843,7 +1847,8 @@ fn claim_worker_for(proxy_id: &str, browser_pid: u32) -> bool {
   let Some(mut config) = salamanderbrowser_lib::proxy_storage::get_proxy_config(proxy_id) else {
     return false;
   };
-  let Some(start_time) = salamanderbrowser_lib::proxy_storage::resolve_process_start_time(browser_pid)
+  let Some(start_time) =
+    salamanderbrowser_lib::proxy_storage::resolve_process_start_time(browser_pid)
   else {
     return false;
   };
@@ -1929,7 +1934,9 @@ async fn worker_reaps_itself_when_its_browser_pid_is_recycled(
     .ok_or("worker config missing after start")?;
   owner.browser_pid = Some(stub.pid());
   owner.browser_pid_start_time = Some(1);
-  assert!(salamanderbrowser_lib::proxy_storage::update_proxy_config(&owner));
+  assert!(salamanderbrowser_lib::proxy_storage::update_proxy_config(
+    &owner
+  ));
 
   assert!(
     wait_for_worker_exit(&config.id, Duration::from_secs(20)).await,

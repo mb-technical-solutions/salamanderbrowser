@@ -442,9 +442,8 @@ mod tests {
 
   #[test]
   fn h2_transport_requires_both_path_and_host() {
-    let missing_host = format!(
-      "vless://{ID}@example.com:443?security=tls&type=http&path=%2Fray&sni=example.com"
-    );
+    let missing_host =
+      format!("vless://{ID}@example.com:443?security=tls&type=http&path=%2Fray&sni=example.com");
     assert!(parse_vless_uri(&missing_host).is_err());
 
     let full = format!(
@@ -469,7 +468,10 @@ mod tests {
     match &parsed.config.security {
       VlessSecurity::Tls(settings) => {
         assert_eq!(settings.server_name, "example.com");
-        assert_eq!(settings.alpn, vec!["h2".to_string(), "http/1.1".to_string()]);
+        assert_eq!(
+          settings.alpn,
+          vec!["h2".to_string(), "http/1.1".to_string()]
+        );
       }
       other => panic!("expected tls security, got {other:?}"),
     }

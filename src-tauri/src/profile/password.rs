@@ -233,7 +233,7 @@ fn clear_failed_attempts(profile_id: &uuid::Uuid) {
   clear_persisted_record(profile_id);
 }
 
-const MIN_PASSWORD_LEN: usize = 8;
+pub(crate) const MIN_PASSWORD_LEN: usize = 8;
 
 fn validate_password(password: &str) -> Result<(), String> {
   if password.len() < MIN_PASSWORD_LEN {

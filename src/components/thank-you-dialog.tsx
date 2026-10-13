@@ -4,7 +4,6 @@ import confetti from "canvas-confetti";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -51,18 +50,6 @@ export function ThankYouDialog({
     >
       <DialogContent className="p-4 sm:max-w-md sm:p-6">
         <div className="flex flex-col items-center gap-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6, rotate: -12 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{
-              ...(reduceMotion ? { duration: 0.15 } : spring),
-              delay: reduceMotion ? 0 : 0.05,
-            }}
-            className="text-foreground"
-          >
-            <Logo className="size-14" />
-          </motion.div>
-
           <div className="flex flex-col gap-2">
             <DialogTitle className="text-2xl font-semibold tracking-tight text-balance">
               {t("onboarding.thankYou.title")}

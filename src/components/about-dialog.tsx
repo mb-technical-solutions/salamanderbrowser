@@ -2,7 +2,6 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuExternalLink, LuSearch } from "react-icons/lu";
@@ -18,8 +17,6 @@ import { Input } from "@/components/ui/input";
 import { StepTransition } from "@/components/ui/step-transition";
 import licenses from "@/generated/licenses.json";
 import xraySource from "@/generated/xray-source.json";
-import { launchSalamanderClone } from "@/lib/salamander-crawl";
-import { Logo } from "./icons/logo";
 import { RippleButton } from "./ui/ripple";
 
 interface AboutDialogProps {
@@ -36,26 +33,12 @@ interface SystemInfo {
 
 type AboutView = "about" | "licenses";
 
-// Flywheel: each click adds spin; past this speed the logo escapes the
-// dialog and crawls off around the window (shared physics with the rail egg).
-const SPIN_PER_CLICK = 540; // deg/s
-const ESCAPE_VELOCITY = 2200; // deg/s
-const SPIN_FRICTION = 1.1; // fraction of velocity lost per second
-
 export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   const { t } = useTranslation();
-  const reducedMotion = useReducedMotion();
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [logoFlown, setLogoFlown] = useState(false);
   const [view, setView] = useState<AboutView>("about");
   const [licenseQuery, setLicenseQuery] = useState("");
 
-  const logoRef = useRef<HTMLButtonElement>(null);
-  const rotationRef = useRef(0);
-  const velocityRef = useRef(0);
-  const rafRef = useRef(0);
-  const lastTimeRef = useRef(0);
-  const cancelLaunchRef = useRef<(() => void) | null>(null);
   const restoreLicensesButtonFocusRef = useRef(false);
 
   useEffect(() => {
@@ -67,79 +50,12 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       });
   }, [isOpen]);
 
-  const stopSpin = useCallback(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = 0;
-    velocityRef.current = 0;
-  }, []);
-
-  const spinFrame = useCallback(
-    (time: number) => {
-      const el = logoRef.current;
-      if (!el) {
-        rafRef.current = 0;
-        return;
-      }
-      const dt = Math.min((time - lastTimeRef.current) / 1000, 0.05);
-      lastTimeRef.current = time;
-
-      rotationRef.current += velocityRef.current * dt;
-      velocityRef.current *= Math.max(0, 1 - SPIN_FRICTION * dt);
-      el.style.transform = `rotate(${rotationRef.current}deg)`;
-
-      if (velocityRef.current >= ESCAPE_VELOCITY) {
-        // The flywheel wins: the logo tears loose and joins the crawl sim,
-        // keeping its momentum as its initial launch velocity.
-        stopSpin();
-        setLogoFlown(true);
-        cancelLaunchRef.current = launchSalamanderClone(el, {
-          initialVX: Math.random() > 0.5 ? 420 : -420,
-          initialVY: -750,
-          onExit: () => {
-            cancelLaunchRef.current = null;
-          },
-        });
-        return;
-      }
-
-      if (velocityRef.current > 5) {
-        rafRef.current = requestAnimationFrame(spinFrame);
-      } else {
-        rafRef.current = 0;
-        velocityRef.current = 0;
-      }
-    },
-    [stopSpin],
-  );
-
-  const handleLogoClick = useCallback(() => {
-    if (reducedMotion || logoFlown) return;
-    velocityRef.current += SPIN_PER_CLICK;
-    if (!rafRef.current) {
-      lastTimeRef.current = performance.now();
-      rafRef.current = requestAnimationFrame(spinFrame);
-    }
-  }, [reducedMotion, logoFlown, spinFrame]);
-
-  const resetLogo = useCallback(() => {
-    stopSpin();
-    cancelLaunchRef.current?.();
-    cancelLaunchRef.current = null;
-    rotationRef.current = 0;
-    if (logoRef.current) {
-      logoRef.current.style.transform = "";
-      logoRef.current.style.visibility = "";
-    }
-    setLogoFlown(false);
-  }, [stopSpin]);
-
   const handleClose = useCallback(() => {
-    resetLogo();
     setView("about");
     setLicenseQuery("");
     restoreLicensesButtonFocusRef.current = false;
     onClose();
-  }, [onClose, resetLogo]);
+  }, [onClose]);
 
   const handleLicensesButtonRef = useCallback(
     (node: HTMLButtonElement | null) => {
@@ -152,10 +68,9 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   );
 
   const handleOpenLicenses = useCallback(() => {
-    resetLogo();
     setLicenseQuery("");
     setView("licenses");
-  }, [resetLogo]);
+  }, []);
 
   const handleBackToAbout = useCallback(() => {
     restoreLicensesButtonFocusRef.current = true;
@@ -172,13 +87,6 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
         license.toLocaleLowerCase().includes(query),
     );
   }, [licenseQuery]);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      cancelLaunchRef.current?.();
-    };
-  }, []);
 
   return (
     <Dialog
@@ -210,17 +118,6 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
               </DialogHeader>
 
               <div className="flex flex-col items-center gap-3 py-4">
-                <button
-                  ref={logoRef}
-                  type="button"
-                  aria-label={t("header.salamanderLogo")}
-                  onClick={handleLogoClick}
-                  className="grid size-16 cursor-pointer place-items-center rounded-full bg-transparent text-foreground select-none will-change-transform"
-                  style={logoFlown ? { visibility: "hidden" } : undefined}
-                >
-                  <Logo className="size-14" />
-                </button>
-
                 <div className="text-center">
                   <p className="text-lg font-semibold">Salamander Browser</p>
                   {systemInfo && (

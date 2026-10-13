@@ -2,6 +2,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrent } from "@tauri-apps/plugin-deep-link";
 import { motion } from "motion/react";
 import { useOnborda } from "onborda";
@@ -15,6 +16,7 @@ import { CookieCopyDialog } from "@/components/cookie-copy-dialog";
 import { CookieManagementDialog } from "@/components/cookie-management-dialog";
 import { CreateProfileDialog } from "@/components/create-profile-dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
+import { ExportProfileDialog } from "@/components/export-profile-dialog";
 import { ExtensionGroupAssignmentDialog } from "@/components/extension-group-assignment-dialog";
 import { ExtensionManagementDialog } from "@/components/extension-management-dialog";
 import { GroupAssignmentDialog } from "@/components/group-assignment-dialog";
@@ -294,6 +296,10 @@ export default function Home() {
   const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [importProfileDialogOpen, setImportProfileDialogOpen] = useState(false);
+  // Paths dropped onto the window while nothing (or something else) had
+  // focus — handed to ImportProfileDialog once it opens so it can
+  // auto-detect and pre-fill instead of requiring Browse to be clicked.
+  const [importDropPaths, setImportDropPaths] = useState<string[]>([]);
   const [proxyManagementDialogOpen, setProxyManagementDialogOpen] =
     useState(false);
   const [groupManagementDialogOpen, setGroupManagementDialogOpen] =
@@ -348,6 +354,7 @@ export default function Home() {
   const [showBulkDeleteConfirmation, setShowBulkDeleteConfirmation] =
     useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkExportDialogOpen, setBulkExportDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   // Pre-launch gate. Requests queue instead of overwriting a single resolver:
@@ -437,6 +444,31 @@ export default function Home() {
         break;
     }
   }, []);
+
+  // Dropping a profile folder, a `.salamander-profile` archive (or several),
+  // or a whole old-installation data directory anywhere on the window opens
+  // the importer with those paths pre-filled, instead of requiring the user
+  // to open Import and click Browse first.
+  useEffect(() => {
+    let mounted = true;
+    let unlisten: (() => void) | undefined;
+    void getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (event.payload.type !== "drop") return;
+        const paths = event.payload.paths;
+        if (paths.length === 0) return;
+        setImportDropPaths(paths);
+        handleRailNavigate("import");
+      })
+      .then((u) => {
+        if (mounted) unlisten = u;
+        else u();
+      });
+    return () => {
+      mounted = false;
+      unlisten?.();
+    };
+  }, [handleRailNavigate]);
 
   const runShortcut = useCallback(
     (id: ShortcutId) => {
@@ -749,15 +781,8 @@ export default function Home() {
     // duplicate handlers and a single URL was handled N times), and a failing
     // listen() call would leak the listeners that had already succeeded.
     const unlisteners: Array<() => void> = [];
-    let handleLogoUrlEvent: ((event: CustomEvent) => void) | undefined;
     const teardown = () => {
       for (const unlisten of unlisteners) unlisten();
-      if (handleLogoUrlEvent) {
-        window.removeEventListener(
-          "url-open-request",
-          handleLogoUrlEvent as EventListener,
-        );
-      }
     };
 
     try {
@@ -787,16 +812,6 @@ export default function Home() {
           showErrorToast(t("errors.noProfilesForUrl"));
           setCreateProfileDialogOpen(true);
         }),
-      );
-
-      // Listen for custom logo click events
-      handleLogoUrlEvent = (event: CustomEvent) => {
-        console.log("Received logo URL event:", event.detail);
-        handleUrlOpen(event.detail);
-      };
-      window.addEventListener(
-        "url-open-request",
-        handleLogoUrlEvent as EventListener,
       );
 
       return teardown;
@@ -1283,6 +1298,16 @@ export default function Home() {
     setShowBulkDeleteConfirmation(true);
   }, [selectedProfiles]);
 
+  const handleBulkExport = useCallback(() => {
+    if (selectedProfiles.length === 0) return;
+    setBulkExportDialogOpen(true);
+  }, [selectedProfiles]);
+
+  const bulkExportTargets = useMemo(
+    () => profiles.filter((p) => selectedProfiles.includes(p.id)),
+    [profiles, selectedProfiles],
+  );
+
   const confirmBulkDelete = useCallback(async () => {
     if (selectedProfiles.length === 0) return;
 
@@ -1624,6 +1649,7 @@ export default function Home() {
                 selectedProfiles={selectedProfiles}
                 onSelectedProfilesChange={setSelectedProfiles}
                 onBulkDelete={handleBulkDelete}
+                onBulkExport={handleBulkExport}
                 onBulkGroupAssignment={handleBulkGroupAssignment}
                 onBulkProxyAssignment={handleBulkProxyAssignment}
                 onBulkCopyCookies={handleBulkCopyCookies}
@@ -1709,10 +1735,12 @@ export default function Home() {
               isOpen={importProfileDialogOpen}
               onClose={() => {
                 setImportProfileDialogOpen(false);
+                setImportDropPaths([]);
                 setCurrentPage("profiles");
               }}
               crossOsUnlocked={crossOsUnlocked}
               subPage={currentPage === "import"}
+              initialPaths={importDropPaths}
             />
           )}
         </main>
@@ -1952,6 +1980,14 @@ export default function Home() {
         profileIds={selectedProfiles}
         profiles={profiles.map((p) => ({ id: p.id, name: p.name }))}
       />
+
+      {bulkExportDialogOpen && (
+        <ExportProfileDialog
+          isOpen={bulkExportDialogOpen}
+          onClose={() => setBulkExportDialogOpen(false)}
+          profiles={bulkExportTargets}
+        />
+      )}
 
       <WindowResizeWarningDialog
         isOpen={windowResizeWarningOpen}

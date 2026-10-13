@@ -109,7 +109,6 @@ impl BrowserProfile {
       None => false,
     }
   }
-
 }
 
 #[cfg(test)]

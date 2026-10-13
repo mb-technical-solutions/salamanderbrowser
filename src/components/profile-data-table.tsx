@@ -25,6 +25,7 @@ import {
   LuChevronDown,
   LuChevronUp,
   LuCookie,
+  LuDownload,
   LuInfo,
   LuPlay,
   LuPuzzle,
@@ -103,7 +104,6 @@ import {
   DataTableActionBarAction,
   DataTableActionBarSelection,
 } from "./data-table-action-bar";
-import { Logo } from "./icons/logo";
 import MultipleSelector, { type Option } from "./multiple-selector";
 import { ProxyCheckButton } from "./proxy-check-button";
 import { TrafficDetailsDialog } from "./traffic-details-dialog";
@@ -1069,6 +1069,7 @@ interface ProfilesDataTableProps {
   onBulkGroupAssignment?: () => void;
   onBulkProxyAssignment?: () => void;
   onBulkCopyCookies?: () => void;
+  onBulkExport?: () => void;
   onBulkRun?: () => void;
   onBulkStop?: () => void;
   bulkActionsUnlocked?: boolean;
@@ -1112,6 +1113,7 @@ export function ProfilesDataTable({
   onBulkGroupAssignment,
   onBulkProxyAssignment,
   onBulkCopyCookies,
+  onBulkExport,
   onBulkRun,
   onBulkStop,
   bulkActionsUnlocked = false,
@@ -2041,11 +2043,13 @@ export function ProfilesDataTable({
         cell: ({ row, table }) => {
           const meta = table.options.meta as TableMeta;
           const profile = row.original;
-          const isRunning = meta.isClient && meta.runningProfiles.has(profile.id);
+          const isRunning =
+            meta.isClient && meta.runningProfiles.has(profile.id);
           const isLaunching = meta.launchingProfiles.has(profile.id);
           const isStopping = meta.stoppingProfiles.has(profile.id);
           const canLaunch = meta.browserState.canLaunchProfile(profile);
-          const tooltipContent = meta.browserState.getLaunchTooltipContent(profile);
+          const tooltipContent =
+            meta.browserState.getLaunchTooltipContent(profile);
 
           const handleProfileStop = async (profile: BrowserProfile) => {
             meta.setStoppingProfiles((prev: Set<string>) =>
@@ -2531,30 +2535,28 @@ export function ProfilesDataTable({
                             />
                             {t("common.labels.none")}
                           </CommandItem>
-                          {meta.storedProxies
-                            .map((proxy: StoredProxy) => (
-                              <CommandItem
-                                key={proxy.id}
-                                value={proxy.name}
-                                onSelect={() =>
-                                  void meta.handleProxySelection(
-                                    profile.id,
-                                    proxy.id,
-                                  )
-                                }
-                              >
-                                <LuCheck
-                                  className={cn(
-                                    "mr-2 size-4",
-                                    effectiveProxyId === proxy.id &&
-                                      !effectiveVpn
-                                      ? "opacity-100"
-                                      : "opacity-0",
-                                  )}
-                                />
-                                {proxy.name}
-                              </CommandItem>
-                            ))}
+                          {meta.storedProxies.map((proxy: StoredProxy) => (
+                            <CommandItem
+                              key={proxy.id}
+                              value={proxy.name}
+                              onSelect={() =>
+                                void meta.handleProxySelection(
+                                  profile.id,
+                                  proxy.id,
+                                )
+                              }
+                            >
+                              <LuCheck
+                                className={cn(
+                                  "mr-2 size-4",
+                                  effectiveProxyId === proxy.id && !effectiveVpn
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {proxy.name}
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                         {meta.vpnConfigs.length > 0 && (
                           <CommandGroup heading={t("profileTable.vpnsHeading")}>
@@ -2865,7 +2867,9 @@ export function ProfilesDataTable({
                       className="py-16"
                     >
                       <div className="flex flex-col items-center gap-3 text-center">
-                        <Logo className="size-12 text-muted-foreground" />
+                        <div className="grid size-12 place-items-center rounded-full bg-muted/60">
+                          <LuUserSearch className="size-6 text-muted-foreground" />
+                        </div>
                         <div>
                           <p className="text-sm font-medium text-foreground">
                             {t("profiles.table.emptyTitle")}
@@ -3122,6 +3126,15 @@ export function ProfilesDataTable({
             size="icon"
           >
             <LuCookie />
+          </DataTableActionBarAction>
+        )}
+        {onBulkExport && (
+          <DataTableActionBarAction
+            tooltip={t("exportProfile.bulkExportTooltip")}
+            onClick={onBulkExport}
+            size="icon"
+          >
+            <LuDownload />
           </DataTableActionBarAction>
         )}
         {onBulkDelete && (

@@ -247,6 +247,9 @@ mod tests {
     let error = fetch_vless_subscription("ftp://example.com/list")
       .await
       .unwrap_err();
-    assert!(matches!(error, XrayError::InvalidField { field: "url", .. }));
+    assert!(matches!(
+      error,
+      XrayError::InvalidField { field: "url", .. }
+    ));
   }
 }

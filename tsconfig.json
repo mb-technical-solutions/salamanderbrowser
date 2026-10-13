@@ -33,5 +33,11 @@
     ".next/dev/types/**/*.ts",
     "dist/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "nodecar", "src-tauri/target", "salamander-sync"]
+  "exclude": [
+    "node_modules",
+    "nodecar",
+    "src-tauri/target",
+    "e2e/app/target",
+    "salamander-sync"
+  ]
 }

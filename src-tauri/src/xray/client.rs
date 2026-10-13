@@ -144,8 +144,12 @@ pub fn build_client_config(config: &VlessConfig, runtime: &XrayClientRuntime) ->
   }))
 }
 
-pub fn build_client_config_json(config: &VlessConfig, runtime: &XrayClientRuntime) -> XrayResult<String> {
-  serde_json::to_string_pretty(&build_client_config(config, runtime)?).map_err(|_| XrayError::Serialization)
+pub fn build_client_config_json(
+  config: &VlessConfig,
+  runtime: &XrayClientRuntime,
+) -> XrayResult<String> {
+  serde_json::to_string_pretty(&build_client_config(config, runtime)?)
+    .map_err(|_| XrayError::Serialization)
 }
 
 fn validate_socks_credential(field: &'static str, value: &str) -> XrayResult<()> {

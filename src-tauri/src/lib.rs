@@ -159,6 +159,264 @@ use app_auto_updater::{
 
 use profile::import_camoufox::import_camoufox_profile;
 
+use profile::archive::{export_profiles_archive, import_profiles_archive, inspect_import_source};
+
+struct ImportedProxySource {
+  id: String,
+  name: String,
+  settings: browser::ProxySettings,
+}
+
+struct ImportedVpnSource {
+  id: String,
+  name: String,
+  vpn_type: vpn::VpnType,
+  config_data: String,
+}
+
+/// Counts reported back after a successful `import_data_directory`, so the UI
+/// can tell the user what actually came in.
+#[derive(serde::Serialize)]
+struct ImportDataSummary {
+  profiles: usize,
+  proxies: usize,
+  vpn_configs: usize,
+}
+
+/// Manually bring in an entire Salamander (or pre-rename Donut Browser) data
+/// directory picked by the user — profiles, proxies, VPN configs, extensions
+/// and settings — by copying anything missing into the live data directory.
+/// This is the user-driven counterpart to `app_dirs::migrate_from_previous_brand`,
+/// which only catches the same-machine, default-location case automatically;
+/// this covers a different machine, a hand-copied backup, or a non-default
+/// install the automatic check can't find on its own.
+#[tauri::command]
+async fn import_data_directory(
+  app_handle: tauri::AppHandle,
+  source_path: String,
+) -> Result<ImportDataSummary, String> {
+  let source = std::path::PathBuf::from(&source_path);
+
+  let looks_like_data_dir = [
+    "profiles",
+    "proxies",
+    "vpn",
+    "settings",
+    "binaries",
+    "extensions",
+  ]
+  .iter()
+  .any(|d| source.join(d).is_dir());
+  if !source.is_dir() || !looks_like_data_dir {
+    return Err(backend_error("IMPORT_SOURCE_NOT_FOUND"));
+  }
+
+  let profile_manager = profile::manager::ProfileManager::instance();
+  let pre_existing_ids: std::collections::HashSet<_> = profile_manager
+    .list_profiles()
+    .map(|p| p.into_iter().map(|profile| profile.id).collect())
+    .unwrap_or_default();
+  let pre_existing_proxy_count = proxy_manager::PROXY_MANAGER.get_stored_proxies().len();
+  let pre_existing_vpn_count = vpn::VPN_STORAGE
+    .lock()
+    .ok()
+    .and_then(|s| s.list_configs().ok())
+    .map(|c| c.len())
+    .unwrap_or(0);
+  let existing_vpn_configs: Vec<vpn::VpnConfig> = vpn::VPN_STORAGE
+    .lock()
+    .ok()
+    .and_then(|storage| {
+      storage.list_configs().ok().map(|configs| {
+        configs
+          .into_iter()
+          .filter_map(|summary| storage.load_config(&summary.id).ok())
+          .collect()
+      })
+    })
+    .unwrap_or_default();
+
+  // A VPN storage file is encrypted with the key next to the source
+  // installation. Read the source configs before copying anything, then
+  // recreate them with the destination key and remap profile references.
+  let source_vpn_storage = vpn::VpnStorage::with_dir(&source.join("vpn"));
+  let source_vpns: Vec<ImportedVpnSource> = source_vpn_storage
+    .list_configs()
+    .ok()
+    .into_iter()
+    .flatten()
+    .filter_map(|summary| {
+      source_vpn_storage.load_config(&summary.id).ok().map(|config| ImportedVpnSource {
+        id: config.id,
+        name: config.name,
+        vpn_type: config.vpn_type,
+        config_data: config.config_data,
+      })
+    })
+    .collect();
+
+  let source_proxies: Vec<ImportedProxySource> = std::fs::read_dir(source.join("proxies"))
+    .ok()
+    .into_iter()
+    .flatten()
+    .filter_map(|entry| {
+      let path = entry.ok()?.path();
+      if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+        return None;
+      }
+      let proxy: proxy_manager::StoredProxy =
+        serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+      Some(ImportedProxySource {
+        id: proxy.id,
+        name: proxy.name,
+        settings: proxy.proxy_settings,
+      })
+    })
+    .collect();
+
+  app_dirs::import_data_tree_from(&source)
+    .map_err(|e| backend_error_with_detail("INTERNAL_ERROR", e))?;
+
+  let mut proxy_id_map = std::collections::HashMap::new();
+  for proxy in source_proxies {
+    let mut name = format!("{} (imported)", proxy.name);
+    let mut suffix = 2;
+    let imported = loop {
+      match proxy_manager::PROXY_MANAGER.create_stored_proxy(
+        &app_handle,
+        name.clone(),
+        proxy.settings.clone(),
+      ) {
+        Ok(value) => break Some(value),
+        Err(_) if suffix < 1000 => {
+          name = format!("{} (imported {})", proxy.name, suffix);
+          suffix += 1;
+        }
+        Err(_) => break None,
+      }
+    };
+    if let Some(imported) = imported {
+      proxy_id_map.insert(proxy.id, imported.id);
+    }
+  }
+
+  // Rebuild destination VPN storage from its pre-import plaintext snapshot and
+  // the source configs. This avoids leaving records encrypted by the source
+  // installation's unrelated `.vpn_key`.
+  let vpn_storage_path = app_dirs::vpn_dir().join("vpn_configs.json");
+  let _ = std::fs::remove_file(&vpn_storage_path);
+  let mut vpn_id_map = std::collections::HashMap::new();
+  if let Ok(storage) = vpn::VPN_STORAGE.lock() {
+    for config in existing_vpn_configs {
+      let _ = storage.save_config(&config);
+    }
+    for vpn in source_vpns {
+      if let Ok(imported) = storage.create_config_manual(
+        &format!("{} (imported)", vpn.name),
+        vpn.vpn_type,
+        &vpn.config_data,
+      ) {
+        vpn_id_map.insert(vpn.id, imported.id);
+      }
+    }
+  }
+
+  // Source worker files are runtime state, not portable proxy definitions.
+  // Remove copies whose definitions were recreated above.
+  for source_id in proxy_id_map.keys() {
+    let _ = std::fs::remove_file(app_dirs::proxies_dir().join(format!("{source_id}.json")));
+  }
+
+  // The copy brings in profile folders verbatim by UUID, so two profiles
+  // that happen to share a display name (e.g. both named "data" because one
+  // was copied from another installation) now coexist unchanged. Rename only
+  // the newly-introduced ones on collision, the same "{name} (2)" pattern
+  // `import_profiles_archive` already uses, so existing local profiles are
+  // never touched.
+  if let Ok(all_profiles) = profile_manager.list_profiles() {
+    let mut taken_names: std::collections::HashSet<String> = all_profiles
+      .iter()
+      .filter(|p| pre_existing_ids.contains(&p.id))
+      .map(|p| p.name.to_lowercase())
+      .collect();
+
+    for mut imported in all_profiles
+      .into_iter()
+      .filter(|p| !pre_existing_ids.contains(&p.id))
+    {
+      let mut changed = false;
+      if let Some(source_id) = imported.proxy_id.as_ref() {
+        imported.proxy_id = proxy_id_map.get(source_id).cloned();
+        changed = true;
+      }
+      if let Some(source_id) = imported.vpn_id.as_ref() {
+        imported.vpn_id = vpn_id_map.get(source_id).cloned();
+        changed = true;
+      }
+      let lower = imported.name.to_lowercase();
+      if taken_names.contains(&lower) {
+        let base_name = imported.name.clone();
+        let mut suffix = 2;
+        let mut final_name;
+        loop {
+          final_name = format!("{base_name} ({suffix})");
+          if !taken_names.contains(&final_name.to_lowercase()) {
+            break;
+          }
+          suffix += 1;
+        }
+        imported.name = final_name;
+        changed = true;
+      }
+      taken_names.insert(imported.name.to_lowercase());
+      if changed {
+        let _ = profile_manager.save_profile(&imported);
+      }
+    }
+  }
+
+  let profiles = profile_manager
+    .list_profiles()
+    .map(|all| {
+      all
+        .iter()
+        .filter(|profile| !pre_existing_ids.contains(&profile.id))
+        .count()
+    })
+    .unwrap_or(0);
+  let proxies = proxy_manager::PROXY_MANAGER
+    .get_stored_proxies()
+    .len()
+    .saturating_sub(pre_existing_proxy_count);
+  let vpn_configs = vpn::VPN_STORAGE
+    .lock()
+    .ok()
+    .and_then(|s| s.list_configs().ok())
+    .map(|c| c.len())
+    .unwrap_or(0)
+    .saturating_sub(pre_existing_vpn_count);
+
+  let _ = events::emit_empty("profiles-changed");
+  let _ = events::emit_empty("proxies-changed");
+  let _ = events::emit_empty("stored-proxies-changed");
+  let _ = events::emit_empty("vpn-configs-changed");
+  let _ = events::emit_empty("groups-changed");
+
+  log::info!(
+    "Imported data directory from '{}': {} profiles, {} proxies, {} VPN configs",
+    source.display(),
+    profiles,
+    proxies,
+    vpn_configs
+  );
+
+  Ok(ImportDataSummary {
+    profiles,
+    proxies,
+    vpn_configs,
+  })
+}
+
 use extension_manager::{
   add_extension, add_extension_to_group, add_unpacked_extension, assign_extension_group_to_profile,
   create_extension_group, delete_extension, delete_extension_group,
@@ -536,15 +794,13 @@ async fn import_vpn_config(
     .map_err(|e| format!("Failed to lock VPN storage: {e}"))?;
 
   match storage.import_config(&content, &filename, name.clone()) {
-    Ok(config) => {
-      Ok(vpn::VpnImportResult {
-        success: true,
-        vpn_id: Some(config.id),
-        vpn_type: Some(config.vpn_type),
-        name: config.name,
-        error: None,
-      })
-    }
+    Ok(config) => Ok(vpn::VpnImportResult {
+      success: true,
+      vpn_id: Some(config.id),
+      vpn_type: Some(config.vpn_type),
+      name: config.name,
+      error: None,
+    }),
     Err(e) => Ok(vpn::VpnImportResult {
       success: false,
       vpn_id: None,
@@ -827,9 +1083,38 @@ pub async fn validate_profile_network(
   Ok(())
 }
 
+/// Stop every browser this app process has a `process_id` for, so quitting
+/// never leaves camoufox (or the proxy/VPN workers riding its lifecycle)
+/// orphaned behind a closed window. Neither `confirm_quit` nor the tray's
+/// "Quit" ever called into `browser_runner` before this — the window just
+/// closed and `app_handle.exit(0)` ended this process, leaving every spawned
+/// child (an independent OS process with no job-object tether on Windows)
+/// running headless.
+async fn kill_all_running_browsers(app_handle: &tauri::AppHandle) {
+  let profile_manager = crate::profile::manager::ProfileManager::instance();
+  let Ok(profiles) = profile_manager.list_profiles() else {
+    return;
+  };
+  let browser_runner = crate::browser_runner::BrowserRunner::instance();
+  for profile in profiles {
+    if profile.process_id.is_some() {
+      if let Err(e) = browser_runner
+        .kill_browser_process(app_handle.clone(), &profile)
+        .await
+      {
+        log::warn!(
+          "Failed to stop profile '{}' while quitting: {e}",
+          profile.name
+        );
+      }
+    }
+  }
+}
+
 /// Confirm a quit chosen from the close-confirmation dialog and exit the app.
 #[tauri::command]
-fn confirm_quit(app_handle: tauri::AppHandle) {
+async fn confirm_quit(app_handle: tauri::AppHandle) {
+  kill_all_running_browsers(&app_handle).await;
   QUIT_CONFIRMED.store(true, Ordering::SeqCst);
   app_handle.exit(0);
 }
@@ -925,8 +1210,12 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
     .on_menu_event(|app_handle, event| match event.id().as_ref() {
       "tray_show" => show_main_window(app_handle),
       "tray_quit" => {
-        QUIT_CONFIRMED.store(true, Ordering::SeqCst);
-        app_handle.exit(0);
+        let app_handle = app_handle.clone();
+        tauri::async_runtime::spawn(async move {
+          kill_all_running_browsers(&app_handle).await;
+          QUIT_CONFIRMED.store(true, Ordering::SeqCst);
+          app_handle.exit(0);
+        });
       }
       _ => {}
     })
@@ -995,6 +1284,10 @@ pub fn run() {
 pub fn run_with_builder(
   configure_builder: impl FnOnce(tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry>,
 ) {
+  // Must run before anything touches app_dirs::data_dir() (profiles, binaries,
+  // proxies, VPNs, settings) — see its doc comment for why.
+  app_dirs::migrate_from_previous_brand();
+
   let args: Vec<String> = env::args().collect();
   let startup_url = urls_from_args(args.iter()).into_iter().next();
 
@@ -1123,7 +1416,8 @@ pub fn run_with_builder(
       .build(),
     );
 
-  builder.setup(|app| {
+  builder
+    .setup(|app| {
       // Recover ephemeral dir mappings from RAM-backed storage (tmpfs/ramdisk)
       ephemeral_dirs::recover_ephemeral_dirs();
 
@@ -1147,15 +1441,15 @@ pub fn run_with_builder(
 
       #[cfg(feature = "e2e")]
       let win_builder = match e2e_automation_profile_dir() {
-          Some(profile_dir) => win_builder
-            .data_directory(profile_dir.join("webview"))
-            // WKWebView ignores data_directory on macOS. Incognito gives every
-            // launched app process a non-persistent data store there, and also
-            // prevents WebView2/WebKitGTK caches from escaping the session on
-            // the other platforms. Durable app state is still exercised via
-            // SALAMANDERBROWSER_DATA_ROOT; only browser-engine storage is ephemeral.
-            .incognito(true),
-          None => win_builder,
+        Some(profile_dir) => win_builder
+          .data_directory(profile_dir.join("webview"))
+          // WKWebView ignores data_directory on macOS. Incognito gives every
+          // launched app process a non-persistent data store there, and also
+          // prevents WebView2/WebKitGTK caches from escaping the session on
+          // the other platforms. Durable app state is still exercised via
+          // SALAMANDERBROWSER_DATA_ROOT; only browser-engine storage is ephemeral.
+          .incognito(true),
+        None => win_builder,
       };
 
       // The app draws its own titlebar. macOS keeps the native one and makes
@@ -1341,8 +1635,14 @@ pub fn run_with_builder(
         });
       }
 
-
-      // Clear stale process IDs from profiles (processes that died while app was closed)
+      // Clear stale process IDs from profiles (processes that died while app was closed).
+      // Runs synchronously here, before the frontend's first `list_browser_profiles`
+      // call, so a genuinely-dead PID is never even visible to the UI. The event is
+      // still emitted for the case the frontend already has a subscriber attached
+      // from a prior window (e.g. a reload) — `use-profile-events.ts` hydrates
+      // `runningProfiles` from the initial list but documents that it expects
+      // corrections to arrive as `profile-running-changed`, same as every other
+      // running-state transition.
       {
         let profile_manager = crate::profile::ProfileManager::instance();
         if let Ok(profiles) = profile_manager.list_profiles() {
@@ -1362,6 +1662,10 @@ pub fn run_with_builder(
                 let mut updated = profile.clone();
                 updated.process_id = None;
                 let _ = profile_manager.save_profile(&updated);
+                let _ = events::emit(
+                  "profile-running-changed",
+                  serde_json::json!({ "id": updated.id.to_string(), "is_running": false }),
+                );
               }
             }
           }
@@ -1697,8 +2001,7 @@ pub fn run_with_builder(
                 // stored PID but the browser is gone — the launch path sets the
                 // frontend to "running" immediately, and a missed transition
                 // here leaves the stop button stuck.
-                let should_emit =
-                  last_state != is_running || (!is_running && had_pid);
+                let should_emit = last_state != is_running || (!is_running && had_pid);
 
                 if should_emit {
                   log::debug!(
@@ -1733,16 +2036,14 @@ pub fn run_with_builder(
                   // exits naturally (user closing the window) — the explicit
                   // kill path in browser_runner.rs handles app-driven stops.
                   if !is_running && profile.password_protected {
-                    crate::profile::password::complete_after_quit_and_wait(&profile)
-                      .await;
+                    crate::profile::password::complete_after_quit_and_wait(&profile).await;
                   }
 
                   // Clear-on-close for natural exits (user closed the window).
                   // The explicit kill path in browser_runner.rs handles
                   // app-driven stops.
                   if !is_running {
-                    crate::profile::clear_on_close::clear_profile_browsing_data(&profile)
-                      .await;
+                    crate::profile::clear_on_close::clear_profile_browsing_data(&profile).await;
                   }
 
                   last_running_states.insert(profile_id, is_running);
@@ -1822,6 +2123,10 @@ pub fn run_with_builder(
       download_and_prepare_app_update,
       restart_application,
       import_camoufox_profile,
+      export_profiles_archive,
+      import_profiles_archive,
+      inspect_import_source,
+      import_data_directory,
       check_missing_binaries,
       check_missing_geoip_database,
       ensure_all_binaries_exist,

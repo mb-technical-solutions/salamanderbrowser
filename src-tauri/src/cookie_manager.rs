@@ -923,9 +923,9 @@ impl CookieManager {
     let owned: Vec<UnifiedCookie> = cookies.to_vec();
 
     tokio::task::spawn_blocking(move || Self::write_firefox_cookies(&db_path, &owned, mode))
-    .await
-    .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))?
-    .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))
+      .await
+      .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))?
+      .map_err(|e| crate::backend_error_with_detail("COOKIE_DB_UNAVAILABLE", e))
   }
 
   fn now_secs() -> i64 {
@@ -1126,5 +1126,4 @@ mod tests {
     assert_eq!(parsed.len(), 1);
     assert_eq!(parsed[0].same_site, -1);
   }
-
 }

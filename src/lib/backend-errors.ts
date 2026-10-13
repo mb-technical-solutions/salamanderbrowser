@@ -69,6 +69,15 @@ export type BackendErrorCode =
   | "LAUNCH_CONSENT_EXPIRED"
   | "VPN_WORKER_START_FAILED"
   | "EXIT_PROBE_FAILED"
+  | "ARCHIVE_PASSWORD_REQUIRED"
+  | "ARCHIVE_WRONG_PASSWORD"
+  | "ARCHIVE_CORRUPT"
+  | "ARCHIVE_INVALID_PATH"
+  | "ARCHIVE_TOO_LARGE"
+  | "ARCHIVE_UNSUPPORTED_SYMLINK"
+  | "ARCHIVE_UNSUPPORTED_VERSION"
+  | "EXPORT_WRITE_FAILED"
+  | "IMPORT_COPY_FAILED"
   | "INTERNAL_ERROR";
 
 export interface BackendError {
@@ -291,6 +300,26 @@ export function translateBackendError(t: TFunction, err: unknown): string {
       });
     case "EXIT_PROBE_FAILED":
       return t("backendErrors.exitProbeFailed");
+    case "ARCHIVE_PASSWORD_REQUIRED":
+      return t("backendErrors.archivePasswordRequired");
+    case "ARCHIVE_WRONG_PASSWORD":
+      return t("backendErrors.archiveWrongPassword");
+    case "ARCHIVE_CORRUPT":
+      return t("backendErrors.archiveCorrupt");
+    case "ARCHIVE_INVALID_PATH":
+    case "ARCHIVE_TOO_LARGE":
+    case "ARCHIVE_UNSUPPORTED_SYMLINK":
+      return t("backendErrors.archiveCorrupt");
+    case "ARCHIVE_UNSUPPORTED_VERSION":
+      return t("backendErrors.archiveUnsupportedVersion");
+    case "EXPORT_WRITE_FAILED":
+      return t("backendErrors.exportWriteFailed", {
+        detail: parsed.params?.detail ?? "",
+      });
+    case "IMPORT_COPY_FAILED":
+      return t("backendErrors.importCopyFailed", {
+        detail: parsed.params?.detail ?? "",
+      });
     case "INTERNAL_ERROR":
       return t("backendErrors.internal", {
         detail: parsed.params?.detail ?? "",

@@ -130,6 +130,174 @@ pub fn data_dir() -> PathBuf {
   base_dirs().data_local_dir().join(app_name())
 }
 
+/// One-time migration for anyone upgrading from "Donut Browser" — this fork's
+/// previous name, before `app_name()` became "SalamanderBrowser". The old
+/// build wrote everything (downloaded browsers, profiles, proxies, VPNs,
+/// settings) under a sibling directory named after the old brand; without
+/// this, upgrading users would find an empty data directory and have to
+/// re-download every browser engine and recreate every profile from scratch.
+///
+/// Only touches the *default*, unoverridden data location: a custom
+/// `SALAMANDERBROWSER_DATA_DIR`/`SALAMANDERBROWSER_DATA_ROOT` or a portable
+/// install is a deliberate choice, not an in-place upgrade, so those are left
+/// alone. Safe to call on every startup — a marker file makes the actual copy
+/// run at most once.
+pub fn migrate_from_previous_brand() {
+  #[cfg(test)]
+  {
+    if TEST_DATA_DIR.with(|cell| cell.borrow().is_some()) {
+      return;
+    }
+  }
+
+  if std::env::var_os("SALAMANDERBROWSER_DATA_DIR").is_some_and(|v| !v.is_empty())
+    || data_root().is_some()
+    || portable_dir().is_some()
+  {
+    return;
+  }
+
+  let new_dir = base_dirs().data_local_dir().join(app_name());
+  let old_name = if cfg!(debug_assertions) {
+    "DonutBrowserDev"
+  } else {
+    "DonutBrowser"
+  };
+  let old_dir = base_dirs().data_local_dir().join(old_name);
+
+  migrate_dir_if_needed(&old_dir, &new_dir);
+}
+
+/// Testable core of `migrate_from_previous_brand`: given the old and new
+/// directories explicitly, copy once (marker-gated) and never clobber a file
+/// that already exists at the destination.
+fn migrate_dir_if_needed(old_dir: &std::path::Path, new_dir: &std::path::Path) {
+  let marker = new_dir.join(".brand-migration-checked");
+  if marker.exists() {
+    return;
+  }
+
+  if old_dir.exists() && old_dir != new_dir {
+    match copy_dir_skip_existing(old_dir, new_dir) {
+      Ok(()) => log::info!(
+        "Migrated data from previous installation at {} to {}",
+        old_dir.display(),
+        new_dir.display()
+      ),
+      Err(e) => log::warn!(
+        "Brand migration copy from {} failed: {e}",
+        old_dir.display()
+      ),
+    }
+  }
+
+  if let Err(e) = std::fs::create_dir_all(new_dir) {
+    log::warn!("Failed to create data dir during brand migration check: {e}");
+    return;
+  }
+  let _ = std::fs::write(&marker, b"1");
+}
+
+/// Copy everything under `source` into the live data directory, skipping any
+/// file that already exists at the destination. Used by the manual "Import an
+/// installation" UI action — `migrate_from_previous_brand` only covers the
+/// same-machine, default-location, same-session case; this covers everything
+/// else: a different machine, a backup copied in by hand, a portable install,
+/// or a data directory relocated via an env var override.
+pub fn import_data_tree_from(source: &std::path::Path) -> std::io::Result<()> {
+  let destination = data_dir();
+  let source = source.canonicalize()?;
+  let destination_canonical = destination.canonicalize().unwrap_or(destination.clone());
+
+  // Never copy a data tree into itself or from a parent containing the live
+  // data directory. Both cases can recurse forever and partially corrupt the
+  // destination while importing.
+  if source == destination_canonical || destination_canonical.starts_with(&source) {
+    return Err(std::io::Error::new(
+      std::io::ErrorKind::InvalidInput,
+      "import source overlaps the active data directory",
+    ));
+  }
+
+  copy_dir_skip_existing(&source, &destination)
+}
+
+/// Recursively copy `src` into `dst`, creating directories as needed and
+/// skipping any file that already exists at the destination (so a partial
+/// prior migration, or a file the new build already wrote, is never
+/// clobbered).
+fn copy_dir_skip_existing(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+  std::fs::create_dir_all(dst)?;
+  for entry in std::fs::read_dir(src)? {
+    let entry = entry?;
+    let file_type = entry.file_type()?;
+    let from = entry.path();
+    let to = dst.join(entry.file_name());
+    if file_type.is_symlink() {
+      return Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        format!("data import contains unsupported symlink: {}", from.display()),
+      ));
+    }
+    if file_type.is_dir() {
+      if entry.file_name() == "vpn" {
+        copy_vpn_dir_atomically(&from, &to)?;
+      } else {
+        copy_dir_skip_existing(&from, &to)?;
+      }
+    } else if file_type.is_file() && !to.exists() {
+      std::fs::copy(&from, &to)?;
+    }
+  }
+  Ok(())
+}
+
+/// Copy a `vpn/` directory, keeping `vpn_configs.json` and `.vpn_key` paired.
+///
+/// `vpn_configs.json` is only decryptable with the exact `.vpn_key` it was
+/// encrypted with. Copying the pair file-by-file under "skip if destination
+/// already exists" can bring in one half from the source and leave the other
+/// half untouched at the destination (e.g. a freshly-generated local
+/// `.vpn_key` surviving while the source's `vpn_configs.json` gets copied in),
+/// silently producing configs that fail to decrypt (`aead::Error`) and break
+/// launch for any profile referencing them. Only adopt the source pair when
+/// the destination has neither file yet; everything else in the directory
+/// still copies file-by-file as usual.
+fn copy_vpn_dir_atomically(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+  std::fs::create_dir_all(dst)?;
+  let src_configs = src.join("vpn_configs.json");
+  let src_key = src.join(".vpn_key");
+  let dst_configs = dst.join("vpn_configs.json");
+  let dst_key = dst.join(".vpn_key");
+  if src_configs.exists() && src_key.exists() && !dst_configs.exists() && !dst_key.exists() {
+    std::fs::copy(&src_configs, &dst_configs)?;
+    std::fs::copy(&src_key, &dst_key)?;
+  }
+
+  for entry in std::fs::read_dir(src)? {
+    let entry = entry?;
+    let file_type = entry.file_type()?;
+    let from = entry.path();
+    let name = entry.file_name();
+    if name == "vpn_configs.json" || name == ".vpn_key" {
+      continue;
+    }
+    let to = dst.join(&name);
+    if file_type.is_symlink() {
+      return Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        format!("VPN import contains unsupported symlink: {}", from.display()),
+      ));
+    }
+    if file_type.is_dir() {
+      copy_dir_skip_existing(&from, &to)?;
+    } else if file_type.is_file() && !to.exists() {
+      std::fs::copy(&from, &to)?;
+    }
+  }
+  Ok(())
+}
+
 pub fn cache_dir() -> PathBuf {
   #[cfg(test)]
   {
@@ -458,5 +626,156 @@ mod tests {
       assert_eq!(cache_dir(), PathBuf::from("/tmp/test-cleanup-cache"));
     }
     assert_eq!(cache_dir(), original_cache);
+  }
+
+  #[test]
+  fn brand_migration_copies_old_data_into_new_dir() {
+    let work = tempfile::tempdir().unwrap();
+    let old_dir = work.path().join("DonutBrowser");
+    let new_dir = work.path().join("SalamanderBrowser");
+
+    std::fs::create_dir_all(old_dir.join("binaries/camoufox")).unwrap();
+    std::fs::write(old_dir.join("binaries/camoufox/camoufox.exe"), b"engine").unwrap();
+    std::fs::create_dir_all(old_dir.join("profiles/abc")).unwrap();
+    std::fs::write(old_dir.join("profiles/abc/metadata.json"), b"{}").unwrap();
+
+    migrate_dir_if_needed(&old_dir, &new_dir);
+
+    assert_eq!(
+      std::fs::read(new_dir.join("binaries/camoufox/camoufox.exe")).unwrap(),
+      b"engine"
+    );
+    assert_eq!(
+      std::fs::read(new_dir.join("profiles/abc/metadata.json")).unwrap(),
+      b"{}"
+    );
+    assert!(new_dir.join(".brand-migration-checked").exists());
+    // The old installation's files are left in place — this is a copy, not a move.
+    assert!(old_dir.join("binaries/camoufox/camoufox.exe").exists());
+  }
+
+  #[test]
+  fn brand_migration_never_overwrites_an_existing_destination_file() {
+    let work = tempfile::tempdir().unwrap();
+    let old_dir = work.path().join("DonutBrowser");
+    let new_dir = work.path().join("SalamanderBrowser");
+
+    std::fs::create_dir_all(&old_dir).unwrap();
+    std::fs::write(old_dir.join("settings.json"), b"old").unwrap();
+    std::fs::create_dir_all(&new_dir).unwrap();
+    std::fs::write(new_dir.join("settings.json"), b"new").unwrap();
+
+    migrate_dir_if_needed(&old_dir, &new_dir);
+
+    assert_eq!(
+      std::fs::read(new_dir.join("settings.json")).unwrap(),
+      b"new"
+    );
+  }
+
+  #[test]
+  fn brand_migration_is_a_one_shot_even_if_old_dir_appears_later() {
+    let work = tempfile::tempdir().unwrap();
+    let old_dir = work.path().join("DonutBrowser");
+    let new_dir = work.path().join("SalamanderBrowser");
+
+    // No old dir yet — first call just plants the marker.
+    migrate_dir_if_needed(&old_dir, &new_dir);
+    assert!(new_dir.join(".brand-migration-checked").exists());
+
+    // Old dir shows up afterwards (shouldn't happen in practice, but the
+    // marker must still win so a later call is a true no-op).
+    std::fs::create_dir_all(&old_dir).unwrap();
+    std::fs::write(old_dir.join("camoufox.bin"), b"engine").unwrap();
+    migrate_dir_if_needed(&old_dir, &new_dir);
+
+    assert!(!new_dir.join("camoufox.bin").exists());
+  }
+
+  #[test]
+  fn brand_migration_no_op_when_old_dir_absent() {
+    let work = tempfile::tempdir().unwrap();
+    let old_dir = work.path().join("DonutBrowser");
+    let new_dir = work.path().join("SalamanderBrowser");
+
+    migrate_dir_if_needed(&old_dir, &new_dir);
+
+    assert!(new_dir.exists());
+    assert!(new_dir.join(".brand-migration-checked").exists());
+    assert!(!old_dir.exists());
+  }
+
+  #[test]
+  fn copy_dir_skip_existing_recurses_into_nested_directories() {
+    let work = tempfile::tempdir().unwrap();
+    let src = work.path().join("src");
+    let dst = work.path().join("dst");
+    std::fs::create_dir_all(src.join("a/b")).unwrap();
+    std::fs::write(src.join("a/b/file.txt"), b"nested").unwrap();
+
+    copy_dir_skip_existing(&src, &dst).unwrap();
+
+    assert_eq!(std::fs::read(dst.join("a/b/file.txt")).unwrap(), b"nested");
+  }
+
+  #[test]
+  fn copy_dir_skip_existing_adopts_vpn_pair_when_destination_has_neither_file() {
+    let work = tempfile::tempdir().unwrap();
+    let src = work.path().join("src");
+    let dst = work.path().join("dst");
+    std::fs::create_dir_all(src.join("vpn")).unwrap();
+    std::fs::write(src.join("vpn/vpn_configs.json"), b"configs-from-source").unwrap();
+    std::fs::write(src.join("vpn/.vpn_key"), b"key-from-source").unwrap();
+
+    copy_dir_skip_existing(&src, &dst).unwrap();
+
+    assert_eq!(
+      std::fs::read(dst.join("vpn/vpn_configs.json")).unwrap(),
+      b"configs-from-source"
+    );
+    assert_eq!(
+      std::fs::read(dst.join("vpn/.vpn_key")).unwrap(),
+      b"key-from-source"
+    );
+  }
+
+  #[test]
+  fn copy_dir_skip_existing_never_mixes_vpn_config_and_key_across_installs() {
+    let work = tempfile::tempdir().unwrap();
+    let src = work.path().join("src");
+    let dst = work.path().join("dst");
+    std::fs::create_dir_all(src.join("vpn")).unwrap();
+    std::fs::write(src.join("vpn/vpn_configs.json"), b"configs-from-source").unwrap();
+    std::fs::write(src.join("vpn/.vpn_key"), b"key-from-source").unwrap();
+    // Destination already generated its own key (e.g. the new install ran
+    // once before this import/migration happened) — the source's configs,
+    // which were encrypted with the source's key, must NOT be paired with it.
+    std::fs::create_dir_all(dst.join("vpn")).unwrap();
+    std::fs::write(dst.join("vpn/.vpn_key"), b"key-from-destination").unwrap();
+
+    copy_dir_skip_existing(&src, &dst).unwrap();
+
+    assert!(!dst.join("vpn/vpn_configs.json").exists());
+    assert_eq!(
+      std::fs::read(dst.join("vpn/.vpn_key")).unwrap(),
+      b"key-from-destination"
+    );
+  }
+
+  #[test]
+  fn copy_dir_skip_existing_still_copies_other_vpn_files_file_by_file() {
+    let work = tempfile::tempdir().unwrap();
+    let src = work.path().join("src");
+    let dst = work.path().join("dst");
+    std::fs::create_dir_all(src.join("vpn")).unwrap();
+    std::fs::write(src.join("vpn/vpn_configs.json"), b"configs").unwrap();
+    std::fs::write(src.join("vpn/.vpn_key"), b"key").unwrap();
+    std::fs::write(src.join("vpn/other.txt"), b"unrelated").unwrap();
+    std::fs::create_dir_all(dst.join("vpn")).unwrap();
+    std::fs::write(dst.join("vpn/.vpn_key"), b"existing-key").unwrap();
+
+    copy_dir_skip_existing(&src, &dst).unwrap();
+
+    assert_eq!(std::fs::read(dst.join("vpn/other.txt")).unwrap(), b"unrelated");
   }
 }

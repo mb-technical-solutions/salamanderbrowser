@@ -228,8 +228,7 @@ impl BrowserRunner {
       stored
     };
 
-    let upstream_url =
-      crate::proxy_manager::ProxyManager::build_proxy_url(&upstream_for_wrapper);
+    let upstream_url = crate::proxy_manager::ProxyManager::build_proxy_url(&upstream_for_wrapper);
     let wrapper = crate::proxy_runner::start_proxy_process_with_profile(
       Some(upstream_url),
       None,
@@ -373,9 +372,7 @@ impl BrowserRunner {
           .camoufox_manager
           .generate_fingerprint_config(&app_handle, profile, &camoufox_config)
           .await
-          .map_err(|e| {
-            crate::backend_error_with_detail("INTERNAL_ERROR", e.to_string())
-          })?;
+          .map_err(|e| crate::backend_error_with_detail("INTERNAL_ERROR", e.to_string()))?;
         camoufox_config.fingerprint = Some(generated);
         updated_profile.camoufox_config = Some(camoufox_config.clone());
       }
@@ -691,7 +688,11 @@ impl BrowserRunner {
         {
           Ok(stopped) => process_actually_stopped = stopped,
           Err(e) => {
-            log::error!("Error stopping Camoufox process {}: {}", camoufox_process.id, e);
+            log::error!(
+              "Error stopping Camoufox process {}: {}",
+              camoufox_process.id,
+              e
+            );
             process_actually_stopped = false;
           }
         }

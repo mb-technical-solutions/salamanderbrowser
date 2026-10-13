@@ -178,7 +178,8 @@ mod windows {
   /// offered as a browser and the button appeared to do nothing.
   const CLIENT_KEY: &str = r"Software\Clients\StartMenuInternet\SalamanderBrowser";
   /// The value written into `RegisteredApplications`.
-  const CAPABILITIES_KEY: &str = r"Software\Clients\StartMenuInternet\SalamanderBrowser\Capabilities";
+  const CAPABILITIES_KEY: &str =
+    r"Software\Clients\StartMenuInternet\SalamanderBrowser\Capabilities";
   /// The layout earlier builds wrote. Removed on every run, so a machine that
   /// ran one of those does not keep stale capability data claiming http.
   const LEGACY_APP_KEY: &str = r"Software\SalamanderBrowser";

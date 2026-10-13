@@ -59,6 +59,16 @@ export const commandCoverage = {
       "delete_selected_profiles",
     ],
   },
+  archiveEntities: {
+    suite: "entities",
+    level: "integration",
+    commands: [
+      "inspect_import_source",
+      "export_profiles_archive",
+      "import_profiles_archive",
+      "import_data_directory",
+    ],
+  },
   proxyEntities: {
     suite: "entities",
     level: "integration",

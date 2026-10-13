@@ -74,9 +74,15 @@ not-a-hash  Salamander_0.29.0_amd64.deb
       Some("abcdef01745092b7d1c93c1e7e1c30d923be3d1e916b661bd53d1c0c9c7f0a22")
     );
     // Entries with malformed hashes are rejected rather than trusted.
-    assert_eq!(find_checksum_for_file(sums, "Salamander_0.29.0_amd64.deb"), None);
+    assert_eq!(
+      find_checksum_for_file(sums, "Salamander_0.29.0_amd64.deb"),
+      None
+    );
     // Missing file.
-    assert_eq!(find_checksum_for_file(sums, "Salamander_0.29.0_arm64.deb"), None);
+    assert_eq!(
+      find_checksum_for_file(sums, "Salamander_0.29.0_arm64.deb"),
+      None
+    );
   }
 
   #[test]
@@ -86,5 +92,4 @@ not-a-hash  Salamander_0.29.0_amd64.deb
     std::fs::write(&path, b"hello world").unwrap();
     assert_eq!(sha256_file(&path).unwrap(), HELLO_WORLD_SHA256);
   }
-
 }

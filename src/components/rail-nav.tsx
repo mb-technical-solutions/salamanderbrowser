@@ -1,16 +1,14 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
 import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
 import { LuInfo, LuKeyboard, LuPuzzle, LuUser, LuUsers } from "react-icons/lu";
 import { MOTION_SPRING_POSITION } from "@/lib/motion";
-import { launchSalamanderClone } from "@/lib/salamander-crawl";
 import { cn } from "@/lib/utils";
-import { Logo } from "./icons/logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export type AppPage =
@@ -22,144 +20,6 @@ export type AppPage =
   | "settings"
   | "import"
   | "shortcuts";
-
-const CLICK_THRESHOLD = 5;
-const CLICK_WINDOW_MS = 2000;
-const LOGO_HIDDEN_KEY = "salamander-logo-hidden";
-
-function useLogoEasterEgg({
-  currentPage,
-  onNavigate,
-}: {
-  currentPage: AppPage;
-  onNavigate: (page: AppPage) => void;
-}) {
-  const clickTimestamps = useRef<number[]>([]);
-  const [isPressed, setIsPressed] = useState(false);
-  const [wobbleKey, setWobbleKey] = useState(0);
-  const [isFalling, setIsFalling] = useState(false);
-  /**
-   * Click count toward the crawl-away trigger while the user is on the
-   * profiles page. Capped at 4: each click here grows the logo by 25%, so
-   * step 4 has doubled the original size. Click 5 fires `triggerCrawlAway`
-   * and resets.
-   */
-  const [growStep, setGrowStep] = useState(0);
-  const resetTimeoutRef = useRef<number | null>(null);
-  const [isHidden, setIsHidden] = useState(() => {
-    try {
-      return sessionStorage.getItem(LOGO_HIDDEN_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-  const logoRef = useRef<HTMLButtonElement>(null);
-  const cancelCrawlRef = useRef<(() => void) | null>(null);
-
-  const triggerCrawlAway = useCallback(() => {
-    const el = logoRef.current;
-    if (!el || isFalling) return;
-    setIsFalling(true);
-
-    cancelCrawlRef.current = launchSalamanderClone(el, {
-      onExit: () => {
-        try {
-          sessionStorage.setItem(LOGO_HIDDEN_KEY, "1");
-        } catch {
-          // ignore — sessionStorage unavailable in some Tauri WebViews
-        }
-        setIsHidden(true);
-        setIsFalling(false);
-      },
-    });
-  }, [isFalling]);
-
-  useEffect(() => {
-    return () => {
-      cancelCrawlRef.current?.();
-    };
-  }, []);
-
-  const handleClick = useCallback(() => {
-    if (isFalling || isHidden) return;
-
-    // First behaviour: any click from elsewhere in the app just routes the
-    // user back to the profiles list. Growing the logo requires the user
-    // to already be home — that keeps the easter egg from accidentally
-    // firing during normal navigation.
-    if (currentPage !== "profiles") {
-      onNavigate("profiles");
-      clickTimestamps.current = [];
-      setGrowStep(0);
-      if (resetTimeoutRef.current !== null) {
-        window.clearTimeout(resetTimeoutRef.current);
-        resetTimeoutRef.current = null;
-      }
-      return;
-    }
-
-    const now = Date.now();
-    clickTimestamps.current = clickTimestamps.current.filter(
-      (t) => now - t < CLICK_WINDOW_MS,
-    );
-    clickTimestamps.current.push(now);
-
-    if (clickTimestamps.current.length >= CLICK_THRESHOLD) {
-      clickTimestamps.current = [];
-      setGrowStep(0);
-      if (resetTimeoutRef.current !== null) {
-        window.clearTimeout(resetTimeoutRef.current);
-        resetTimeoutRef.current = null;
-      }
-      triggerCrawlAway();
-    } else {
-      setGrowStep(
-        Math.min(clickTimestamps.current.length, CLICK_THRESHOLD - 1),
-      );
-      setWobbleKey((k) => k + 1);
-      if (resetTimeoutRef.current !== null) {
-        window.clearTimeout(resetTimeoutRef.current);
-      }
-      resetTimeoutRef.current = window.setTimeout(() => {
-        clickTimestamps.current = [];
-        setGrowStep(0);
-        resetTimeoutRef.current = null;
-      }, CLICK_WINDOW_MS);
-    }
-  }, [currentPage, isFalling, isHidden, onNavigate, triggerCrawlAway]);
-
-  // Leaving the profiles page mid-streak cancels growth so we never end up
-  // with an outsized logo when the user returns later.
-  useEffect(() => {
-    if (currentPage !== "profiles") {
-      clickTimestamps.current = [];
-      setGrowStep(0);
-      if (resetTimeoutRef.current !== null) {
-        window.clearTimeout(resetTimeoutRef.current);
-        resetTimeoutRef.current = null;
-      }
-    }
-  }, [currentPage]);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimeoutRef.current !== null) {
-        window.clearTimeout(resetTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  return {
-    logoRef,
-    isPressed,
-    setIsPressed,
-    wobbleKey,
-    isFalling,
-    isHidden,
-    growStep,
-    handleClick,
-  };
-}
 
 interface RailNavProps {
   currentPage: AppPage;
@@ -221,16 +81,6 @@ export function RailNav({
 }: RailNavProps) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
-  const {
-    logoRef,
-    isPressed,
-    setIsPressed,
-    wobbleKey,
-    isFalling,
-    isHidden,
-    growStep,
-    handleClick,
-  } = useLogoEasterEgg({ currentPage, onNavigate });
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -245,53 +95,6 @@ export function RailNav({
 
   return (
     <nav className="relative flex w-10 shrink-0 flex-col items-center gap-1 border-r border-border bg-background py-2">
-      {!isHidden ? (
-        <button
-          ref={logoRef}
-          type="button"
-          aria-label={t("header.salamanderLogo")}
-          className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md bg-transparent text-foreground select-none"
-          onClick={handleClick}
-          onPointerDown={() => {
-            setIsPressed(true);
-          }}
-          onPointerUp={() => {
-            setIsPressed(false);
-          }}
-          onPointerLeave={() => {
-            setIsPressed(false);
-          }}
-        >
-          {/* Inner wrapper survives clicks (no `key`) so the scale change
-              animates smoothly across the wiggle layer's remounts. */}
-          <span
-            style={{
-              transform: isPressed
-                ? `scale(${(1 + growStep * 0.25) * 0.9})`
-                : `scale(${1 + growStep * 0.25})`,
-            }}
-            className="inline-grid place-items-center transition-transform duration-300 ease-out will-change-transform"
-          >
-            <span
-              key={wobbleKey}
-              className={cn(
-                "inline-grid place-items-center",
-                !isFalling &&
-                  !isPressed &&
-                  wobbleKey > 0 &&
-                  "animate-[wiggle_0.3s_ease-in-out]",
-              )}
-            >
-              <Logo className="size-5 will-change-transform" />
-            </span>
-          </span>
-        </button>
-      ) : (
-        <div className="size-7 shrink-0" />
-      )}
-
-      <div className="my-1 h-px w-5 shrink-0 bg-border" />
-
       <div className="flex min-h-0 w-full scrollbar-none flex-col items-center gap-1 overflow-y-auto [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {TOP_ITEMS.map(({ page, Icon, labelKey }) => {
           const active = currentPage === page;

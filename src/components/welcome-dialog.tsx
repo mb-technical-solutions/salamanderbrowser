@@ -17,7 +17,6 @@ import {
   LuTriangleAlert,
   LuUsers,
 } from "react-icons/lu";
-import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useBrowserSetup } from "@/hooks/use-browser-setup";
@@ -235,17 +234,6 @@ export function WelcomeDialog({
               className="flex flex-col gap-7"
             >
               <div className="flex flex-col items-center gap-4 text-center">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{
-                    ...panelTransition,
-                    delay: reduceMotion ? 0 : 0.05,
-                  }}
-                  className="text-foreground"
-                >
-                  <Logo className="size-12" />
-                </motion.div>
                 <div className="flex flex-col gap-2">
                   <h2 className="text-2xl font-semibold tracking-tight text-balance">
                     {t("welcome.title")}

@@ -40,7 +40,8 @@ fn looks_like_firefox_profile(dir: &Path) -> bool {
 }
 
 fn get_default_camoufox_version() -> Result<String, Box<dyn std::error::Error>> {
-  let downloaded_versions = DownloadedBrowsersRegistry::instance().get_downloaded_versions("camoufox");
+  let downloaded_versions =
+    DownloadedBrowsersRegistry::instance().get_downloaded_versions("camoufox");
 
   if let Some(version) = downloaded_versions.first() {
     return Ok(version.clone());
@@ -56,19 +57,31 @@ fn get_default_camoufox_version() -> Result<String, Box<dyn std::error::Error>> 
   )
 }
 
-fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn copy_directory_recursive(
+  source: &Path,
+  destination: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
   if !destination.exists() {
     create_dir_all(destination)?;
   }
 
   for entry in fs::read_dir(source)? {
     let entry = entry?;
+    let file_type = entry.file_type()?;
     let source_path = entry.path();
     let dest_path = destination.join(entry.file_name());
 
-    if source_path.is_dir() {
+    if file_type.is_symlink() {
+      return Err(format!(
+        "Camoufox profile contains an unsupported symlink: {}",
+        source_path.display()
+      )
+      .into());
+    }
+
+    if file_type.is_dir() {
       copy_directory_recursive(&source_path, &dest_path)?;
-    } else {
+    } else if file_type.is_file() {
       fs::copy(&source_path, &dest_path)?;
     }
   }
@@ -88,8 +101,10 @@ async fn import_camoufox_profile_impl(
 ) -> Result<BrowserProfile, Box<dyn std::error::Error>> {
   let profile_manager = ProfileManager::instance();
 
-  let source = Path::new(source_path);
-  if !source.exists() || !source.is_dir() {
+  let source = Path::new(source_path)
+    .canonicalize()
+    .map_err(|e| format!("Failed to resolve Camoufox profile path: {e}"))?;
+  if !source.is_dir() {
     return Err(
       serde_json::json!({ "code": "IMPORT_SOURCE_NOT_FOUND" })
         .to_string()
@@ -97,7 +112,7 @@ async fn import_camoufox_profile_impl(
     );
   }
 
-  if !looks_like_firefox_profile(source) {
+  if !looks_like_firefox_profile(&source) {
     return Err(
       serde_json::json!({ "code": "CAMOUFOX_IMPORT_INVALID_FOLDER" })
         .to_string()
@@ -147,7 +162,15 @@ async fn import_camoufox_profile_impl(
   // imported browsing data (cookies, history, extensions, logins).
   let profiles_dir = profile_manager.get_profiles_dir();
   let dest_dir = profile.get_profile_data_path(&profiles_dir);
-  if let Err(e) = copy_directory_recursive(source, &dest_dir) {
+  if source == dest_dir.canonicalize().unwrap_or_else(|_| dest_dir.clone()) {
+    return Err(
+      serde_json::json!({ "code": "CAMOUFOX_IMPORT_INVALID_FOLDER" })
+        .to_string()
+        .into(),
+    );
+  }
+
+  if let Err(e) = copy_directory_recursive(&source, &dest_dir) {
     // The profile metadata already exists and is otherwise valid — leave it
     // in place (with an empty data dir) rather than deleting a profile the
     // user can still see and retry the import into, and surface exactly

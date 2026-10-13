@@ -132,18 +132,27 @@ impl VpnStorage {
   }
 
   /// Migrate VPN configs from the old ProjectDirs location to the new app_dirs location.
+  ///
+  /// `vpn_configs.json` is only decryptable with the `.vpn_key` it was encrypted
+  /// with, so the pair must be copied atomically: copying one file but not the
+  /// other (e.g. because the destination already has its own freshly-generated
+  /// `.vpn_key`) leaves every migrated config permanently undecryptable
+  /// (`aead::Error`), silently breaking launch for any profile that references
+  /// one. Only migrate when the destination has neither file yet.
   fn migrate_from_old_location(new_dir: &std::path::Path) {
     let old_dir = match directories::ProjectDirs::from("com", "donut", "donutbrowser") {
       Some(dirs) => dirs.data_local_dir().to_path_buf(),
       None => return,
     };
 
-    for filename in &["vpn_configs.json", ".vpn_key"] {
-      let old_path = old_dir.join(filename);
-      let new_path = new_dir.join(filename);
-      if old_path.exists() && !new_path.exists() {
-        let _ = fs::copy(&old_path, &new_path);
-      }
+    let old_configs = old_dir.join("vpn_configs.json");
+    let old_key = old_dir.join(".vpn_key");
+    let new_configs = new_dir.join("vpn_configs.json");
+    let new_key = new_dir.join(".vpn_key");
+
+    if old_configs.exists() && old_key.exists() && !new_configs.exists() && !new_key.exists() {
+      let _ = fs::copy(&old_configs, &new_configs);
+      let _ = fs::copy(&old_key, &new_key);
     }
   }
 

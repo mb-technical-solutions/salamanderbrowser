@@ -154,7 +154,6 @@ impl SettingsManager {
 
     Ok(())
   }
-
 }
 
 #[tauri::command]

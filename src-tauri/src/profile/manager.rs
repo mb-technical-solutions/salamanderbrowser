@@ -43,7 +43,10 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
   (to_u8(r1), to_u8(g1), to_u8(b1))
 }
 
-fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn copy_directory_recursive(
+  source: &Path,
+  destination: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
   if !destination.exists() {
     create_dir_all(destination)?;
   }
@@ -172,7 +175,6 @@ impl ProfileManager {
     if !ephemeral {
       create_dir_all(&profile_data_dir)?;
     }
-
 
     // For Camoufox profiles, generate a fingerprint during creation
     let final_camoufox_config = if browser == "camoufox" {
@@ -683,7 +685,6 @@ impl ProfileManager {
     // Save profile
     self.save_profile(&profile)?;
 
-
     // Emit profile note update event
     if let Err(e) = events::emit_empty("profiles-changed") {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
@@ -720,7 +721,6 @@ impl ProfileManager {
     profile.updated_at = Some(crate::proxy_manager::now_secs());
 
     self.save_profile(&profile)?;
-
 
     if let Err(e) = events::emit_empty("profiles-changed") {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
@@ -779,7 +779,6 @@ impl ProfileManager {
 
     self.save_profile(&profile)?;
 
-
     if let Err(e) = events::emit("profile-updated", &profile) {
       log::warn!("Warning: Failed to emit profile update event: {e}");
     }
@@ -810,7 +809,6 @@ impl ProfileManager {
 
     self.save_profile(&profile)?;
 
-
     if let Err(e) = events::emit_empty("profiles-changed") {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
     }
@@ -835,7 +833,6 @@ impl ProfileManager {
     profile.updated_at = Some(crate::proxy_manager::now_secs());
 
     self.save_profile(&profile)?;
-
 
     if let Err(e) = events::emit_empty("profiles-changed") {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
@@ -1038,7 +1035,6 @@ impl ProfileManager {
       .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
         format!("Failed to save profile: {e}").into()
       })?;
-
 
     log::info!(
       "Camoufox configuration updated for profile '{}' (ID: {}).",
@@ -1321,7 +1317,6 @@ impl ProfileManager {
 
     Ok(is_running)
   }
-
 }
 
 #[cfg(test)]

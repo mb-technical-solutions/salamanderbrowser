@@ -42,7 +42,9 @@ fn main() {
     println!("cargo:rustc-env=SALAMANDER_BROWSER_VAULT_PASSWORD={vault_password}");
   } else {
     // Use default password if environment variable is not set
-    println!("cargo:rustc-env=SALAMANDER_BROWSER_VAULT_PASSWORD=salamanderbrowser-api-vault-password");
+    println!(
+      "cargo:rustc-env=SALAMANDER_BROWSER_VAULT_PASSWORD=salamanderbrowser-api-vault-password"
+    );
   }
 
   // Tell Cargo to rebuild if the proxy binary source changes

@@ -565,6 +565,168 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
   );
 });
 
+test("profile archive bundle export (with mandatory password), multi-profile import, inspect_import_source routing, and whole-installation import", async () => {
+  await withApp(
+    "entities-archive",
+    async (app) => {
+      // Write two minimal but complete camoufox profiles straight to disk —
+      // every CamoufoxConfig field must be present (no #[serde(default)] on
+      // it), and a non-null fingerprint sidesteps fingerprint generation
+      // (which would otherwise need a real downloaded Camoufox binary). Two
+      // profiles, not one, so the export is a genuine bundle: the whole
+      // point of this session's rework is that a multi-profile export is one
+      // combined archive, not one file per profile.
+      const profilesDir = path.join(app.dataRoot, "data", "profiles");
+      const camoufoxConfig = {
+        proxy: null,
+        screen_max_width: null,
+        screen_max_height: null,
+        screen_min_width: null,
+        screen_min_height: null,
+        geoip: null,
+        block_images: null,
+        block_webrtc: null,
+        block_webgl: null,
+        fingerprint: '{"fp":true}',
+        randomize_fingerprint_on_launch: null,
+        os: null,
+        preset_tabs: null,
+      };
+      const writeSourceProfile = async (id, name) => {
+        const dir = path.join(profilesDir, id);
+        await mkdir(path.join(dir, "profile"), { recursive: true });
+        await writeFile(path.join(dir, "profile", "prefs.js"), "user_pref(1);");
+        await writeFile(
+          path.join(dir, "metadata.json"),
+          JSON.stringify({
+            id,
+            name,
+            browser: "camoufox",
+            version: "135.0",
+            camoufox_config: camoufoxConfig,
+          }),
+        );
+      };
+      const alphaId = "11111111-1111-1111-1111-111111111111";
+      const bravoId = "33333333-3333-3333-3333-333333333333";
+      await writeSourceProfile(alphaId, "Alpha");
+      await writeSourceProfile(bravoId, "Bravo");
+
+      assert.deepEqual(
+        await app.invoke("inspect_import_source", {
+          path: path.join(profilesDir, alphaId),
+        }),
+        { kind: "profile_folder" },
+      );
+      assert.deepEqual(
+        await app.invoke("inspect_import_source", {
+          path: path.join(app.root, "does-not-exist"),
+        }),
+        { kind: "unknown" },
+      );
+
+      const beforeExport = await app.invoke("list_browser_profiles");
+      assert.equal(beforeExport.length, 2);
+
+      // Archive passwords became mandatory this session — both halves of
+      // that are real behavior, not scaffolding.
+      const archivePath = path.join(
+        app.root,
+        "artifacts",
+        "export.salamander-profile",
+      );
+      const shortPasswordError = await app.invokeError(
+        "export_profiles_archive",
+        {
+          profileIds: [alphaId, bravoId],
+          archivePassword: "short",
+          includeProxyCredentials: false,
+          includeVpnCredentials: false,
+          outputPath: archivePath,
+        },
+      );
+      assert.match(shortPasswordError, /PASSWORD_TOO_SHORT/);
+      assert.ok(!existsSync(archivePath));
+
+      const warnings = await app.invoke("export_profiles_archive", {
+        profileIds: [alphaId, bravoId],
+        archivePassword: "correct horse battery staple",
+        includeProxyCredentials: false,
+        includeVpnCredentials: false,
+        outputPath: archivePath,
+      });
+      assert.deepEqual(warnings, []);
+      assert.ok(existsSync(archivePath));
+
+      // Encrypted: inspect can see it's an archive and that it needs a
+      // password, but not what's inside without the password.
+      assert.deepEqual(
+        await app.invoke("inspect_import_source", { path: archivePath }),
+        { kind: "archive", needs_password: true, profile_count: null, preview_names: [] },
+      );
+
+      const wrongPasswordError = await app.invokeError(
+        "import_profiles_archive",
+        {
+          archivePath,
+          archivePassword: "not the right password",
+        },
+      );
+      assert.match(wrongPasswordError, /ARCHIVE_WRONG_PASSWORD/);
+
+      // Importing the bundle back, with both source profiles still present,
+      // exercises the name-collision suffix added this session — and that
+      // both profiles come back from a SINGLE invoke call, not two.
+      const imported = await app.invoke("import_profiles_archive", {
+        archivePath,
+        archivePassword: "correct horse battery staple",
+      });
+      assert.deepEqual(
+        imported.map((p) => p.name).sort(),
+        ["Alpha (2)", "Bravo (2)"],
+      );
+
+      const afterArchiveImport = await app.invoke("list_browser_profiles");
+      assert.equal(afterArchiveImport.length, 4);
+
+      // A whole-installation import merges in a second old-style data tree
+      // and must not clobber what's already here, including deduping a
+      // profile that happens to share a display name with ones just imported.
+      const installationRoot = path.join(app.root, "old-installation");
+      const otherId = "22222222-2222-2222-2222-222222222222";
+      const otherDir = path.join(installationRoot, "profiles", otherId);
+      await mkdir(path.join(otherDir, "profile"), { recursive: true });
+      await writeFile(
+        path.join(otherDir, "metadata.json"),
+        JSON.stringify({
+          id: otherId,
+          name: "Alpha",
+          browser: "camoufox",
+          version: "135.0",
+        }),
+      );
+
+      const summary = await app.invoke("import_data_directory", {
+        sourcePath: installationRoot,
+      });
+      assert.equal(summary.profiles, 5);
+
+      const afterInstallationImport = await app.invoke(
+        "list_browser_profiles",
+      );
+      const names = afterInstallationImport.map((p) => p.name).sort();
+      assert.deepEqual(names, [
+        "Alpha",
+        "Alpha (2)",
+        "Alpha (3)",
+        "Bravo",
+        "Bravo (2)",
+      ]);
+    },
+    { seedDownloadedBrowser: true },
+  );
+});
+
 test("extensions, extension groups, VPN storage, DNS rules, and event-backed assignments", async () => {
   await withApp("entities-network-extension", async (app) => {
     const profile = await createProfile(app, "Assignment Profile");

@@ -234,18 +234,17 @@ pub async fn enforce_fingerprint_gate(
     return Ok(());
   }
 
-  let result = match fingerprint_consistency::probe_and_check_consistency(profile, upstream, &key)
-    .await
-  {
-    Ok(result) => result,
-    Err(e) => {
-      log::warn!(
-        "Fingerprint gate: exit probe failed for profile {}, allowing launch: {e}",
-        profile.name
-      );
-      return Ok(());
-    }
-  };
+  let result =
+    match fingerprint_consistency::probe_and_check_consistency(profile, upstream, &key).await {
+      Ok(result) => result,
+      Err(e) => {
+        log::warn!(
+          "Fingerprint gate: exit probe failed for profile {}, allowing launch: {e}",
+          profile.name
+        );
+        return Ok(());
+      }
+    };
 
   if !result.checked || result.consistent {
     return Ok(());

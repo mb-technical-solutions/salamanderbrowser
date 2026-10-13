@@ -33,6 +33,7 @@ import {
   LuUsers,
   LuX,
 } from "react-icons/lu";
+import { ExportProfileDialog } from "@/components/export-profile-dialog";
 import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -688,6 +689,7 @@ function ProfileInfoLayout({
   t,
 }: ProfileInfoLayoutProps) {
   const [section, setSection] = React.useState<ProfileSection>("overview");
+  const [isExportDialogOpen, setIsExportDialogOpen] = React.useState(false);
 
   // Map sidebar items to existing actions by their stable, language-independent
   // `id`, so clicking a section triggers the existing dialog handler. Matching
@@ -829,6 +831,15 @@ function ProfileInfoLayout({
             {t("profileInfo.duplicate")}
           </Button>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-xs"
+          onClick={() => setIsExportDialogOpen(true)}
+        >
+          <LuDownload className="size-3" />
+          {t("exportProfile.title")}
+        </Button>
         <button
           type="button"
           aria-label={t("common.buttons.close")}
@@ -1069,6 +1080,11 @@ function ProfileInfoLayout({
           )}
         </div>
       </div>
+      <ExportProfileDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        profile={profile}
+      />
     </>
   );
 }

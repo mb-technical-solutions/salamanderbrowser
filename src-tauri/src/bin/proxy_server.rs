@@ -450,7 +450,8 @@ async fn main() {
         log::info!("Looking for VPN worker config in: {:?}", storage_dir);
         let mut attempts = 0;
         loop {
-          if let Some(config) = salamanderbrowser_lib::vpn_worker_storage::get_vpn_worker_config(id) {
+          if let Some(config) = salamanderbrowser_lib::vpn_worker_storage::get_vpn_worker_config(id)
+          {
             log::info!(
               "Found VPN worker config: id={}, vpn_type={}, vpn_id={}",
               config.id,
@@ -493,7 +494,8 @@ async fn main() {
 
       match config.vpn_type.as_str() {
         "wireguard" => {
-          let wg_config = match salamanderbrowser_lib::vpn::parse_wireguard_config(&vpn_config_data) {
+          let wg_config = match salamanderbrowser_lib::vpn::parse_wireguard_config(&vpn_config_data)
+          {
             Ok(c) => c,
             Err(e) => {
               log::error!("Failed to parse WireGuard config: {}", e);
@@ -534,7 +536,8 @@ async fn main() {
 
     set_high_priority();
     if let Err(error) =
-      salamanderbrowser_lib::xray_worker_runner::run_xray_worker(std::path::Path::new(config_path)).await
+      salamanderbrowser_lib::xray_worker_runner::run_xray_worker(std::path::Path::new(config_path))
+        .await
     {
       log::error!("Xray worker failed: {error}");
       process::exit(1);
