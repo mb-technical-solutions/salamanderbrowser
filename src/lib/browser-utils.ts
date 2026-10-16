@@ -3,8 +3,7 @@
  * Centralized helpers for browser name mapping, icons, etc.
  */
 
-import { FaExclamationTriangle, FaFire, FaFirefoxBrowser } from "react-icons/fa";
-import { LuLock } from "react-icons/lu";
+import { FaChrome, FaExclamationTriangle, FaFirefoxBrowser } from "react-icons/fa";
 import { getCurrentOS } from "@/lib/platform";
 
 export { getCurrentOS } from "@/lib/platform";
@@ -14,7 +13,8 @@ export { getCurrentOS } from "@/lib/platform";
  */
 export function getBrowserDisplayName(browserType: string): string {
   const browserNames: Record<string, string> = {
-    camoufox: "Camoufox",
+    camoufox: "Firefox",
+    clearcote: "Chrome",
   };
 
   return browserNames[browserType] || browserType;
@@ -29,22 +29,19 @@ export function getBrowserIcon(browserType: string) {
   switch (browserType) {
     case "camoufox":
       return FaFirefoxBrowser;
+    case "clearcote":
+      return FaChrome;
     default:
       return FaExclamationTriangle;
   }
 }
 
-export function getProfileIcon(profile: {
-  browser: string;
-  ephemeral?: boolean;
-  password_protected?: boolean;
-}) {
-  // `password_protected` and `ephemeral` are mutually exclusive (the backend
-  // rejects setting a password on an ephemeral profile), so the order here
-  // doesn't matter — checking lock first only matters if the invariant is
-  // ever violated, in which case showing the lock is the safer default.
-  if (profile.password_protected) return LuLock;
-  if (profile.ephemeral) return FaFire;
+/** The backend currently implements cookie operations for Camoufox only. */
+export function supportsCookieBackend(browserType: string): boolean {
+  return browserType === "camoufox";
+}
+
+export function getProfileIcon(profile: { browser: string }) {
   return getBrowserIcon(profile.browser);
 }
 

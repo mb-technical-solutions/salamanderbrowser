@@ -159,10 +159,7 @@
       "copyLogsDescription": "Sao chép gói nhật ký gần đây đã được che thông tin nhạy cảm (tối đa 5 MB). Hãy xem lại trước khi chia sẻ vì việc che dữ liệu không thể nhận diện mọi loại dữ liệu cá nhân."
     },
     "disableAutoUpdates": "Tắt tự động cập nhật ứng dụng",
-    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật Salamander Browser. Cập nhật trình duyệt không bị ảnh hưởng.",
-    "keepDecryptedProfilesInRam": "Giữ hồ sơ đã giải mã trong RAM",
-    "keepDecryptedProfilesInRamDescription": "Giữ bản sao đã giải mã trong RAM của hồ sơ được bảo vệ bằng mật khẩu giữa các lần khởi chạy để khởi động nhanh hơn. Bản sao trên ổ đĩa vẫn được mã hóa.",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật Salamander Browser. Cập nhật trình duyệt không bị ảnh hưởng.",    "privacy": {
       "consistencyWarning": "Chặn khi dấu vân tay không khớp",
       "consistencyWarningDescription": "Ngăn trình duyệt khởi động khi múi giờ hoặc ngôn ngữ của hồ sơ không khớp với nút thoát của proxy. Bạn vẫn có thể chọn khởi chạy.",
       "clearTraffic": "Xóa toàn bộ lịch sử lưu lượng",
@@ -211,7 +208,6 @@
       "status": "Đang chạy hay không",
       "version": "Phiên bản trình duyệt",
       "locked": "Được bảo vệ bằng mật khẩu",
-      "ephemeral": "Hồ sơ tạm thời",
       "created": "Ngày tạo",
       "launched": "Ngày khởi chạy gần nhất"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "Gán vào nhóm",
       "changeFingerprint": "Đổi vân tay",
       "copyCookiesToProfile": "Sao chép Cookie sang hồ sơ",
-      "launchHook": "URL Hook khởi chạy",
       "setPassword": "Đặt mật khẩu",
       "changePassword": "Đổi mật khẩu",
       "removePassword": "Xóa mật khẩu"
     },
-    "ephemeral": "Tạm thời",
     "ephemeralDescription": "Trình duyệt buộc ghi dữ liệu hồ sơ vào bộ nhớ thay vì ổ đĩa. Lưu ý rằng hệ điều hành có thể chuyển một phần bộ nhớ sang ổ đĩa khi tải nặng, nên dấu vết của phiên vẫn có thể bị khôi phục.",
     "ephemeralBadge": "Tạm thời",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "Chạy mục đã chọn",
       "stopSelected": "Dừng mục đã chọn",
       "proRequired": "Cần gói Pro để chạy/dừng hàng loạt"
-    },
-    "passwordProtectedBadge": "Được bảo vệ bằng mật khẩu",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "Chạy {{count}} hồ sơ?",
       "confirmDescription": "Khởi chạy {{count}} hồ sơ cùng lúc có thể tiêu tốn nhiều tài nguyên hệ thống. Tiếp tục?",
       "confirmButton": "Chạy {{count}}",
@@ -347,10 +336,6 @@
       "search": "Tìm kiếm proxy hoặc VPN...",
       "notFound": "Không tìm thấy proxy hoặc VPN."
     },
-    "launchHook": {
-      "label": "URL Hook khởi chạy",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "Đang lấy danh sách phiên bản...",
       "fetchError": "Không thể lấy danh sách phiên bản trình duyệt. Vui lòng kiểm tra kết nối mạng và thử lại.",
@@ -362,12 +347,8 @@
       "latestDownloading": "Đang tải xuống phiên bản ({{version}})...",
       "upgradeAvailable": "Đã có phiên bản mới hơn ({{version}}) của {{browser}}."
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} chưa khả dụng trên nền tảng của bạn.",
-    "passwordProtect": {
-      "label": "Bảo vệ hồ sơ bằng mật khẩu",
-      "description": "Mã hóa dữ liệu hồ sơ trên ổ đĩa. Yêu cầu mật khẩu để khởi chạy."
-    },
     "downloadingSubtitle": "Đang tải xuống…",
     "browsersDownloading": "Trình duyệt vẫn đang được tải xuống. Việc tạo hồ sơ sẽ khả dụng khi quá trình tải hoàn tất.",
     "os": {
@@ -618,7 +599,7 @@
       "sourcePlaceholder": "Chọn profile để sao chép cookie từ",
       "running": "(đang chạy)",
       "targetProfiles": "Profile đích ({{count}})",
-      "noOtherTargets": "Chưa chọn profile Camoufox nào khác",
+      "noOtherTargets": "Chưa chọn profile Firefox nào khác",
       "selectSourceFirst": "Hãy chọn profile nguồn trước",
       "selectionStatus": "(đã chọn {{selected}}/{{total}})",
       "searchPlaceholder": "Tìm kiếm tên miền hoặc cookie...",
@@ -832,7 +813,7 @@
     "renameProfileFailed": "Đổi tên profile thất bại: {{error}}",
     "killBrowserFailed": "Dừng trình duyệt thất bại: {{error}}",
     "deleteSelectedProfilesFailed": "Xóa các profile đã chọn thất bại: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Sao chép cookie chỉ hoạt động với profile Camoufox",
+    "cookieCopyUnsupportedBrowser": "Sao chép cookie chỉ dùng được với Firefox; Chrome chưa được hỗ trợ",
     "cloneProfileFailed": "Nhân bản profile thất bại: {{error}}",
     "loadSupportedBrowsersFailed": "Tải danh sách trình duyệt hỗ trợ thất bại",
     "setupExtensionListenersFailed": "Thiết lập trình lắng nghe sự kiện tiện ích thất bại: {{error}}",
@@ -978,13 +959,11 @@
       "browser": "Trình duyệt",
       "releaseType": "Loại phát hành",
       "proxyVpn": "Proxy / VPN",
-      "launchHook": "Hook khởi chạy",
       "group": "Nhóm",
       "tags": "Thẻ",
       "note": "Ghi chú",
       "lastLaunched": "Lần khởi chạy cuối",
       "hostOs": "HĐH chủ",
-      "ephemeral": "Tạm thời",
       "extensionGroup": "Nhóm tiện ích",
       "totalSessions": "Tổng số phiên",
       "proxy": "PROXY",
@@ -1015,13 +994,6 @@
       "vpnLabel": "VPN: {{name}}",
       "proxyLabel": "Proxy: {{name}}"
     },
-    "launchHook": {
-      "title": "URL hook khởi chạy",
-      "label": "URL hook khởi chạy",
-      "description": "Salamander Browser sẽ gửi yêu cầu GET đến URL này mỗi khi profile được khởi chạy.",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "Nhập URL http:// hoặc https:// hợp lệ."
-    },
     "actions": {
       "manageCookies": "Quản lý cookie",
       "assignExtensionGroup": "Gán nhóm tiện ích"
@@ -1041,24 +1013,19 @@
       "network": "Mạng",
       "cookies": "Cookie",
       "extensions": "Tiện ích",
-      "automation": "Tự động hóa",
       "security": "Bảo mật",
       "delete": "Xóa profile",
-      "activity": "Hoạt động",
-      "launchHook": "Hook khởi chạy"
+      "activity": "Hoạt động"
     },
     "sectionDesc": {
       "fingerprint": "Cấu hình cách profile này hiển thị với các script vân tay.",
       "network": "Quản lý proxy hoặc VPN mà profile này sử dụng để truy cập internet.",
       "cookies": "Nhập, sao chép hoặc xóa cookie cho profile này.",
       "extensions": "Chọn tiện ích nào được tải khi profile này khởi chạy.",
-      "automation": "Chạy lệnh hoặc script mỗi khi profile này khởi chạy.",
-      "security": "Mã hóa dữ liệu profile bằng mật khẩu.",
-      "launchHook": "Gửi yêu cầu GET đến URL này mỗi khi profile khởi chạy."
+      "security": "Mã hóa dữ liệu profile bằng mật khẩu."
     },
     "badges": {
-      "locked": "ĐÃ KHÓA",
-      "active": "ĐANG HOẠT ĐỘNG"
+      "locked": "ĐÃ KHÓA"
     },
     "cookies": {
       "runningNotice": "Không thể đọc cookie khi trình duyệt đang chạy. Hãy đóng profile này trước.",
@@ -1072,36 +1039,9 @@
     "fingerprint": {
       "lockedTitle": "Xem và chỉnh sửa vân tay là tính năng Pro",
       "lockedDescription": "Thông tin thiết bị của bạn được bảo vệ trong mọi profile. Việc xem và chỉnh sửa vân tay của profile yêu cầu gói trả phí đang hoạt động.",
-      "camoufoxDescription": "Camoufox tạo dấu vân tay cục bộ khi tạo (hoặc nhập) hồ sơ; chưa có trình chỉnh sửa từng trường. Bạn có thể xóa dấu vân tay đã lưu để lần khởi chạy tiếp theo sẽ tạo một dấu vân tay mới.",
+      "camoufoxDescription": "Firefox tạo dấu vân tay cục bộ khi tạo (hoặc nhập) hồ sơ; chưa có trình chỉnh sửa từng trường. Bạn có thể xóa dấu vân tay đã lưu để lần khởi chạy tiếp theo sẽ tạo một dấu vân tay mới.",
       "camoufoxRegenerateButton": "Xóa dấu vân tay (tạo lại ở lần khởi chạy tiếp theo)",
       "camoufoxRegenerateQueued": "Đã xóa dấu vân tay — một dấu vân tay mới sẽ được tạo vào lần tới hồ sơ này khởi chạy."
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "Hồ sơ tạm thời bị xoá khi đóng trình duyệt, nên ở đây không có cookie nào để quản lý.",
-      "extensionsUnavailable": "Hồ sơ tạm thời bị xoá khi đóng trình duyệt, nên không thể gán nhóm tiện ích mở rộng cho chúng.",
-      "hint": "Hãy tạo hồ sơ thường nếu bạn cần giữ lại dữ liệu này."
-    }
-  },
-  "extensions": {
-    "title": "Tiện ích",
-    "description": "Quản lý tiện ích trình duyệt và nhóm tiện ích cho profile của bạn.",
-    "upload": "Tải lên",
-    "delete": "Xóa",
-    "extensionsTab": "Tiện ích",
-    "groupsTab": "Nhóm",
-    "managedNotice": "Tiện ích được quản lý tại đây sẽ thay thế bất kỳ tiện ích nào được cài đặt thủ công trong profile khi khởi chạy.",
-    "proRequired": "Quản lý tiện ích là tính năng Pro",
-    "empty": "Chưa tải lên tiện ích nào.",
-    "noGroups": "Chưa tạo nhóm tiện ích nào.",
-    "createGroup": "Tạo nhóm",
-    "newGroup": "Nhóm mới",
-    "addToGroup": "Thêm tiện ích...",
-    "removeFromGroup": "Xóa khỏi nhóm",
-    "deleteGroup": "Xóa nhóm",
-    "extensionGroup": "Nhóm tiện ích",
-    "compatibility": {
-      "label": "Tương thích",
-      "chromium": "Chromium"
     },
     "selectedFile": "Tệp đã chọn",
     "namePlaceholder": "Tên tiện ích",
@@ -1646,62 +1586,6 @@
       "lookingForUpdates": "Đang tìm bản cập nhật cho {{browser}}"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "Đặt mật khẩu profile",
-      "description": "Mã hóa dữ liệu trên đĩa cho {{name}}. Bạn sẽ cần mật khẩu này mỗi khi khởi chạy profile.",
-      "button": "Mã hóa profile"
-    },
-    "unlock": {
-      "title": "Mở khóa profile",
-      "description": "Nhập mật khẩu để mở khóa {{name}}.",
-      "button": "Mở khóa"
-    },
-    "change": {
-      "title": "Thay đổi mật khẩu profile",
-      "description": "Mã hóa lại {{name}} bằng mật khẩu mới.",
-      "button": "Thay đổi mật khẩu"
-    },
-    "remove": {
-      "title": "Xóa mật khẩu profile",
-      "description": "Giải mã dữ liệu trên đĩa cho {{name}}. Profile sẽ không còn được bảo vệ bằng mật khẩu.",
-      "button": "Xóa mật khẩu"
-    },
-    "fields": {
-      "password": "Mật khẩu",
-      "currentPassword": "Mật khẩu hiện tại",
-      "newPassword": "Mật khẩu mới",
-      "confirm": "Xác nhận mật khẩu",
-      "confirmPassword": "Xác nhận mật khẩu mới"
-    },
-    "errors": {
-      "oldPasswordRequired": "Mật khẩu hiện tại là bắt buộc",
-      "passwordRequired": "Mật khẩu là bắt buộc",
-      "tooShort": "Mật khẩu phải có ít nhất 8 ký tự",
-      "mismatch": "Mật khẩu không khớp"
-    },
-    "toasts": {
-      "set": "Profile đã được bảo vệ bằng mật khẩu",
-      "changed": "Đã thay đổi mật khẩu profile",
-      "removed": "Đã xóa mật khẩu profile"
-    },
-    "warnings": {
-      "forgetWarningTitle": "Quan trọng: mật khẩu này không thể khôi phục",
-      "forgetWarningBody": "Salamander Browser không thể đặt lại, khôi phục hoặc bỏ qua mật khẩu này. Nếu bạn quên, bạn sẽ mất quyền truy cập vĩnh viễn vào dữ liệu profile này."
-    },
-    "modes": {
-      "set": "Đặt",
-      "change": "Thay đổi",
-      "remove": "Xóa",
-      "validate": "Xác thực"
-    },
-    "verifyDialog": {
-      "title": "Xác thực mật khẩu profile",
-      "description": "Nhập mật khẩu profile để xác nhận khớp với mật khẩu đã lưu trên đĩa.",
-      "submit": "Xác thực",
-      "matchToast": "Mật khẩu chính xác"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "Mật khẩu không đúng",
     "lockedOut": "Quá nhiều lần nhập sai. Thử lại sau {{duration}}.",
@@ -1734,7 +1618,6 @@
     "extensionPathHasComma": "Đường dẫn thư mục có dấu phẩy nên Chromium không tải được. Hãy đổi tên hoặc di chuyển thư mục.",
     "extensionLinkRequiresDirectory": "Chỉ có thể tải tại chỗ một thư mục. Hãy tắt liên kết để thêm tệp nén.",
     "internal": "Đã xảy ra lỗi: {{detail}}",
-    "invalidLaunchHookUrl": "URL hook khởi chạy không hợp lệ. Sử dụng URL http:// hoặc https:// đầy đủ.",
     "cookieDbLocked": "Không thể đọc cookie — cơ sở dữ liệu bị khóa. Đóng trình duyệt và thử lại.",
     "cookieDbUnavailable": "Không thể đọc cookie — kho cookie không khả dụng.",
     "cookieImportBrowserRunning": "Không thể nhập cookie khi trình duyệt đang chạy. Hãy đóng trình duyệt và thử lại.",
@@ -1754,9 +1637,7 @@
     "camoufoxImportCopyFailed": "Nhập Camoufox đã tạo hồ sơ, nhưng sao chép tệp không thành công: {{detail}}",
     "browserNotDownloaded": "Không có phiên bản {{browser}} nào đã tải xuống. Hãy tải xuống trước, sau đó thử nhập lại.",
     "archiveExtractionFailed": "Không thể giải nén tệp: {{detail}}",
-    "unsupportedArchiveFormat": "Định dạng tệp nén không được hỗ trợ. Chỉ hỗ trợ tệp ZIP.",
-    "clearOnCloseUnavailable": "Tính năng xóa khi đóng không khả dụng với hồ sơ tạm thời hoặc hồ sơ được bảo vệ bằng mật khẩu.",
-    "proxyAndVpnMutuallyExclusive": "Một hồ sơ chỉ có thể dùng proxy hoặc VPN, không dùng cả hai.",
+    "unsupportedArchiveFormat": "Định dạng tệp nén không được hỗ trợ. Chỉ hỗ trợ tệp ZIP.",    "proxyAndVpnMutuallyExclusive": "Một hồ sơ chỉ có thể dùng proxy hoặc VPN, không dùng cả hai.",
     "invalidDnsRulesJson": "Tệp đã chọn không phải là JSON quy tắc DNS hợp lệ.",
     "unsupportedDnsRulesFormat": "Định dạng quy tắc không được hỗ trợ: {{format}}",
     "dnsRulesSaveFailed": "Không thể lưu quy tắc DNS.",
@@ -1871,7 +1752,7 @@
     "steps": {
       "createProfile": {
         "title": "Tạo hồ sơ đầu tiên của bạn",
-        "content": "Nhấn vào đây để tạo hồ sơ đầu tiên của bạn. Camoufox, trình duyệt có bảo vệ vân tay, được sử dụng tự động."
+        "content": "Nhấn vào đây để tạo hồ sơ đầu tiên của bạn. Firefox, trình duyệt có bảo vệ vân tay, được sử dụng tự động."
       },
       "dnsBlocking": {
         "title": "Chặn DNS",
@@ -1904,7 +1785,7 @@
     },
     "ready": {
       "title": "Đang thiết lập",
-      "descDownloading": "Đang tải trình duyệt đầu tiên của bạn (Camoufox). Quá trình thiết lập một lần này chạy ngầm — vui lòng chờ.",
+      "descDownloading": "Đang tải trình duyệt đầu tiên của bạn (Firefox). Quá trình thiết lập một lần này chạy ngầm — vui lòng chờ.",
       "descReady": "Trình duyệt của bạn đã sẵn sàng. Hãy tạo hồ sơ đầu tiên của bạn.",
       "cta": "Tạo hồ sơ đầu tiên của tôi",
       "downloading": "Đang tải xuống…",
@@ -1943,10 +1824,6 @@
     "searchLicenses": "Tìm kiếm giấy phép…",
     "noMatchingLicenses": "Không có giấy phép phù hợp.",
     "openSource": "Xem mã nguồn của {{name}}"
-  },
-  "clearOnClose": {
-    "label": "Xóa dữ liệu khi đóng",
-    "description": "Xóa cookie, lịch sử và bộ nhớ đệm khi trình duyệt đóng. Tiện ích mở rộng và dấu trang được giữ lại."
   },
   "consistencyWarning": {
     "timezoneDetail": "Nút thoát nằm ở {{exit}} nhưng vân tay báo là {{fingerprint}}.",

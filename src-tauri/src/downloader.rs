@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 use crate::api_client::ApiClient;
-use crate::browser::{create_browser, BrowserType};
+use crate::browser::{BrowserType, create_browser};
 use crate::browser_version_manager::DownloadInfo;
 use crate::events;
 
@@ -184,6 +184,34 @@ impl Downloader {
             format!("Camoufox asset has no valid SHA-256 digest for version {version}")
           })?;
 
+        Ok(ResolvedDownload {
+          url: asset.browser_download_url.clone(),
+          sha256: sha256.to_string(),
+        })
+      }
+      BrowserType::Clearcote => {
+        let releases = self
+          .api_client
+          .fetch_clearcote_releases_with_caching(true)
+          .await?;
+        let release = releases
+          .iter()
+          .find(|release| release.tag_name == version)
+          .ok_or_else(|| format!("Clearcote version {version} is not available"))?;
+        let (os, arch) = Self::get_platform_info();
+        let asset = ApiClient::find_clearcote_asset(release, &os, &arch).ok_or_else(|| {
+          format!("No compatible Clearcote asset found for {version} on {os}/{arch}")
+        })?;
+        let sha256 = asset
+          .digest
+          .as_deref()
+          .and_then(|digest| digest.strip_prefix("sha256:"))
+          .filter(|digest| {
+            digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+          })
+          .ok_or_else(|| {
+            format!("Clearcote asset has no valid SHA-256 digest for version {version}")
+          })?;
         Ok(ResolvedDownload {
           url: asset.browser_download_url.clone(),
           sha256: sha256.to_string(),
@@ -644,7 +672,9 @@ impl Downloader {
         return Ok(version);
       } else {
         // Registry says it's downloaded but files don't exist - clean up registry
-        log::info!("Registry indicates {browser_str} {version} is downloaded, but files are missing. Cleaning up registry entry.");
+        log::info!(
+          "Registry indicates {browser_str} {version} is downloaded, but files are missing. Cleaning up registry entry."
+        );
         self.registry.remove_browser(&browser_str, &version);
         self
           .registry

@@ -124,7 +124,7 @@ impl DownloadedBrowsersRegistry {
   /// Check if browser is downloaded and files exist on disk
   /// This method validates both registry entry and actual file existence
   pub fn is_browser_downloaded(&self, browser: &str, version: &str) -> bool {
-    use crate::browser::{create_browser, BrowserType};
+    use crate::browser::{BrowserType, create_browser};
 
     // First check if browser is registered
     if !self.is_browser_registered(browser, version) {
@@ -389,7 +389,7 @@ impl DownloadedBrowsersRegistry {
   pub fn verify_and_cleanup_stale_entries(
     &self,
   ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
-    use crate::browser::{create_browser, BrowserType};
+    use crate::browser::{BrowserType, create_browser};
     let mut cleaned_up = Vec::new();
     let binaries_dir = self.profile_manager.get_binaries_dir();
 
@@ -825,7 +825,7 @@ impl DownloadedBrowsersRegistry {
   pub async fn check_missing_binaries(
     &self,
   ) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error + Send + Sync>> {
-    use crate::browser::{create_browser, BrowserType};
+    use crate::browser::{BrowserType, create_browser};
     // Get all profiles
     let profiles = self
       .profile_manager
@@ -1413,7 +1413,7 @@ pub async fn ensure_active_browsers_downloaded(
   let version_manager = crate::browser_version_manager::BrowserVersionManager::instance();
   let mut downloaded = Vec::new();
 
-  for browser in &["camoufox"] {
+  for browser in &["camoufox", "clearcote"] {
     // Check if any version is already downloaded
     let existing = registry.get_downloaded_versions(browser);
     if !existing.is_empty() {

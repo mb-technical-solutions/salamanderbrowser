@@ -240,7 +240,7 @@ pub mod macos {
     url: &str,
     browser_type: BrowserType,
     browser_dir: &Path,
-    _profiles_dir: &Path,
+    profiles_dir: &Path,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let pid = profile.process_id.unwrap();
 
@@ -249,7 +249,7 @@ pub mod macos {
 
     let browser = create_browser(browser_type);
     if let Ok(executable_path) = browser.get_executable_path(browser_dir) {
-      let profile_data_path = profile.get_profile_data_path(_profiles_dir);
+      let profile_data_path = crate::ephemeral_dirs::get_effective_profile_path(profile, profiles_dir);
       let remote_output = Command::new(executable_path)
         .args([
           &format!("--user-data-dir={}", profile_data_path.to_string_lossy()),
@@ -361,9 +361,7 @@ pub mod windows {
     cmd.args([
       &format!(
         "--user-data-dir={}",
-        profile
-          .get_profile_data_path(profiles_dir)
-          .to_string_lossy()
+        crate::ephemeral_dirs::get_effective_profile_path(profile, profiles_dir).to_string_lossy()
       ),
       "--new-window",
       url,
@@ -391,7 +389,7 @@ pub mod windows {
     use sysinfo::{Pid, System};
     let system = System::new_all();
     if let Some(process) = system.process(Pid::from(pid as usize)) {
-      if process.kill() {
+      if process.kill() && wait_for_process_exit(pid).await {
         log::info!("Successfully killed browser process with PID: {pid}");
         return Ok(());
       }
@@ -404,21 +402,20 @@ pub mod windows {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     let output = Command::new("taskkill")
-      .args(["/F", "/PID", &pid.to_string()])
+      .args(["/F", "/T", "/PID", &pid.to_string()])
       .creation_flags(CREATE_NO_WINDOW)
       .output();
 
     match output {
       Ok(result) => {
-        if result.status.success() {
+        if result.status.success() && wait_for_process_exit(pid).await {
           log::info!("Successfully killed browser process with PID: {pid} using taskkill");
           Ok(())
         } else {
           Err(
             format!(
-              "Failed to kill process {} with taskkill: {}",
-              pid,
-              String::from_utf8_lossy(&result.stderr)
+              "Failed to kill process {} with taskkill (exit code {:?})",
+              pid, result.status.code()
             )
             .into(),
           )
@@ -426,6 +423,17 @@ pub mod windows {
       }
       Err(e) => Err(format!("Failed to execute taskkill for process {}: {}", pid, e).into()),
     }
+  }
+
+  async fn wait_for_process_exit(pid: u32) -> bool {
+    for _ in 0..20 {
+      let system = sysinfo::System::new_all();
+      if system.process(sysinfo::Pid::from(pid as usize)).is_none() {
+        return true;
+      }
+      tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    false
   }
 }
 
@@ -572,7 +580,7 @@ pub mod linux {
       .get_executable_path(browser_dir)
       .map_err(|e| format!("Failed to get executable path: {}", e))?;
 
-    let profile_data_path = profile.get_profile_data_path(profiles_dir);
+    let profile_data_path = crate::ephemeral_dirs::get_effective_profile_path(profile, profiles_dir);
     let output = Command::new(executable_path)
       .args([
         &format!("--user-data-dir={}", profile_data_path.to_string_lossy()),

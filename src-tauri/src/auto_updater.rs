@@ -153,7 +153,9 @@ impl AutoUpdater {
               }
 
               if registry.is_browser_downloaded(&browser, &new_version) {
-                log::info!("Browser {browser} {new_version} already downloaded, proceeding to auto-update profiles");
+                log::info!(
+                  "Browser {browser} {new_version} already downloaded, proceeding to auto-update profiles"
+                );
 
                 // Browser already exists, go straight to profile update
                 match AutoUpdater::instance()
@@ -649,22 +651,20 @@ mod tests {
       process_id: None,
       proxy_id: None,
       vpn_id: None,
-      launch_hook: None,
       last_launch: None,
       release_type: "stable".to_string(),
       camoufox_config: None,
+      browser_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
       encryption_salt: None,
       host_os: None,
-      ephemeral: false,
+      password_protected: false,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
       dns_blocklist: None,
-      password_protected: false,
-      clear_on_close: false,
       created_at: None,
       updated_at: None,
     }
@@ -829,9 +829,11 @@ mod tests {
     assert_eq!(loaded_state.disabled_browsers.len(), 1);
     assert!(loaded_state.disabled_browsers.contains("testbrowser"));
     assert_eq!(loaded_state.auto_update_downloads.len(), 1);
-    assert!(loaded_state
-      .auto_update_downloads
-      .contains("testbrowser-1.1.0"));
+    assert!(
+      loaded_state
+        .auto_update_downloads
+        .contains("testbrowser-1.1.0")
+    );
     assert_eq!(loaded_state.pending_updates.len(), 1);
     assert_eq!(loaded_state.pending_updates[0].id, "test");
   }

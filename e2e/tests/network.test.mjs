@@ -430,7 +430,6 @@ async function createXrayProfile(app, version) {
       geoip: false,
     },
     groupId: null,
-    ephemeral: false,
     dnsBlocklist: null,
     launchHook: null,
   });

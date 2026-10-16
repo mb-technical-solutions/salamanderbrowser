@@ -148,6 +148,13 @@
       "cameraDescription": "Access to camera for browser applications",
       "accessRequested": "{{permission}} access requested"
     },
+    "prelaunchSites": {
+      "title": "Pre-launch sites",
+      "description": "Manage the named sites available for selection in profile settings.",
+      "namePlaceholder": "Site name (required)",
+      "placeholder": "https://example.com/",
+      "hint": "Add a name and an http(s) URL. Select one or more sites while creating or editing a profile."
+    },
     "advanced": {
       "title": "Advanced",
       "clearCache": "Clear All Version Cache",
@@ -159,10 +166,7 @@
       "copyLogsDescription": "Copies a redacted bundle of recent logs (up to 5 MB). Review it before sharing because redaction cannot identify every kind of personal data."
     },
     "disableAutoUpdates": "Disable App Auto Updates",
-    "disableAutoUpdatesDescription": "Prevent the app from automatically checking and installing Salamander Browser updates. Browser updates are not affected.",
-    "keepDecryptedProfilesInRam": "Keep Decrypted Profiles In RAM",
-    "keepDecryptedProfilesInRamDescription": "Preserve the decrypted in-RAM copy of password-protected profiles between launches for faster startup. The on-disk copy stays encrypted regardless.",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Prevent the app from automatically checking and installing Salamander Browser updates. Browser updates are not affected.",    "privacy": {
       "consistencyWarning": "Block on fingerprint mismatch",
       "consistencyWarningDescription": "Stop the browser from starting when a profile's timezone or language doesn't match its proxy exit node. You can still choose to launch.",
       "clearTraffic": "Clear all traffic history",
@@ -210,8 +214,6 @@
       "browser": "Browser",
       "status": "Running or not",
       "version": "Browser version",
-      "locked": "Password protected",
-      "ephemeral": "Ephemeral profile",
       "created": "Creation date",
       "launched": "Last launch date"
     },
@@ -276,15 +278,8 @@
       "viewNetwork": "View Network",
       "assignToGroup": "Assign to Group",
       "changeFingerprint": "Change Fingerprint",
-      "copyCookiesToProfile": "Copy Cookies to Profile",
-      "launchHook": "Launch Hook URL",
-      "setPassword": "Set Password",
-      "changePassword": "Change Password",
-      "removePassword": "Remove Password"
+      "copyCookiesToProfile": "Copy Cookies to Profile"
     },
-    "ephemeral": "Ephemeral",
-    "ephemeralDescription": "The browser is forced to write profile data into memory instead of disk. Note that your operating system can swap parts of memory to disk under load, so traces of the session may still be recoverable.",
-    "ephemeralBadge": "Ephemeral",
     "bulkDelete": {
       "title": "Delete Selected Profiles",
       "description": "This action cannot be undone. This will permanently delete {{count}} profile(s) and all associated data.",
@@ -310,10 +305,6 @@
       "runSelected": "Run selected",
       "stopSelected": "Stop selected",
       "proRequired": "Pro plan required for bulk run/stop"
-    },
-    "passwordProtectedBadge": "Password Protected",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
     },
     "bulkRun": {
       "confirmTitle": "Run {{count}} profiles?",
@@ -347,10 +338,6 @@
       "search": "Search proxies or VPNs...",
       "notFound": "No proxies or VPNs found."
     },
-    "launchHook": {
-      "label": "Launch Hook URL",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "Fetching available versions...",
       "fetchError": "Failed to fetch browser versions. Please check your internet connection and try again.",
@@ -362,12 +349,8 @@
       "latestDownloading": "Downloading version ({{version}})...",
       "upgradeAvailable": "A newer version ({{version}}) of {{browser}} is available."
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} is not available on your platform yet.",
-    "passwordProtect": {
-      "label": "Password protect this profile",
-      "description": "Encrypts the on-disk profile data. Required to launch."
-    },
     "downloadingSubtitle": "Downloading…",
     "browsersDownloading": "Browsers are still downloading. Profile creation will be available once a download finishes.",
     "os": {
@@ -376,12 +359,33 @@
       "macos": "macOS",
       "linux": "Linux"
     },
+    "engineSettings": {
+      "title": "Engine fingerprint",
+      "description": "Leave values on Auto to generate a stable profile-specific fingerprint.",
+      "auto": "Auto",
+      "platform": "Fingerprint platform",
+      "seed": "Fingerprint seed (optional)",
+      "seedPlaceholder": "Auto-generated from this profile",
+      "seedHint": "Use a custom seed only when you need to reproduce the same Chrome identity."
+    },
+    "screen": {
+      "minWidth": "Minimum width",
+      "maxWidth": "Maximum width",
+      "minHeight": "Minimum height",
+      "maxHeight": "Maximum height",
+      "autoPlaceholder": "Auto"
+    },
+    "randomizeFingerprint": {
+      "label": "Generate a new fingerprint on every launch",
+      "description": "Improves rotation, but websites will see a different device each time."
+    },
     "blockImages": "Block Images",
     "blockWebrtc": "Block WebRTC",
     "blockWebgl": "Block WebGL",
     "geoip": "Automatically configure location information based on proxy configuration or your connection if no proxy provided",
     "presetTabs": {
       "label": "Preset tabs to open on launch",
+      "description": "Choose the sites that should open automatically when this profile starts.",
       "google": "Google Search",
       "youtube": "YouTube",
       "instagram": "Instagram"
@@ -618,7 +622,7 @@
       "sourcePlaceholder": "Select a profile to copy cookies from",
       "running": "(running)",
       "targetProfiles": "Target Profiles ({{count}})",
-      "noOtherTargets": "No other Camoufox profiles selected",
+      "noOtherTargets": "No other Firefox profiles selected",
       "selectSourceFirst": "Select a source profile first",
       "selectionStatus": "({{selected}} of {{total}} selected)",
       "searchPlaceholder": "Search domains or cookies...",
@@ -832,7 +836,7 @@
     "renameProfileFailed": "Failed to rename profile: {{error}}",
     "killBrowserFailed": "Failed to kill browser: {{error}}",
     "deleteSelectedProfilesFailed": "Failed to delete selected profiles: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Cookie copy only works with Camoufox profiles",
+    "cookieCopyUnsupportedBrowser": "Cookie copy is available for Firefox only; Chrome cookie support is not available yet",
     "cloneProfileFailed": "Failed to clone profile: {{error}}",
     "loadSupportedBrowsersFailed": "Failed to load supported browsers",
     "setupExtensionListenersFailed": "Failed to setup extension event listeners: {{error}}",
@@ -844,8 +848,7 @@
     "setupProxyListenersFailed": "Failed to setup proxy event listeners: {{error}}",
     "loadVpnConfigsFailed": "Failed to load VPN configs: {{error}}",
     "setupVpnListenersFailed": "Failed to setup VPN event listeners: {{error}}",
-    "themeNotFound": "Tokyo Night theme not found",
-    "setProfilePasswordFailed": "Failed to set profile password: {{error}}"
+    "themeNotFound": "Tokyo Night theme not found"
   },
   "fingerprint": {
     "crossOsWarning": "Spoofing fingerprint for a different operating system is less reliable because it is impossible to perfectly mimic all underlying components. Use with caution.",
@@ -969,6 +972,14 @@
   },
   "profileInfo": {
     "title": "Profile Details",
+    "security": {
+      "title": "Profile security",
+      "protected": "Password protected",
+      "unprotected": "Not password protected",
+      "enable": "Set password",
+      "change": "Change password",
+      "remove": "Remove"
+    },
     "tabs": {
       "info": "Info",
       "settings": "Settings"
@@ -978,13 +989,11 @@
       "browser": "Browser",
       "releaseType": "Release Type",
       "proxyVpn": "Proxy / VPN",
-      "launchHook": "Launch Hook",
       "group": "Group",
       "tags": "Tags",
       "note": "Note",
       "lastLaunched": "Last Launched",
       "hostOs": "Host OS",
-      "ephemeral": "Ephemeral",
       "extensionGroup": "Extension Group",
       "totalSessions": "Total sessions",
       "proxy": "PROXY",
@@ -1015,13 +1024,6 @@
       "vpnLabel": "VPN: {{name}}",
       "proxyLabel": "Proxy: {{name}}"
     },
-    "launchHook": {
-      "title": "Launch Hook URL",
-      "label": "Launch Hook URL",
-      "description": "Salamander Browser will send a GET request to this URL whenever the profile is launched.",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "Enter a valid http:// or https:// URL."
-    },
     "actions": {
       "manageCookies": "Manage Cookies",
       "assignExtensionGroup": "Assign Extension Group"
@@ -1041,24 +1043,19 @@
       "network": "Network",
       "cookies": "Cookies",
       "extensions": "Extensions",
-      "automation": "Automation",
       "security": "Security",
       "delete": "Delete profile",
-      "activity": "Activity",
-      "launchHook": "Launch hook"
+      "activity": "Activity"
     },
     "sectionDesc": {
       "fingerprint": "Configure how this profile appears to fingerprinting scripts.",
       "network": "Manage the proxy or VPN this profile uses to reach the internet.",
       "cookies": "Import, copy, or wipe cookies for this profile.",
       "extensions": "Choose which extensions load when this profile launches.",
-      "automation": "Run a command or script every time this profile launches.",
-      "security": "Encrypt the profile data with a password.",
-      "launchHook": "Send a GET request to this URL every time the profile launches."
+      "security": "Encrypt the profile data with a password."
     },
     "badges": {
-      "locked": "LOCKED",
-      "active": "ACTIVE"
+      "locked": "LOCKED"
     },
     "cookies": {
       "runningNotice": "Cookies can't be read while the browser is running. Close this profile first.",
@@ -1072,36 +1069,9 @@
     "fingerprint": {
       "lockedTitle": "Viewing & editing the fingerprint is a Pro feature",
       "lockedDescription": "Your device information is protected in every profile. Viewing and editing a profile's fingerprint requires an active paid plan.",
-      "camoufoxDescription": "Camoufox generates its fingerprint locally at profile creation (or import) time; there's no field-by-field editor yet. You can clear the stored fingerprint so the next launch generates a fresh one.",
+      "camoufoxDescription": "Firefox generates its fingerprint locally at profile creation (or import) time; there's no field-by-field editor yet. You can clear the stored fingerprint so the next launch generates a fresh one.",
       "camoufoxRegenerateButton": "Clear fingerprint (regenerate on next launch)",
       "camoufoxRegenerateQueued": "Fingerprint cleared — a new one will be generated the next time this profile launches."
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "Ephemeral profiles are discarded when the browser closes, so there are no cookies to manage here.",
-      "extensionsUnavailable": "Ephemeral profiles are discarded when the browser closes, so extension groups cannot be assigned to them.",
-      "hint": "Create a regular profile if you need this to persist."
-    }
-  },
-  "extensions": {
-    "title": "Extensions",
-    "description": "Manage browser extensions and extension groups for your profiles.",
-    "upload": "Upload",
-    "delete": "Delete",
-    "extensionsTab": "Extensions",
-    "groupsTab": "Groups",
-    "managedNotice": "Extensions managed here will replace any manually installed extensions in profiles when launched.",
-    "proRequired": "Extension management is a Pro feature",
-    "empty": "No extensions uploaded yet.",
-    "noGroups": "No extension groups created yet.",
-    "createGroup": "Create Group",
-    "newGroup": "New group",
-    "addToGroup": "Add extension...",
-    "removeFromGroup": "Remove from group",
-    "deleteGroup": "Delete group",
-    "extensionGroup": "Extension Group",
-    "compatibility": {
-      "label": "Compatibility",
-      "chromium": "Chromium"
     },
     "selectedFile": "Selected file",
     "namePlaceholder": "Extension name",
@@ -1216,9 +1186,9 @@
   "vpns": {
     "form": {
       "titleEdit": "Edit VPN",
-      "titleCreate": "Create WireGuard VPN",
+      "titleCreate": "Add VPN",
       "descEdit": "Update the name of your VPN configuration.",
-      "descCreate": "Enter your WireGuard interface and peer details.",
+      "descCreate": "Add a WireGuard configuration.",
       "name": "Name",
       "namePlaceholder": "e.g. Home WireGuard",
       "privateKey": "Private Key",
@@ -1247,7 +1217,7 @@
       "peerPublicKeyRequired": "Peer public key is required",
       "peerEndpointRequired": "Peer endpoint is required",
       "updated": "VPN updated successfully",
-      "created": "WireGuard VPN created successfully",
+      "created": "VPN created successfully",
       "updateFailed": "Failed to update VPN: {{error}}",
       "createFailed": "Failed to create VPN: {{error}}"
     },
@@ -1275,7 +1245,12 @@
     },
     "management": {
       "loading": "Loading VPNs...",
+      "loadFailed": "Could not load VPN configurations",
       "noneCreated": "No VPN configs created yet. Import or create one using the buttons above.",
+      "emptyTitle": "No VPN configurations yet",
+      "emptyDescription": "Import or add a WireGuard configuration to route profiles through a private tunnel.",
+      "importCta": "Import config",
+      "createCta": "Add manually",
       "editVpn": "Edit VPN",
       "deleteVpn": "Delete VPN",
       "cannotDelete_one": "Cannot delete: in use by {{count}} profile",
@@ -1406,7 +1381,7 @@
     "bulkTitle": "Export {{count}} profiles",
     "bulkHint": "Saves each selected profile as its own password-protected file in a folder you choose — fingerprint, cookies, extensions, tags and notes included.",
     "bulkFileName": "{{count}} profiles.salamander-profile",
-"passwordLabel": "Archive password",
+    "passwordLabel": "Archive password",
     "passwordPlaceholder": "At least 8 characters",
     "passwordHint": "Required to protect the exported file(s) — this is separate from a profile's own password, if it has one. A profile already password-protected stays locked with its own password after import, independently of this.",
     "includeProxyLabel": "Include the assigned proxy credentials",
@@ -1647,60 +1622,14 @@
     }
   },
   "profilePassword": {
-    "set": {
-      "title": "Set Profile Password",
-      "description": "Encrypt the on-disk data for {{name}}. You will need this password every time you launch the profile.",
-      "button": "Encrypt Profile"
-    },
-    "unlock": {
-      "title": "Unlock Profile",
-      "description": "Enter the password to unlock {{name}}.",
-      "button": "Unlock"
-    },
-    "change": {
-      "title": "Change Profile Password",
-      "description": "Re-encrypt {{name}} with a new password.",
-      "button": "Change Password"
-    },
-    "remove": {
-      "title": "Remove Profile Password",
-      "description": "Decrypt the on-disk data for {{name}}. The profile will no longer be password protected.",
-      "button": "Remove Password"
-    },
-    "fields": {
-      "password": "Password",
-      "currentPassword": "Current password",
-      "newPassword": "New password",
-      "confirm": "Confirm password",
-      "confirmPassword": "Confirm new password"
-    },
-    "errors": {
-      "oldPasswordRequired": "Current password is required",
-      "passwordRequired": "Password is required",
-      "tooShort": "Password must be at least 8 characters",
-      "mismatch": "Passwords do not match"
-    },
-    "toasts": {
-      "set": "Profile is now password protected",
-      "changed": "Profile password changed",
-      "removed": "Profile password removed"
-    },
-    "warnings": {
-      "forgetWarningTitle": "Important: this password is not recoverable",
-      "forgetWarningBody": "Salamander Browser cannot reset, recover, or bypass this password. If you forget it, you will permanently lose access to this profile's data."
-    },
-    "modes": {
-      "set": "Set",
-      "change": "Change",
-      "remove": "Remove",
-      "validate": "Validate"
-    },
-    "verifyDialog": {
-      "title": "Validate Profile Password",
-      "description": "Enter the profile password to confirm it matches the one stored on disk.",
-      "submit": "Validate",
-      "matchToast": "Password is correct"
-    }
+    "set": { "title": "Set Profile Password", "description": "Encrypt the on-disk data for {{name}}.", "button": "Encrypt Profile" },
+    "unlock": { "title": "Unlock Profile", "description": "Enter the password to unlock {{name}}.", "button": "Unlock" },
+    "change": { "title": "Change Profile Password", "description": "Re-encrypt {{name}} with a new password.", "button": "Change Password" },
+    "remove": { "title": "Remove Profile Password", "description": "Decrypt the on-disk data for {{name}}.", "button": "Remove Password" },
+    "fields": { "password": "Password", "currentPassword": "Current password", "newPassword": "New password", "confirm": "Confirm", "confirmPassword": "Confirm new password" },
+    "errors": { "oldPasswordRequired": "Current password is required", "passwordRequired": "Password is required", "tooShort": "Password must be at least {{min}} characters", "mismatch": "Passwords do not match" },
+    "toasts": { "set": "Profile is now password protected", "changed": "Profile password changed", "removed": "Profile password removed" },
+    "warnings": { "forgetWarningTitle": "This password cannot be recovered", "forgetWarningBody": "If you forget it, access to this profile will be permanently lost." }
   },
   "backendErrors": {
     "incorrectPassword": "Incorrect password",
@@ -1734,7 +1663,6 @@
     "extensionPathHasComma": "That folder's path contains a comma, which Chromium cannot load. Rename or move the folder.",
     "extensionLinkRequiresDirectory": "Only a folder can be loaded in place. Turn linking off to add an archive.",
     "internal": "Something went wrong: {{detail}}",
-    "invalidLaunchHookUrl": "Invalid launch hook URL. Use a full http:// or https:// URL.",
     "cookieDbLocked": "Could not read cookies — the database is locked. Close the browser and try again.",
     "cookieDbUnavailable": "Could not read cookies — the cookie store is unavailable.",
     "cookieImportBrowserRunning": "Cannot import cookies while the browser is running. Close it and try again.",
@@ -1754,9 +1682,7 @@
     "camoufoxImportCopyFailed": "Camoufox import created the profile, but copying the profile files failed: {{detail}}",
     "browserNotDownloaded": "No downloaded version of {{browser}} is available. Download it first, then retry the import.",
     "archiveExtractionFailed": "Failed to extract the archive: {{detail}}",
-    "unsupportedArchiveFormat": "Unsupported archive format. Only ZIP archives are supported.",
-    "clearOnCloseUnavailable": "Clear-on-close isn't available for ephemeral or password-protected profiles.",
-    "proxyAndVpnMutuallyExclusive": "A profile can use either a proxy or a VPN, not both.",
+    "unsupportedArchiveFormat": "Unsupported archive format. Only ZIP archives are supported.",    "proxyAndVpnMutuallyExclusive": "A profile can use either a proxy or a VPN, not both.",
     "invalidDnsRulesJson": "The selected file isn't valid DNS rules JSON.",
     "unsupportedDnsRulesFormat": "Unsupported rules format: {{format}}",
     "dnsRulesSaveFailed": "Failed to save the DNS rules.",
@@ -1871,7 +1797,7 @@
     "steps": {
       "createProfile": {
         "title": "Create your first profile",
-        "content": "Click here to create your first profile. Camoufox — a fingerprint-protected browser — is used automatically."
+        "content": "Click here to create your first profile. Firefox — a fingerprint-protected browser — is used automatically."
       },
       "dnsBlocking": {
         "title": "DNS blocking",
@@ -1904,7 +1830,7 @@
     },
     "ready": {
       "title": "Setting things up",
-      "descDownloading": "Downloading your first browser (Camoufox). This one-time setup runs in the background — hang tight.",
+      "descDownloading": "Downloading your first browser (Firefox). This one-time setup runs in the background — hang tight.",
       "descReady": "Your browser is ready. Let's create your first profile.",
       "cta": "Create my first profile",
       "downloading": "Downloading…",
@@ -1943,10 +1869,6 @@
     "searchLicenses": "Search licenses…",
     "noMatchingLicenses": "No matching licenses.",
     "openSource": "View {{name}} source code"
-  },
-  "clearOnClose": {
-    "label": "Clear data on close",
-    "description": "Wipe cookies, history and cache when the browser closes. Extensions and bookmarks are kept."
   },
   "consistencyWarning": {
     "timezoneDetail": "Exit node is in {{exit}} but the fingerprint reports {{fingerprint}}.",

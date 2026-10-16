@@ -15,26 +15,25 @@ import {
   LuCookie,
   LuCopy,
   LuDownload,
-  LuEraser,
   LuFingerprint,
   LuGlobe,
   LuGroup,
-  LuKey,
-  LuLink,
-  LuLockOpen,
   LuPlus,
   LuPuzzle,
   LuSettings,
   LuShield,
   LuShieldCheck,
-  LuTimer,
   LuTrash2,
   LuUpload,
   LuUsers,
   LuX,
 } from "react-icons/lu";
 import { ExportProfileDialog } from "@/components/export-profile-dialog";
-import { AnimatedSwitch } from "@/components/ui/animated-switch";
+import { PrelaunchSitesSelector } from "@/components/prelaunch-sites-selector";
+import {
+  ProfilePasswordDialog,
+  type PasswordDialogMode,
+} from "@/components/profile-password-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -48,7 +47,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -75,16 +73,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { translateBackendError } from "@/lib/backend-errors";
-import { getProfileIcon } from "@/lib/browser-utils";
+import {
+  getProfileIcon,
+  supportsCookieBackend,
+} from "@/lib/browser-utils";
 import { DNS_BLOCKLIST_LEVELS } from "@/lib/dns-blocklist-levels";
 import { formatRelativeTime } from "@/lib/flag-utils";
-import { PRESET_TAB_OPTIONS } from "@/lib/preset-tabs";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import type {
   BrowserProfile,
   CamoufoxConfig,
+  CamoufoxOS,
   ProfileGroup,
+  PrelaunchSite,
   StoredProxy,
   VpnConfig,
 } from "@/types";
@@ -102,12 +104,8 @@ interface ProfileInfoDialogProps {
   onAssignExtensionGroup?: (profileIds: string[]) => void;
   onOpenBypassRules?: (profile: BrowserProfile) => void;
   onOpenDnsBlocklist?: (profile: BrowserProfile) => void;
-  onOpenLaunchHook?: (profile: BrowserProfile) => void;
   onCloneProfile?: (profile: BrowserProfile) => void;
   onDeleteProfile?: (profile: BrowserProfile) => void;
-  onSetPassword?: (profile: BrowserProfile) => void;
-  onChangePassword?: (profile: BrowserProfile) => void;
-  onRemovePassword?: (profile: BrowserProfile) => void;
   crossOsUnlocked?: boolean;
   isRunning?: boolean;
   isDisabled?: boolean;
@@ -125,56 +123,6 @@ function _OSIcon({ os }: { os: string }) {
     default:
       return null;
   }
-}
-
-function ClearOnCloseToggle({
-  profile,
-  isDisabled,
-}: {
-  profile: BrowserProfile;
-  isDisabled: boolean;
-}) {
-  const { t } = useTranslation();
-  const [enabled, setEnabled] = React.useState(profile.clear_on_close === true);
-  const [saving, setSaving] = React.useState(false);
-
-  React.useEffect(() => {
-    setEnabled(profile.clear_on_close === true);
-  }, [profile.clear_on_close]);
-
-  const toggle = async (next: boolean) => {
-    setEnabled(next);
-    setSaving(true);
-    try {
-      await invoke("update_profile_clear_on_close", {
-        profileId: profile.id,
-        clearOnClose: next,
-      });
-    } catch (error) {
-      setEnabled(!next);
-      showErrorToast(translateBackendError(t, error));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
-      <LuEraser className="size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{t("clearOnClose.label")}</p>
-        <p className="text-[11px] text-muted-foreground">
-          {t("clearOnClose.description")}
-        </p>
-      </div>
-      <AnimatedSwitch
-        checked={enabled}
-        disabled={saving || isDisabled}
-        onCheckedChange={(v) => void toggle(v === true)}
-        aria-label={t("clearOnClose.label")}
-      />
-    </div>
-  );
 }
 
 function InfoCard({ label, value }: { label: string; value: string }) {
@@ -324,12 +272,8 @@ export function ProfileInfoDialog({
   onAssignExtensionGroup,
   onOpenBypassRules,
   onOpenDnsBlocklist,
-  onOpenLaunchHook,
   onCloneProfile,
   onDeleteProfile,
-  onSetPassword,
-  onChangePassword,
-  onRemovePassword,
   crossOsUnlocked = false,
   isRunning = false,
   isDisabled = false,
@@ -385,7 +329,7 @@ export function ProfileInfoDialog({
   if (!profile) return null;
 
   const ProfileIcon = getProfileIcon(profile);
-  const isCamoufox = profile.browser === "camoufox";
+  const hasCookieBackend = supportsCookieBackend(profile.browser);
   const isDeleteDisabled = isRunning;
 
   const proxyName = profile.proxy_id
@@ -424,9 +368,8 @@ export function ProfileInfoDialog({
   // (or trigger a navigation/action that closes this one). Do NOT put inline
   // settings UI — inputs, toggles, save buttons — directly in this dialog's
   // settings tab. Each setting belongs in its own focused dialog (see
-  // `ProfileLaunchHookDialog`, `ProfileBypassRulesDialog`,
-  // `ProfileDnsBlocklistDialog` for the pattern). The settings tab is purely
-  // a navigation hub.
+  // `ProfileBypassRulesDialog`, `ProfileDnsBlocklistDialog` for the pattern).
+  // The settings tab is purely a navigation hub.
   interface ActionItem {
     // Stable, language-independent key used to map sidebar sections to actions.
     // The sidebar must NOT match on `label` — labels are translated, so English
@@ -472,7 +415,6 @@ export function ProfileInfoDialog({
       disabled: isDisabled || !crossOsUnlocked,
       proBadge: !crossOsUnlocked,
       runningBadge: isRunning,
-      hidden: !isCamoufox,
     },
     {
       id: "cookiesCopy",
@@ -483,8 +425,7 @@ export function ProfileInfoDialog({
       },
       disabled: isDisabled,
       runningBadge: isRunning,
-      hidden:
-        !isCamoufox || profile.ephemeral === true || !onCopyCookiesToProfile,
+      hidden: !hasCookieBackend || !onCopyCookiesToProfile,
     },
     {
       id: "cookiesManage",
@@ -495,8 +436,7 @@ export function ProfileInfoDialog({
       },
       disabled: isDisabled,
       runningBadge: isRunning,
-      hidden:
-        !isCamoufox || profile.ephemeral === true || !onOpenCookieManagement,
+      hidden: !hasCookieBackend || !onOpenCookieManagement,
     },
     {
       icon: <LuSettings className="size-4" />,
@@ -506,7 +446,6 @@ export function ProfileInfoDialog({
       },
       disabled: isDisabled,
       runningBadge: isRunning,
-      hidden: profile.ephemeral === true,
     },
     {
       id: "extension",
@@ -517,7 +456,6 @@ export function ProfileInfoDialog({
       },
       disabled: isDisabled,
       runningBadge: isRunning,
-      hidden: profile.ephemeral === true,
     },
     {
       icon: <LuShieldCheck className="size-4" />,
@@ -532,49 +470,6 @@ export function ProfileInfoDialog({
       onClick: () => {
         handleAction(() => onOpenDnsBlocklist?.(profile));
       },
-    },
-    {
-      id: "hook",
-      icon: <LuLink className="size-4" />,
-      label: t("profiles.actions.launchHook"),
-      onClick: () => {
-        handleAction(() => onOpenLaunchHook?.(profile));
-      },
-      hidden: !onOpenLaunchHook,
-    },
-    {
-      icon: <LuKey className="size-4" />,
-      label: t("profiles.actions.setPassword"),
-      onClick: () => {
-        handleAction(() => onSetPassword?.(profile));
-      },
-      disabled: isDisabled || isRunning,
-      runningBadge: isRunning,
-      hidden:
-        profile.password_protected === true ||
-        profile.ephemeral === true ||
-        !onSetPassword,
-    },
-    {
-      icon: <LuKey className="size-4" />,
-      label: t("profiles.actions.changePassword"),
-      onClick: () => {
-        handleAction(() => onChangePassword?.(profile));
-      },
-      disabled: isDisabled || isRunning,
-      runningBadge: isRunning,
-      hidden: profile.password_protected !== true || !onChangePassword,
-    },
-    {
-      icon: <LuLockOpen className="size-4" />,
-      label: t("profiles.actions.removePassword"),
-      onClick: () => {
-        handleAction(() => onRemovePassword?.(profile));
-      },
-      disabled: isDisabled || isRunning,
-      runningBadge: isRunning,
-      hidden: profile.password_protected !== true || !onRemovePassword,
-      destructive: true,
     },
     {
       id: "delete",
@@ -665,8 +560,6 @@ type ProfileSection =
   | "network"
   | "cookies"
   | "extensions"
-  | "automation"
-  | "security"
   | "delete";
 
 function ProfileInfoLayout({
@@ -690,6 +583,9 @@ function ProfileInfoLayout({
 }: ProfileInfoLayoutProps) {
   const [section, setSection] = React.useState<ProfileSection>("overview");
   const [isExportDialogOpen, setIsExportDialogOpen] = React.useState(false);
+  const [passwordDialogMode, setPasswordDialogMode] =
+    React.useState<PasswordDialogMode>("set");
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
 
   // Map sidebar items to existing actions by their stable, language-independent
   // `id`, so clicking a section triggers the existing dialog handler. Matching
@@ -700,23 +596,13 @@ function ProfileInfoLayout({
     [visibleActions],
   );
 
-  // An ephemeral profile is discarded when the browser closes, so it has
-  // nowhere to keep cookies, extensions or a synced copy. The sections were
-  // hidden outright, which left no way to discover that and read as the app
-  // being broken or the plan lacking the feature. Keep them listed and explain.
-  const isEphemeral = profile.ephemeral === true;
-  const isCamoufoxProfile = profile.browser === "camoufox";
-
   const deleteAction = findAction("delete");
   const fingerprintAction = findAction("fingerprint");
   const cookiesManageAction = findAction("cookiesManage");
   const cookiesCopyAction = findAction("cookiesCopy");
   const cookiesAction = cookiesManageAction ?? cookiesCopyAction;
   const extensionAction = findAction("extension");
-  const _launchHookAction = findAction("hook");
   const _networkAction = findAction("network");
-  // Password actions are no longer routed via the legacy action handlers —
-  // SecuritySectionInline writes directly to the backend instead.
 
   // Cookie count is fetched at the layout level so the sidebar badge can
   // surface it without waiting for the user to open the Cookies section.
@@ -766,10 +652,7 @@ function ProfileInfoLayout({
       id: "fingerprint",
       icon: <LuFingerprint className="size-3.5" />,
       label: t("profileInfo.sections.fingerprint"),
-      badge: profile.password_protected
-        ? t("profileInfo.badges.locked")
-        : undefined,
-      hidden: !fingerprintAction,
+      hidden: !fingerprintAction && profile.browser !== "clearcote",
     },
     {
       id: "network",
@@ -785,25 +668,14 @@ function ProfileInfoLayout({
         cookieCount !== null && cookieCount > 0
           ? cookieCount.toLocaleString()
           : undefined,
-      hidden: !cookiesAction && !(isEphemeral && isCamoufoxProfile),
+      hidden: !cookiesAction,
     },
     {
       id: "extensions",
       icon: <LuPuzzle className="size-3.5" />,
       label: t("profileInfo.sections.extensions"),
       badge: extensionGroupName ?? undefined,
-      hidden: !extensionAction && !isEphemeral,
-    },
-    {
-      id: "automation",
-      icon: <LuLink className="size-3.5" />,
-      label: t("profileInfo.sections.launchHook"),
-      badge: profile.launch_hook ? t("profileInfo.badges.active") : undefined,
-    },
-    {
-      id: "security",
-      icon: <LuKey className="size-3.5" />,
-      label: t("profileInfo.sections.security"),
+      hidden: !extensionAction,
     },
   ];
 
@@ -972,6 +844,49 @@ function ProfileInfoLayout({
                 />
               </div>
 
+              <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
+                <div>
+                  <div className="text-xs font-medium">
+                    {t("profileInfo.security.title")}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {profile.password_protected
+                      ? t("profileInfo.security.protected")
+                      : t("profileInfo.security.unprotected")}
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isDisabled || isRunning}
+                    onClick={() => {
+                      setPasswordDialogMode(
+                        profile.password_protected ? "change" : "set",
+                      );
+                      setIsPasswordDialogOpen(true);
+                    }}
+                  >
+                    {profile.password_protected
+                      ? t("profileInfo.security.change")
+                      : t("profileInfo.security.enable")}
+                  </Button>
+                  {profile.password_protected && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={isDisabled || isRunning}
+                      onClick={() => {
+                        setPasswordDialogMode("remove");
+                        setIsPasswordDialogOpen(true);
+                      }}
+                    >
+                      {t("profileInfo.security.remove")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Activity */}
               <div className="mt-1 flex flex-col gap-1.5">
                 <span className="text-[10px] tracking-wide text-muted-foreground uppercase">
@@ -1002,10 +917,6 @@ function ProfileInfoLayout({
                   <LocalDataTransferCard profileId={profile.id} t={t} />
                 </div>
               </div>
-
-              {!profile.ephemeral && !profile.password_protected && (
-                <ClearOnCloseToggle profile={profile} isDisabled={isDisabled} />
-              )}
             </div>
           )}
 
@@ -1034,47 +945,21 @@ function ProfileInfoLayout({
             />
           )}
 
-          {section === "cookies" &&
-            (isEphemeral ? (
-              <EphemeralSectionNotice
-                title={t("profileInfo.sections.cookies")}
-                description={t("profileInfo.ephemeral.cookiesUnavailable")}
-                t={t}
-              />
-            ) : (
-              <CookiesSectionInline
-                profile={profile}
-                isRunning={isRunning}
-                isDisabled={isDisabled}
-                onCopyCookies={cookiesCopyAction?.onClick}
-                onImportCookies={cookiesManageAction?.onClick}
-                t={t}
-              />
-            ))}
-
-          {section === "extensions" &&
-            (isEphemeral ? (
-              <EphemeralSectionNotice
-                title={t("profileInfo.sections.extensions")}
-                description={t("profileInfo.ephemeral.extensionsUnavailable")}
-                t={t}
-              />
-            ) : (
-              <ExtensionsSectionInline
-                profile={profile}
-                isDisabled={isDisabled}
-                t={t}
-              />
-            ))}
-
-          {section === "automation" && (
-            <LaunchHookEditor profile={profile} t={t} />
-          )}
-
-          {section === "security" && (
-            <SecuritySectionInline
+          {section === "cookies" && (
+            <CookiesSectionInline
               profile={profile}
               isRunning={isRunning}
+              isDisabled={isDisabled}
+              onCopyCookies={cookiesCopyAction?.onClick}
+              onImportCookies={cookiesManageAction?.onClick}
+              t={t}
+            />
+          )}
+
+          {section === "extensions" && (
+            <ExtensionsSectionInline
+              profile={profile}
+              isDisabled={isDisabled}
               t={t}
             />
           )}
@@ -1084,6 +969,12 @@ function ProfileInfoLayout({
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
         profile={profile}
+      />
+      <ProfilePasswordDialog
+        isOpen={isPasswordDialogOpen}
+        onClose={() => setIsPasswordDialogOpen(false)}
+        profile={profile}
+        mode={passwordDialogMode}
       />
     </>
   );
@@ -1160,101 +1051,6 @@ function _SectionAction({
       <span className="flex-1">{label}</span>
       <LuChevronRight className="size-3.5 text-muted-foreground" />
     </button>
-  );
-}
-
-function isValidHttpUrl(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return false;
-  try {
-    const u = new URL(trimmed);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function LaunchHookEditor({
-  profile,
-  t,
-}: {
-  profile: BrowserProfile;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  const { t: tFn } = useTranslation();
-  const [value, setValue] = React.useState(profile.launch_hook ?? "");
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const initial = profile.launch_hook ?? "";
-  const dirty = value !== initial;
-  const trimmed = value.trim();
-  const showInvalidHint = trimmed.length > 0 && !isValidHttpUrl(trimmed);
-
-  const onSave = async () => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await invoke("update_profile_launch_hook", {
-        profileId: profile.id,
-        launchHook: trimmed ? trimmed : null,
-      });
-    } catch (e) {
-      setError(translateBackendError(tFn, e));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <LuLink className="size-4" />
-        {t("profileInfo.sections.launchHook")}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {t("profileInfo.sectionDesc.launchHook")}
-      </p>
-      <Input
-        type="url"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-        }}
-        placeholder={t("profiles.launchHook.placeholder")}
-        className="font-mono text-xs"
-      />
-      {showInvalidHint && (
-        <p className="text-xs text-warning-text">
-          {t("profileInfo.launchHook.invalidUrlHint")}
-        </p>
-      )}
-      {error && <p className="text-xs text-destructive-text">{error}</p>}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          className="h-7 text-xs"
-          disabled={!dirty || isSaving || showInvalidHint}
-          onClick={() => {
-            void onSave();
-          }}
-        >
-          {isSaving ? t("common.buttons.saving") : t("common.buttons.save")}
-        </Button>
-        {dirty && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={() => {
-              setValue(initial);
-              setError(null);
-            }}
-          >
-            {t("common.buttons.cancel")}
-          </Button>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -1390,31 +1186,6 @@ function NetworkSectionInline({
       </div>
 
       {error && <p className="text-xs text-destructive-text">{error}</p>}
-    </div>
-  );
-}
-
-/// Explains why a section has nothing to offer on an ephemeral profile.
-/// Mirrors the locked-fingerprint empty state so the two read as one pattern.
-function EphemeralSectionNotice({
-  title,
-  description,
-  t,
-}: {
-  title: string;
-  description: string;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border p-6 text-center">
-      <LuTimer className="size-4 shrink-0 text-muted-foreground" />
-      <h3 className="text-sm font-medium text-foreground">{title}</h3>
-      <p className="max-w-[48ch] text-sm text-pretty text-muted-foreground">
-        {description}
-      </p>
-      <p className="max-w-[48ch] text-xs text-pretty text-muted-foreground">
-        {t("profileInfo.ephemeral.hint")}
-      </p>
     </div>
   );
 }
@@ -1733,15 +1504,19 @@ function CookiesSectionInline({
   );
 }
 
-// Inline password set / change / remove form. Replaces three separate
-// nested modal dialogs with one in-page form that branches on the current
-// `password_protected` state of the profile.
 /**
  * Camoufox generates fingerprints locally via a Bayesian-network model (no
  * headless-launch device synthesis, no cloud identity concept), so
  * there is nothing to edit field-by-field here yet — only whether a stored
  * fingerprint is kept or cleared so the next launch generates a fresh one.
  */
+const SCREEN_SIZE_FIELDS = [
+  ["screen_min_width", "createProfile.screen.minWidth"],
+  ["screen_max_width", "createProfile.screen.maxWidth"],
+  ["screen_min_height", "createProfile.screen.minHeight"],
+  ["screen_max_height", "createProfile.screen.maxHeight"],
+] as const;
+
 function CamoufoxFingerprintSection({
   profile,
   onSaved,
@@ -1751,83 +1526,227 @@ function CamoufoxFingerprintSection({
   onSaved: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
+  const config = profile.camoufox_config ?? {};
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
-  const hasFingerprint = Boolean(profile.camoufox_config?.fingerprint);
+  const hasFingerprint = Boolean(config.fingerprint);
   const [presetTabs, setPresetTabs] = React.useState<string[]>(
-    profile.camoufox_config?.preset_tabs ?? [],
+    config.preset_tabs ?? [],
   );
-  const [isSavingPresets, setIsSavingPresets] = React.useState(false);
-  const [presetError, setPresetError] = React.useState<string | null>(null);
+  const [customPresetSites, setCustomPresetSites] = React.useState<PrelaunchSite[]>([]);
+  const [os, setOs] = React.useState<CamoufoxOS>(config.os ?? "windows");
+  const [screenSizes, setScreenSizes] = React.useState<
+    Record<(typeof SCREEN_SIZE_FIELDS)[number][0], number | undefined>
+  >({
+    screen_min_width: config.screen_min_width,
+    screen_max_width: config.screen_max_width,
+    screen_min_height: config.screen_min_height,
+    screen_max_height: config.screen_max_height,
+  });
 
-  const togglePresetTab = async (url: string, checked: boolean) => {
-    const next = checked
-      ? [...presetTabs, url]
-      : presetTabs.filter((u) => u !== url);
-    setPresetTabs(next);
-    setIsSavingPresets(true);
-    setPresetError(null);
-    try {
-      const nextConfig: CamoufoxConfig = {
-        ...(profile.camoufox_config ?? {}),
-        preset_tabs: next,
-      };
-      await invoke("update_camoufox_config", {
-        profileId: profile.id,
-        config: nextConfig,
-      });
-      onSaved();
-    } catch (e) {
-      setPresetTabs(presetTabs);
-      setPresetError(translateBackendError(t as never, e));
-    } finally {
-      setIsSavingPresets(false);
-    }
-  };
+  React.useEffect(() => {
+    void invoke<{
+      global_preset_tabs?: string[];
+      global_prelaunch_sites?: PrelaunchSite[];
+    }>("get_app_settings")
+      .then((settings) => {
+        const named = (settings.global_prelaunch_sites ?? []).filter(
+          (site) => site.name.trim() && /^https?:\/\/[^\s]+$/i.test(site.url),
+        );
+        const legacy = (settings.global_preset_tabs ?? [])
+          .filter((url) => /^https?:\/\/[^\s]+$/i.test(url))
+          .map((url) => ({ name: new URL(url).hostname, url }));
+        setCustomPresetSites([
+          ...named,
+          ...legacy.filter((site) => !named.some((item) => item.url === site.url)),
+        ]);
+      })
+      .catch(() => setCustomPresetSites([]));
+  }, []);
 
-  const onRegenerate = async () => {
+  const saveConfig = async (
+    patch: Partial<CamoufoxConfig>,
+    rollback: () => void,
+  ): Promise<boolean> => {
     setIsSaving(true);
     setError(null);
     setSuccess(null);
     try {
-      const nextConfig: CamoufoxConfig = {
-        ...(profile.camoufox_config ?? {}),
-        fingerprint: undefined,
-      };
+      const nextConfig: CamoufoxConfig = { ...config, ...patch };
       await invoke("update_camoufox_config", {
         profileId: profile.id,
         config: nextConfig,
       });
-      setSuccess(t("profileInfo.fingerprint.camoufoxRegenerateQueued"));
       onSaved();
+      return true;
     } catch (e) {
+      rollback();
       setError(translateBackendError(t as never, e));
+      return false;
     } finally {
       setIsSaving(false);
     }
   };
 
+  const changeOs = (value: string) => {
+    const previous = os;
+    const next = value as CamoufoxOS;
+    setOs(next);
+    void saveConfig({ os: next }, () => setOs(previous));
+  };
+
+  const commitScreenSize = (key: (typeof SCREEN_SIZE_FIELDS)[number][0]) => {
+    const previous = config[key];
+    if (screenSizes[key] === previous) return;
+    void saveConfig({ [key]: screenSizes[key] }, () =>
+      setScreenSizes((prev) => ({ ...prev, [key]: previous })),
+    );
+  };
+
+  const toggleFlag = (
+    key: "randomize_fingerprint_on_launch" | "block_images" | "block_webrtc" | "block_webgl" | "geoip",
+    checked: boolean,
+  ) => {
+    void saveConfig({ [key]: checked }, () => {
+      /* On failure the component re-reads from `profile` on the next render
+         via its parent's refresh, so no local toggle state to roll back. */
+    });
+  };
+
+  const onRegenerate = async () => {
+    const ok = await saveConfig({ fingerprint: undefined }, () => {});
+    if (ok) setSuccess(t("profileInfo.fingerprint.camoufoxRegenerateQueued"));
+  };
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <LuFingerprint className="size-4" />
-        {t("profileInfo.sections.fingerprint")}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <LuFingerprint className="size-4" />
+          {t("profileInfo.sections.fingerprint")}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {t("profileInfo.fingerprint.camoufoxDescription")}
+        </p>
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSaving || !hasFingerprint}
+            onClick={() => void onRegenerate()}
+          >
+            {t("profileInfo.fingerprint.camoufoxRegenerateButton")}
+          </Button>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {t("profileInfo.fingerprint.camoufoxDescription")}
-      </p>
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isSaving || !hasFingerprint}
-          onClick={() => void onRegenerate()}
-        >
-          {t("profileInfo.fingerprint.camoufoxRegenerateButton")}
-        </Button>
+
+      <div className="space-y-2">
+        <Label htmlFor="camoufox-profile-os" className="text-xs">
+          {t("createProfile.os.label")}
+        </Label>
+        <Select value={os} onValueChange={changeOs} disabled={isSaving}>
+          <SelectTrigger id="camoufox-profile-os">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="windows">{t("createProfile.os.windows")}</SelectItem>
+            <SelectItem value="macos">{t("createProfile.os.macos")}</SelectItem>
+            <SelectItem value="linux">{t("createProfile.os.linux")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {SCREEN_SIZE_FIELDS.map(([key, label]) => (
+          <div className="space-y-2" key={key}>
+            <Label htmlFor={`camoufox-profile-${key}`} className="text-xs">
+              {t(label)}
+            </Label>
+            <Input
+              id={`camoufox-profile-${key}`}
+              type="number"
+              min={1}
+              disabled={isSaving}
+              value={screenSizes[key] ?? ""}
+              onChange={(event) =>
+                setScreenSizes((prev) => ({
+                  ...prev,
+                  [key]: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
+                }))
+              }
+              onBlur={() => commitScreenSize(key)}
+              placeholder={t("createProfile.screen.autoPlaceholder")}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-4">
+        <Label htmlFor="camoufox-profile-randomize" className="text-xs">
+          {t("createProfile.randomizeFingerprint.label")}
+        </Label>
+        <Checkbox
+          id="camoufox-profile-randomize"
+          disabled={isSaving}
+          checked={config.randomize_fingerprint_on_launch ?? false}
+          onCheckedChange={(checked) =>
+            toggleFlag("randomize_fingerprint_on_launch", checked === true)
+          }
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label htmlFor="camoufox-profile-block-images" className="text-xs">
+          {t("createProfile.blockImages")}
+        </Label>
+        <Checkbox
+          id="camoufox-profile-block-images"
+          disabled={isSaving}
+          checked={config.block_images ?? false}
+          onCheckedChange={(checked) => toggleFlag("block_images", checked === true)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label htmlFor="camoufox-profile-block-webrtc" className="text-xs">
+          {t("createProfile.blockWebrtc")}
+        </Label>
+        <Checkbox
+          id="camoufox-profile-block-webrtc"
+          disabled={isSaving}
+          checked={config.block_webrtc ?? false}
+          onCheckedChange={(checked) => toggleFlag("block_webrtc", checked === true)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label htmlFor="camoufox-profile-block-webgl" className="text-xs">
+          {t("createProfile.blockWebgl")}
+        </Label>
+        <Checkbox
+          id="camoufox-profile-block-webgl"
+          disabled={isSaving}
+          checked={config.block_webgl ?? false}
+          onCheckedChange={(checked) => toggleFlag("block_webgl", checked === true)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label htmlFor="camoufox-profile-geoip" className="text-xs">
+          {t("createProfile.geoip")}
+        </Label>
+        <Checkbox
+          id="camoufox-profile-geoip"
+          disabled={isSaving}
+          checked={config.geoip !== false}
+          onCheckedChange={(checked) => toggleFlag("geoip", checked === true)}
+        />
+      </div>
+
       {error && <p className="text-xs text-destructive">{error}</p>}
       {success && <p className="text-xs text-muted-foreground">{success}</p>}
 
@@ -1835,24 +1754,18 @@ function CamoufoxFingerprintSection({
         <Label className="text-xs font-semibold">
           {t("createProfile.presetTabs.label")}
         </Label>
-        {PRESET_TAB_OPTIONS.map((preset) => (
-          <div key={preset.url} className="flex items-center justify-between">
-            <Label htmlFor={`profile-preset-${preset.key}`} className="text-xs">
-              {t(`createProfile.presetTabs.${preset.key}`)}
-            </Label>
-            <Checkbox
-              id={`profile-preset-${preset.key}`}
-              disabled={isSavingPresets}
-              checked={presetTabs.includes(preset.url)}
-              onCheckedChange={(checked) => {
-                void togglePresetTab(preset.url, checked === true);
-              }}
-            />
-          </div>
-        ))}
-        {presetError && (
-          <p className="text-xs text-destructive">{presetError}</p>
-        )}
+        <PrelaunchSitesSelector
+          idPrefix="profile-preset"
+          t={t}
+          customSites={customPresetSites}
+          selectedUrls={presetTabs}
+          disabled={isSaving}
+          onChange={(urls) => {
+            const previous = presetTabs;
+            setPresetTabs(urls);
+            void saveConfig({ preset_tabs: urls }, () => setPresetTabs(previous));
+          }}
+        />
       </div>
     </div>
   );
@@ -1869,384 +1782,181 @@ function FingerprintSectionInline({
   onSaved: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
+  if (profile.browser === "clearcote") {
+    return <ClearcoteSitesSection profile={profile} onSaved={onSaved} t={t} />;
+  }
   return (
     <CamoufoxFingerprintSection profile={profile} onSaved={onSaved} t={t} />
   );
 }
 
-function SecuritySectionInline({
+function ClearcoteSitesSection({
   profile,
-  isRunning,
+  onSaved,
   t,
 }: {
   profile: BrowserProfile;
-  isRunning: boolean;
+  onSaved: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  // Mode is implied by current state: unprotected → "set"; protected →
-  // "change" by default, with a "remove" alternative.
-  type Mode = "set" | "change" | "remove";
-  const initialMode: Mode = profile.password_protected ? "change" : "set";
-  const [mode, setMode] = React.useState<Mode>(initialMode);
-  const [oldPassword, setOldPassword] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirm, setConfirm] = React.useState("");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
-  const [isVerifyOpen, setIsVerifyOpen] = React.useState(false);
-  const [verifyPassword, setVerifyPassword] = React.useState("");
-  const [isVerifying, setIsVerifying] = React.useState(false);
-
-  const onVerify = async () => {
-    setIsVerifying(true);
-    try {
-      await invoke("verify_profile_password", {
-        profileId: profile.id,
-        password: verifyPassword,
-      });
-      showSuccessToast(t("profilePassword.verifyDialog.matchToast"));
-      setIsVerifyOpen(false);
-      setVerifyPassword("");
-    } catch (e) {
-      const message = translateBackendError(
-        t as unknown as Parameters<typeof translateBackendError>[0],
-        e,
-      );
-      showErrorToast(message);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  // Reset the form whenever the underlying profile state changes (e.g. the
-  // user just set a password — flip to "change" mode and clear fields).
-  React.useEffect(() => {
-    setMode(profile.password_protected ? "change" : "set");
-    setOldPassword("");
-    setPassword("");
-    setConfirm("");
-    setError(null);
-    setSuccess(null);
-  }, [profile.password_protected]);
-
-  const reset = () => {
-    setOldPassword("");
-    setPassword("");
-    setConfirm("");
-    setError(null);
-  };
-
-  const validate = (): string | null => {
-    if (mode === "change" || mode === "remove") {
-      if (!oldPassword) return t("profilePassword.errors.passwordRequired");
-    }
-    if (mode === "set" || mode === "change") {
-      if (password.length < 8) return t("profilePassword.errors.tooShort");
-      if (password !== confirm) return t("profilePassword.errors.mismatch");
-    }
-    return null;
-  };
-
-  const onSubmit = async () => {
-    if (isRunning) return;
-    const v = validate();
-    if (v) {
-      setError(v);
-      return;
-    }
-    setIsSubmitting(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      if (mode === "set") {
-        await invoke("set_profile_password", {
-          profileId: profile.id,
-          password,
-        });
-        showSuccessToast(t("profilePassword.toasts.set"));
-      } else if (mode === "change") {
-        await invoke("change_profile_password", {
-          profileId: profile.id,
-          oldPassword,
-          newPassword: password,
-        });
-        showSuccessToast(t("profilePassword.toasts.changed"));
-      } else {
-        await invoke("remove_profile_password", {
-          profileId: profile.id,
-          password: oldPassword,
-        });
-        showSuccessToast(t("profilePassword.toasts.removed"));
-      }
-      reset();
-    } catch (e) {
-      const message = translateBackendError(
-        t as unknown as Parameters<typeof translateBackendError>[0],
-        e,
-      );
-      setError(message);
-      showErrorToast(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <LuKey className="size-4" />
-        {t("profileInfo.sections.security")}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {profile.password_protected
-          ? t("profileInfo.security.protected")
-          : t("profileInfo.security.unprotected")}
-      </p>
-
-      {profile.password_protected && (
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setVerifyPassword("");
-              setIsVerifyOpen(true);
-            }}
-            className={cn(
-              "h-7 flex-1 rounded-md border px-2 text-xs transition-colors",
-              "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            {t("profilePassword.modes.validate")}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("change");
-              reset();
-            }}
-            className={cn(
-              "h-7 flex-1 rounded-md border px-2 text-xs transition-colors",
-              mode === "change"
-                ? "border-transparent bg-accent text-accent-foreground"
-                : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            {t("profilePassword.modes.change")}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("remove");
-              reset();
-            }}
-            className={cn(
-              "h-7 flex-1 rounded-md border px-2 text-xs transition-colors",
-              mode === "remove"
-                ? "border-transparent bg-destructive/10 text-destructive-text"
-                : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            {t("profilePassword.modes.remove")}
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {(mode === "change" || mode === "remove") && (
-          <Input
-            type="password"
-            value={oldPassword}
-            onChange={(e) => {
-              setOldPassword(e.target.value);
-              setError(null);
-            }}
-            placeholder={t("profilePassword.fields.currentPassword")}
-            disabled={isRunning || isSubmitting}
-            className="h-8 text-xs"
-          />
-        )}
-        {(mode === "set" || mode === "change") && (
-          <>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(null);
-              }}
-              placeholder={t("profilePassword.fields.newPassword")}
-              disabled={isRunning || isSubmitting}
-              className="h-8 text-xs"
-            />
-            <Input
-              type="password"
-              value={confirm}
-              onChange={(e) => {
-                setConfirm(e.target.value);
-                setError(null);
-              }}
-              placeholder={t("profilePassword.fields.confirmPassword")}
-              disabled={isRunning || isSubmitting}
-              className="h-8 text-xs"
-            />
-          </>
-        )}
-      </div>
-
-      {error && <p className="text-xs text-destructive-text">{error}</p>}
-      {success && !error && (
-        <p className="text-xs text-success-text">{success}</p>
-      )}
-
-      {isRunning && (
-        <p className="text-xs text-muted-foreground">
-          {t("profileInfo.security.cannotWhileRunning")}
-        </p>
-      )}
-
-      <Button
-        size="sm"
-        variant={mode === "remove" ? "destructive" : "default"}
-        className="h-7 self-start text-xs"
-        disabled={isRunning || isSubmitting}
-        onClick={() => {
-          void onSubmit();
-        }}
-      >
-        {mode === "set"
-          ? t("profilePassword.modes.set")
-          : mode === "change"
-            ? t("profilePassword.modes.change")
-            : t("profilePassword.modes.remove")}
-      </Button>
-
-      <Dialog
-        open={isVerifyOpen}
-        onOpenChange={(open) => {
-          if (!isVerifying) {
-            setIsVerifyOpen(open);
-            if (!open) setVerifyPassword("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("profilePassword.verifyDialog.title")}</DialogTitle>
-            <DialogDescription>
-              {t("profilePassword.verifyDialog.description")}
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            type="password"
-            placeholder={t("profilePassword.fields.currentPassword")}
-            value={verifyPassword}
-            autoFocus
-            onChange={(e) => setVerifyPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && verifyPassword.length > 0) {
-                e.preventDefault();
-                void onVerify();
-              }
-            }}
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={isVerifying}
-              onClick={() => {
-                setIsVerifyOpen(false);
-                setVerifyPassword("");
-              }}
-            >
-              {t("common.buttons.cancel")}
-            </Button>
-            <Button
-              disabled={isVerifying || verifyPassword.length === 0}
-              onClick={() => void onVerify()}
-            >
-              {isVerifying
-                ? t("common.buttons.loading")
-                : t("profilePassword.verifyDialog.submit")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+  const browserConfig = profile.browser_config ?? {};
+  const storedTabs = browserConfig.preset_tabs;
+  const [presetTabs, setPresetTabs] = React.useState<string[]>(
+    Array.isArray(storedTabs)
+      ? storedTabs.filter((url): url is string => typeof url === "string")
+      : [],
   );
-}
-
-interface ProfileLaunchHookDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  profileId: string | null;
-  currentLaunchHook: string | null;
-}
-
-export function ProfileLaunchHookDialog({
-  isOpen,
-  onClose,
-  profileId,
-  currentLaunchHook,
-}: ProfileLaunchHookDialogProps) {
-  const { t } = useTranslation();
-  const [value, setValue] = React.useState(currentLaunchHook ?? "");
+  const [customPresetSites, setCustomPresetSites] = React.useState<PrelaunchSite[]>([]);
+  const storedPlatform = browserConfig.fingerprint_platform;
+  const [platform, setPlatform] = React.useState<CamoufoxOS | "auto">(
+    storedPlatform === "windows" ||
+      storedPlatform === "macos" ||
+      storedPlatform === "linux"
+      ? storedPlatform
+      : "auto",
+  );
+  const storedSeed = browserConfig.fingerprint_seed;
+  const [seed, setSeed] = React.useState<string>(
+    typeof storedSeed === "string" ? storedSeed : "",
+  );
   const [isSaving, setIsSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (isOpen) {
-      setValue(currentLaunchHook ?? "");
-    }
-  }, [isOpen, currentLaunchHook]);
+    void invoke<{
+      global_preset_tabs?: string[];
+      global_prelaunch_sites?: PrelaunchSite[];
+    }>("get_app_settings")
+      .then((settings) => {
+        const named = (settings.global_prelaunch_sites ?? []).filter(
+          (site) => site.name.trim() && /^https?:\/\/[^\s]+$/i.test(site.url),
+        );
+        const legacy = (settings.global_preset_tabs ?? [])
+          .filter((url) => /^https?:\/\/[^\s]+$/i.test(url))
+          .map((url) => ({ name: new URL(url).hostname, url }));
+        setCustomPresetSites([
+          ...named,
+          ...legacy.filter((site) => !named.some((item) => item.url === site.url)),
+        ]);
+      })
+      .catch(() => setCustomPresetSites([]));
+  }, []);
 
-  const trimmed = value.trim();
-  const saved = currentLaunchHook ?? "";
-  const isDirty = trimmed !== saved;
-
-  const handleSave = async () => {
-    if (!profileId) return;
+  const saveConfig = async (
+    patch: Record<string, unknown>,
+    rollback: () => void,
+  ) => {
     setIsSaving(true);
+    setError(null);
     try {
-      await invoke("update_profile_launch_hook", {
-        profileId,
-        launchHook: trimmed || null,
+      await invoke("update_browser_config", {
+        profileId: profile.id,
+        config: { ...browserConfig, ...patch },
       });
-      onClose();
+      onSaved();
     } catch (err) {
-      console.error("Failed to update launch hook:", err);
+      rollback();
+      setError(translateBackendError(t as never, err));
     } finally {
       setIsSaving(false);
     }
   };
 
+  const changePlatform = (value: string) => {
+    const previous = platform;
+    const next = value === "auto" ? undefined : (value as CamoufoxOS);
+    setPlatform(next ?? "auto");
+    void saveConfig({ fingerprint_platform: next }, () => setPlatform(previous));
+  };
+
+  const commitSeed = () => {
+    const trimmed = seed.trim();
+    if (trimmed === (typeof storedSeed === "string" ? storedSeed : "")) return;
+    const previous = typeof storedSeed === "string" ? storedSeed : "";
+    void saveConfig({ fingerprint_seed: trimmed || undefined }, () =>
+      setSeed(previous),
+    );
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("profileInfo.launchHook.title")}</DialogTitle>
-        </DialogHeader>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <LuFingerprint className="size-4" />
+          {t("createProfile.engineSettings.title")}
+        </div>
         <p className="text-xs text-muted-foreground">
-          {t("profileInfo.launchHook.description")}
+          {t("createProfile.engineSettings.description")}
         </p>
-        <Input
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-          }}
-          placeholder={t("profileInfo.launchHook.placeholder")}
-          disabled={isSaving}
-        />
-        <DialogFooter>
-          <Button
-            onClick={() => void handleSave()}
-            disabled={isSaving || !isDirty}
-            className="w-full"
+        <div className="space-y-2">
+          <Label htmlFor="clearcote-profile-platform" className="text-xs">
+            {t("createProfile.engineSettings.platform")}
+          </Label>
+          <Select
+            value={platform}
+            onValueChange={changePlatform}
+            disabled={isSaving}
           >
-            {t("common.buttons.save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <SelectTrigger id="clearcote-profile-platform">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">
+                {t("createProfile.engineSettings.auto")}
+              </SelectItem>
+              <SelectItem value="windows">
+                {t("createProfile.os.windows")}
+              </SelectItem>
+              <SelectItem value="macos">
+                {t("createProfile.os.macos")}
+              </SelectItem>
+              <SelectItem value="linux">
+                {t("createProfile.os.linux")}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="clearcote-profile-seed" className="text-xs">
+            {t("createProfile.engineSettings.seed")}
+          </Label>
+          <Input
+            id="clearcote-profile-seed"
+            value={seed}
+            disabled={isSaving}
+            onChange={(event) => setSeed(event.target.value)}
+            onBlur={commitSeed}
+            placeholder={t("createProfile.engineSettings.seedPlaceholder")}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("createProfile.engineSettings.seedHint")}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 border-t pt-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <LuGlobe className="size-4" />
+          {t("createProfile.presetTabs.label")}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {t("createProfile.presetTabs.description")}
+        </p>
+        <PrelaunchSitesSelector
+          idPrefix="clearcote-profile-preset"
+          t={t}
+          customSites={customPresetSites}
+          selectedUrls={presetTabs}
+          disabled={isSaving}
+          onChange={(urls) => {
+            const previous = presetTabs;
+            setPresetTabs(urls);
+            void saveConfig({ preset_tabs: urls }, () => setPresetTabs(previous));
+          }}
+        />
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   );
 }
 

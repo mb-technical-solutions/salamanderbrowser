@@ -43,7 +43,6 @@ export const commandCoverage = {
       "update_profile_vpn",
       "update_profile_tags",
       "update_profile_note",
-      "update_profile_clear_on_close",
       "update_profile_launch_hook",
       "update_profile_window_color",
       "update_profile_proxy_bypass_rules",

@@ -530,9 +530,7 @@ pub fn delete_traffic_stats(id: &str) -> bool {
   removed
 }
 
-/// Best-effort secure erase. Shared with the ephemeral-profile teardown, which
-/// needs exactly the same "zero then unlink, never let the overwrite gate the
-/// unlink" behaviour; see `crate::fs_secure` for the caveats.
+/// Best-effort secure erase; see `crate::fs_secure` for the caveats.
 use crate::fs_secure::secure_remove_file;
 
 /// Clear all traffic stats (used when clearing cache), securely erasing each

@@ -175,7 +175,12 @@ impl VpnStorage {
     let mut value: serde_json::Value = serde_json::from_str(&content)
       .map_err(|e| VpnError::Storage(format!("Failed to parse storage file: {e}")))?;
     if let Some(arr) = value.get_mut("configs").and_then(|v| v.as_array_mut()) {
-      arr.retain(|c| c.get("vpn_type").and_then(|t| t.as_str()) == Some("WireGuard"));
+      arr.retain(|c| {
+        matches!(
+          c.get("vpn_type").and_then(|t| t.as_str()),
+          Some("WireGuard")
+        )
+      });
     }
 
     serde_json::from_value(value)

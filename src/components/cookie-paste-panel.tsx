@@ -3,8 +3,6 @@
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuTriangleAlert } from "react-icons/lu";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -358,15 +356,6 @@ export function CookiePastePanel({
             </span>
           </span>
         </label>
-      )}
-
-      {analysis?.clearsOnClose && (
-        <Alert>
-          <LuTriangleAlert className="text-warning-text" />
-          <AlertDescription>
-            {t("cookies.paste.clearsOnCloseWarning")}
-          </AlertDescription>
-        </Alert>
       )}
 
       {analysis !== null && analysis.cookies.length > 0 && (

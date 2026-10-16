@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getBrowserIcon } from "@/lib/browser-utils";
+import { getBrowserIcon, supportsCookieBackend } from "@/lib/browser-utils";
 import type {
   BrowserProfile,
   CookieCopyRequest,
@@ -84,7 +84,8 @@ export function CookieCopyDialog({
   // dead-end state (source picked = target list empty = copy button disabled).
   const eligibleSourceProfiles = useMemo(() => {
     return profiles.filter(
-      (p) => !selectedProfiles.includes(p.id) && p.browser === "camoufox",
+      (p) =>
+        !selectedProfiles.includes(p.id) && supportsCookieBackend(p.browser),
     );
   }, [profiles, selectedProfiles]);
 
@@ -93,7 +94,7 @@ export function CookieCopyDialog({
       (p) =>
         selectedProfiles.includes(p.id) &&
         p.id !== sourceProfileId &&
-        p.browser === "camoufox",
+        supportsCookieBackend(p.browser),
     );
   }, [profiles, selectedProfiles, sourceProfileId]);
 

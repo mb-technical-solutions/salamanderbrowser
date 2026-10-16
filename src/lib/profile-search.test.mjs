@@ -136,18 +136,6 @@ test("enum fields match a slug by prefix, so a half-typed value narrows", () => 
   );
 });
 
-test("boolean fields take yes and no", () => {
-  assert.equal(hit("locked:yes", profile({ password_protected: true })), true);
-  assert.equal(hit("locked:no", profile({ password_protected: true })), false);
-  assert.equal(hit("password:no", profile()), true, "alias, unset is false");
-  assert.equal(hit("ephemeral:yes", profile({ ephemeral: true })), true);
-  assert.equal(
-    hit("locked:maybe", profile({ password_protected: true })),
-    false,
-    "an unusable value matches nothing rather than everything",
-  );
-});
-
 test("none and any answer the empty question on every relation", () => {
   const bare = profile();
   const wired = profile({ proxy_id: "p1", group_id: "g1", tags: ["eu"] });

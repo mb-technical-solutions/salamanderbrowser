@@ -159,10 +159,7 @@
       "copyLogsDescription": "Copie un lot expurgé des journaux récents (jusqu’à 5 Mo). Vérifiez-le avant de le partager, car l’expurgation ne peut pas identifier tous les types de données personnelles."
     },
     "disableAutoUpdates": "Désactiver les mises à jour automatiques de l'app",
-    "disableAutoUpdatesDescription": "Empêche l'application de vérifier et d'installer automatiquement les mises à jour de Salamander Browser. Les mises à jour des navigateurs ne sont pas affectées.",
-    "keepDecryptedProfilesInRam": "Conserver les profils déchiffrés en RAM",
-    "keepDecryptedProfilesInRamDescription": "Conserver en RAM la copie déchiffrée des profils protégés par mot de passe entre les lancements pour un démarrage plus rapide. La copie sur disque reste chiffrée dans tous les cas.",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Empêche l'application de vérifier et d'installer automatiquement les mises à jour de Salamander Browser. Les mises à jour des navigateurs ne sont pas affectées.",    "privacy": {
       "consistencyWarning": "Bloquer en cas d'empreinte incohérente",
       "consistencyWarningDescription": "Empêche le navigateur de démarrer lorsque le fuseau horaire ou la langue d'un profil ne correspond pas à son nœud de sortie. Vous pourrez tout de même lancer.",
       "clearTraffic": "Effacer tout l'historique de trafic",
@@ -211,7 +208,6 @@
       "status": "En cours d'exécution ou non",
       "version": "Version du navigateur",
       "locked": "Protégé par mot de passe",
-      "ephemeral": "Profil éphémère",
       "created": "Date de création",
       "launched": "Date du dernier lancement"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "Assigner au Groupe",
       "changeFingerprint": "Changer l'Empreinte",
       "copyCookiesToProfile": "Copier les Cookies vers le Profil",
-      "launchHook": "URL du hook de lancement",
       "setPassword": "Définir un mot de passe",
       "changePassword": "Changer le mot de passe",
       "removePassword": "Supprimer le mot de passe"
     },
-    "ephemeral": "Éphémère",
     "ephemeralDescription": "Le navigateur est contraint d'écrire les données du profil en mémoire plutôt que sur le disque. Notez que votre système d'exploitation peut écrire une partie de la mémoire sur le disque (swap) en cas de charge, donc des traces de la session pourraient rester récupérables.",
     "ephemeralBadge": "Éphémère",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "Lancer la sélection",
       "stopSelected": "Arrêter la sélection",
       "proRequired": "Plan Pro requis pour le lancement/arrêt groupé"
-    },
-    "passwordProtectedBadge": "Protégé par mot de passe",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "Lancer {{count}} profils ?",
       "confirmDescription": "Lancer {{count}} profils à la fois peut consommer beaucoup de ressources système. Continuer ?",
       "confirmButton": "Lancer {{count}}",
@@ -347,10 +336,6 @@
       "search": "Rechercher proxies ou VPN...",
       "notFound": "Aucun proxy ou VPN trouvé."
     },
-    "launchHook": {
-      "label": "URL du hook de lancement",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "Récupération des versions disponibles...",
       "fetchError": "Échec de la récupération des versions du navigateur. Veuillez vérifier votre connexion Internet et réessayer.",
@@ -362,12 +347,8 @@
       "latestDownloading": "Téléchargement de la version ({{version}})...",
       "upgradeAvailable": "Une version plus récente ({{version}}) de {{browser}} est disponible."
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} n'est pas encore disponible sur votre plateforme.",
-    "passwordProtect": {
-      "label": "Protéger ce profil par mot de passe",
-      "description": "Chiffre les données du profil sur disque. Requis au lancement."
-    },
     "downloadingSubtitle": "Téléchargement…",
     "browsersDownloading": "Les navigateurs sont encore en cours de téléchargement. La création de profils sera disponible une fois un téléchargement terminé.",
     "os": {
@@ -620,7 +601,7 @@
       "sourcePlaceholder": "Sélectionnez un profil pour copier les cookies",
       "running": "(en cours)",
       "targetProfiles": "Profils cibles ({{count}})",
-      "noOtherTargets": "Aucun autre profil Camoufox sélectionné",
+      "noOtherTargets": "Aucun autre profil Firefox sélectionné",
       "selectSourceFirst": "Sélectionnez d'abord un profil source",
       "selectionStatus": "({{selected}} sur {{total}} sélectionnés)",
       "searchPlaceholder": "Rechercher des domaines ou cookies...",
@@ -835,7 +816,7 @@
     "renameProfileFailed": "Échec du renommage du profil : {{error}}",
     "killBrowserFailed": "Échec de l’arrêt du navigateur : {{error}}",
     "deleteSelectedProfilesFailed": "Échec de la suppression des profils sélectionnés : {{error}}",
-    "cookieCopyUnsupportedBrowser": "La copie de cookies ne fonctionne qu'avec les profils Camoufox",
+    "cookieCopyUnsupportedBrowser": "La copie de cookies est disponible uniquement pour Firefox ; Chrome n'est pas encore compatible",
     "cloneProfileFailed": "Échec du clonage du profil : {{error}}",
     "loadSupportedBrowsersFailed": "Échec du chargement des navigateurs pris en charge",
     "setupExtensionListenersFailed": "Échec de la configuration des écouteurs d’événements d’extensions : {{error}}",
@@ -981,13 +962,11 @@
       "browser": "Navigateur",
       "releaseType": "Type de Version",
       "proxyVpn": "Proxy / VPN",
-      "launchHook": "Hook de lancement",
       "group": "Groupe",
       "tags": "Tags",
       "note": "Note",
       "lastLaunched": "Dernier Lancement",
       "hostOs": "OS Hôte",
-      "ephemeral": "Éphémère",
       "extensionGroup": "Groupe d'Extensions",
       "totalSessions": "Sessions totales",
       "proxy": "PROXY",
@@ -1018,13 +997,6 @@
       "vpnLabel": "VPN : {{name}}",
       "proxyLabel": "Proxy : {{name}}"
     },
-    "launchHook": {
-      "title": "URL du hook de lancement",
-      "label": "URL du hook de lancement",
-      "description": "Salamander Browser enverra une requête GET à cette URL à chaque lancement du profil.",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "Saisissez une URL valide http:// ou https://."
-    },
     "actions": {
       "manageCookies": "Gérer les Cookies",
       "assignExtensionGroup": "Assigner un Groupe d'Extensions"
@@ -1044,24 +1016,19 @@
       "network": "Réseau",
       "cookies": "Cookies",
       "extensions": "Extensions",
-      "automation": "Automatisation",
       "security": "Sécurité",
       "delete": "Supprimer le profil",
-      "activity": "Activité",
-      "launchHook": "Hook de lancement"
+      "activity": "Activité"
     },
     "sectionDesc": {
       "fingerprint": "Configurez l’apparence de ce profil pour les scripts de fingerprinting.",
       "network": "Gérez le proxy ou le VPN utilisé par ce profil.",
       "cookies": "Importer, copier ou effacer les cookies de ce profil.",
       "extensions": "Choisissez les extensions à charger avec ce profil.",
-      "automation": "Exécutez une commande au lancement de ce profil.",
-      "security": "Chiffrez les données du profil avec un mot de passe.",
-      "launchHook": "Envoie une requête GET à cette URL à chaque lancement du profil."
+      "security": "Chiffrez les données du profil avec un mot de passe."
     },
     "badges": {
-      "locked": "VERROUILLÉ",
-      "active": "ACTIF"
+      "locked": "VERROUILLÉ"
     },
     "cookies": {
       "runningNotice": "Impossible de lire les cookies pendant l'exécution du navigateur. Fermez d'abord ce profil.",
@@ -1075,36 +1042,9 @@
     "fingerprint": {
       "lockedTitle": "Afficher et modifier l'empreinte est une fonctionnalité Pro",
       "lockedDescription": "Les informations de votre appareil sont protégées dans chaque profil. Afficher et modifier l'empreinte d'un profil nécessite un forfait payant actif.",
-      "camoufoxDescription": "Camoufox génère son empreinte localement à la création (ou à l'importation) du profil ; il n'y a pas encore d'éditeur champ par champ. Vous pouvez effacer l'empreinte enregistrée pour qu'une nouvelle soit générée au prochain lancement.",
+      "camoufoxDescription": "Firefox génère son empreinte localement à la création (ou à l'importation) du profil ; il n'y a pas encore d'éditeur champ par champ. Vous pouvez effacer l'empreinte enregistrée pour qu'une nouvelle soit générée au prochain lancement.",
       "camoufoxRegenerateButton": "Effacer l'empreinte (régénérer au prochain lancement)",
       "camoufoxRegenerateQueued": "Empreinte effacée : une nouvelle sera générée au prochain lancement de ce profil."
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "Les profils éphémères sont supprimés à la fermeture du navigateur : il n'y a donc aucun cookie à gérer ici.",
-      "extensionsUnavailable": "Les profils éphémères sont supprimés à la fermeture du navigateur : aucun groupe d'extensions ne peut leur être attribué.",
-      "hint": "Créez un profil normal si vous avez besoin de conserver ces données."
-    }
-  },
-  "extensions": {
-    "title": "Extensions",
-    "description": "Gérez les extensions de navigateur et les groupes d'extensions pour vos profils.",
-    "upload": "Télécharger",
-    "delete": "Supprimer",
-    "extensionsTab": "Extensions",
-    "groupsTab": "Groupes",
-    "managedNotice": "Les extensions gérées ici remplaceront toutes les extensions installées manuellement dans les profils lors du lancement.",
-    "proRequired": "La gestion des extensions est une fonctionnalité Pro",
-    "empty": "Aucune extension téléchargée pour l'instant.",
-    "noGroups": "Aucun groupe d'extensions créé pour l'instant.",
-    "createGroup": "Créer un Groupe",
-    "newGroup": "Nouveau groupe",
-    "addToGroup": "Ajouter une extension...",
-    "removeFromGroup": "Retirer du groupe",
-    "deleteGroup": "Supprimer le groupe",
-    "extensionGroup": "Groupe d'Extensions",
-    "compatibility": {
-      "label": "Compatibilité",
-      "chromium": "Chromium"
     },
     "selectedFile": "Fichier sélectionné",
     "namePlaceholder": "Nom de l'extension",
@@ -1653,62 +1593,6 @@
       "lookingForUpdates": "Recherche de mises à jour pour {{browser}}"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "Définir un mot de passe de profil",
-      "description": "Chiffre les données sur disque de {{name}}. Vous devrez saisir ce mot de passe à chaque lancement du profil.",
-      "button": "Chiffrer le profil"
-    },
-    "unlock": {
-      "title": "Déverrouiller le profil",
-      "description": "Saisissez le mot de passe pour déverrouiller {{name}}.",
-      "button": "Déverrouiller"
-    },
-    "change": {
-      "title": "Changer le mot de passe du profil",
-      "description": "Re-chiffre {{name}} avec un nouveau mot de passe.",
-      "button": "Changer le mot de passe"
-    },
-    "remove": {
-      "title": "Supprimer le mot de passe du profil",
-      "description": "Déchiffre les données sur disque de {{name}}. Le profil ne sera plus protégé par mot de passe.",
-      "button": "Supprimer le mot de passe"
-    },
-    "fields": {
-      "password": "Mot de passe",
-      "currentPassword": "Mot de passe actuel",
-      "newPassword": "Nouveau mot de passe",
-      "confirm": "Confirmer le mot de passe",
-      "confirmPassword": "Confirmer le nouveau mot de passe"
-    },
-    "errors": {
-      "oldPasswordRequired": "Le mot de passe actuel est requis",
-      "passwordRequired": "Le mot de passe est requis",
-      "tooShort": "Le mot de passe doit comporter au moins 8 caractères",
-      "mismatch": "Les mots de passe ne correspondent pas"
-    },
-    "toasts": {
-      "set": "Le profil est maintenant protégé par mot de passe",
-      "changed": "Mot de passe du profil modifié",
-      "removed": "Mot de passe du profil supprimé"
-    },
-    "warnings": {
-      "forgetWarningTitle": "Important : ce mot de passe ne peut pas être récupéré",
-      "forgetWarningBody": "Salamander Browser ne peut ni réinitialiser, ni récupérer, ni contourner ce mot de passe. Si vous l'oubliez, vous perdrez définitivement l'accès aux données de ce profil."
-    },
-    "modes": {
-      "set": "Définir",
-      "change": "Modifier",
-      "remove": "Supprimer",
-      "validate": "Valider"
-    },
-    "verifyDialog": {
-      "title": "Valider le mot de passe du profil",
-      "description": "Saisissez le mot de passe du profil pour vérifier qu'il correspond à celui enregistré sur le disque.",
-      "submit": "Valider",
-      "matchToast": "Le mot de passe est correct"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "Mot de passe incorrect",
     "lockedOut": "Trop de tentatives incorrectes. Réessayez dans {{duration}}.",
@@ -1741,7 +1625,6 @@
     "extensionPathHasComma": "Le chemin de ce dossier contient une virgule, que Chromium ne peut pas charger. Renommez ou déplacez le dossier.",
     "extensionLinkRequiresDirectory": "Seul un dossier peut être chargé sur place. Désactivez la liaison pour ajouter une archive.",
     "internal": "Une erreur s'est produite : {{detail}}",
-    "invalidLaunchHookUrl": "URL du hook de lancement invalide. Utilisez une URL http:// ou https:// complète.",
     "cookieDbLocked": "Impossible de lire les cookies — la base de données est verrouillée. Fermez le navigateur et réessayez.",
     "cookieDbUnavailable": "Impossible de lire les cookies — le magasin de cookies est indisponible.",
     "cookieImportBrowserRunning": "Impossible d'importer des cookies pendant que le navigateur est ouvert. Fermez-le et réessayez.",
@@ -1761,9 +1644,7 @@
     "camoufoxImportCopyFailed": "L'importation Camoufox a créé le profil, mais la copie des fichiers a échoué : {{detail}}",
     "browserNotDownloaded": "Aucune version téléchargée de {{browser}} n'est disponible. Téléchargez-la d'abord, puis réessayez l'importation.",
     "archiveExtractionFailed": "Échec de l'extraction de l'archive : {{detail}}",
-    "unsupportedArchiveFormat": "Format d'archive non pris en charge. Seules les archives ZIP sont prises en charge.",
-    "clearOnCloseUnavailable": "L'effacement à la fermeture n'est pas disponible pour les profils éphémères ou protégés par mot de passe.",
-    "proxyAndVpnMutuallyExclusive": "Un profil peut utiliser un proxy ou un VPN, mais pas les deux.",
+    "unsupportedArchiveFormat": "Format d'archive non pris en charge. Seules les archives ZIP sont prises en charge.",    "proxyAndVpnMutuallyExclusive": "Un profil peut utiliser un proxy ou un VPN, mais pas les deux.",
     "invalidDnsRulesJson": "Le fichier sélectionné n'est pas un JSON de règles DNS valide.",
     "unsupportedDnsRulesFormat": "Format de règles non pris en charge : {{format}}",
     "dnsRulesSaveFailed": "Échec de l'enregistrement des règles DNS.",
@@ -1878,7 +1759,7 @@
     "steps": {
       "createProfile": {
         "title": "Créez votre premier profil",
-        "content": "Cliquez ici pour créer votre premier profil. Camoufox, un navigateur protégé contre le fingerprinting, est utilisé automatiquement."
+        "content": "Cliquez ici pour créer votre premier profil. Firefox, un navigateur protégé contre le fingerprinting, est utilisé automatiquement."
       },
       "dnsBlocking": {
         "title": "Blocage DNS",
@@ -1911,7 +1792,7 @@
     },
     "ready": {
       "title": "Préparation en cours",
-      "descDownloading": "Téléchargement de votre premier navigateur (Camoufox). Cette configuration unique s'exécute en arrière-plan — patientez un instant.",
+      "descDownloading": "Téléchargement de votre premier navigateur (Firefox). Cette configuration unique s'exécute en arrière-plan — patientez un instant.",
       "descReady": "Votre navigateur est prêt. Créons votre premier profil.",
       "cta": "Créer mon premier profil",
       "downloading": "Téléchargement…",
@@ -1950,10 +1831,6 @@
     "searchLicenses": "Rechercher des licences…",
     "noMatchingLicenses": "Aucune licence correspondante.",
     "openSource": "Voir le code source de {{name}}"
-  },
-  "clearOnClose": {
-    "label": "Effacer les données à la fermeture",
-    "description": "Supprime les cookies, l'historique et le cache à la fermeture du navigateur. Les extensions et les favoris sont conservés."
   },
   "consistencyWarning": {
     "timezoneDetail": "Le nœud de sortie est dans {{exit}}, mais l'empreinte indique {{fingerprint}}.",

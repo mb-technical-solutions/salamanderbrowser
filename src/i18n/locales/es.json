@@ -159,10 +159,7 @@
       "copyLogsDescription": "Copia un paquete censurado de los registros recientes (hasta 5 MB). Revísalo antes de compartirlo, ya que la censura no puede identificar todos los tipos de datos personales."
     },
     "disableAutoUpdates": "Desactivar Actualizaciones Automáticas de la App",
-    "disableAutoUpdatesDescription": "Evita que la aplicación busque e instale actualizaciones de Salamander Browser automáticamente. Las actualizaciones de navegadores no se ven afectadas.",
-    "keepDecryptedProfilesInRam": "Mantener Perfiles Descifrados en RAM",
-    "keepDecryptedProfilesInRamDescription": "Conservar la copia descifrada en RAM de los perfiles protegidos por contraseña entre lanzamientos para un inicio más rápido. La copia en disco permanece cifrada en cualquier caso.",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Evita que la aplicación busque e instale actualizaciones de Salamander Browser automáticamente. Las actualizaciones de navegadores no se ven afectadas.",    "privacy": {
       "consistencyWarning": "Bloquear si la huella digital no coincide",
       "consistencyWarningDescription": "Impide que el navegador se inicie cuando la zona horaria o el idioma de un perfil no coinciden con su nodo de salida del proxy. Aun así podrás iniciarlo.",
       "clearTraffic": "Borrar todo el historial de tráfico",
@@ -211,7 +208,6 @@
       "status": "En ejecución o no",
       "version": "Versión del navegador",
       "locked": "Protegido con contraseña",
-      "ephemeral": "Perfil efímero",
       "created": "Fecha de creación",
       "launched": "Fecha del último inicio"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "Asignar a Grupo",
       "changeFingerprint": "Cambiar Huella Digital",
       "copyCookiesToProfile": "Copiar Cookies al Perfil",
-      "launchHook": "URL del hook de inicio",
       "setPassword": "Establecer Contraseña",
       "changePassword": "Cambiar Contraseña",
       "removePassword": "Quitar Contraseña"
     },
-    "ephemeral": "Efímero",
     "ephemeralDescription": "El navegador se ve obligado a escribir los datos del perfil en memoria en lugar de en el disco. Ten en cuenta que tu sistema operativo puede pasar partes de la memoria al disco cuando hay poca RAM, por lo que aún podrían quedar rastros de la sesión recuperables.",
     "ephemeralBadge": "Efímero",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "Ejecutar seleccionados",
       "stopSelected": "Detener seleccionados",
       "proRequired": "Se requiere el plan Pro para ejecución/parada masiva"
-    },
-    "passwordProtectedBadge": "Protegido por Contraseña",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "¿Ejecutar {{count}} perfiles?",
       "confirmDescription": "Iniciar {{count}} perfiles a la vez puede consumir muchos recursos del sistema. ¿Continuar?",
       "confirmButton": "Ejecutar {{count}}",
@@ -347,10 +336,6 @@
       "search": "Buscar proxies o VPN...",
       "notFound": "No se encontraron proxies o VPN."
     },
-    "launchHook": {
-      "label": "URL del hook de inicio",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "Obteniendo versiones disponibles...",
       "fetchError": "Error al obtener versiones del navegador. Por favor verifica tu conexión a internet e intenta de nuevo.",
@@ -362,12 +347,8 @@
       "latestDownloading": "Descargando versión ({{version}})...",
       "upgradeAvailable": "Hay una versión más reciente ({{version}}) de {{browser}} disponible."
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} aún no está disponible en tu plataforma.",
-    "passwordProtect": {
-      "label": "Proteger este perfil con contraseña",
-      "description": "Cifra los datos del perfil en disco. Necesario para abrirlo."
-    },
     "downloadingSubtitle": "Descargando…",
     "browsersDownloading": "Los navegadores aún se están descargando. La creación de perfiles estará disponible cuando termine una descarga.",
     "os": {
@@ -620,7 +601,7 @@
       "sourcePlaceholder": "Selecciona un perfil del que copiar cookies",
       "running": "(en ejecución)",
       "targetProfiles": "Perfiles de destino ({{count}})",
-      "noOtherTargets": "No hay otros perfiles Camoufox seleccionados",
+      "noOtherTargets": "No hay otros perfiles Firefox seleccionados",
       "selectSourceFirst": "Selecciona primero un perfil de origen",
       "selectionStatus": "({{selected}} de {{total}} seleccionadas)",
       "searchPlaceholder": "Buscar dominios o cookies...",
@@ -835,7 +816,7 @@
     "renameProfileFailed": "Error al renombrar el perfil: {{error}}",
     "killBrowserFailed": "Error al detener el navegador: {{error}}",
     "deleteSelectedProfilesFailed": "Error al eliminar los perfiles seleccionados: {{error}}",
-    "cookieCopyUnsupportedBrowser": "La copia de cookies solo funciona con perfiles Camoufox",
+    "cookieCopyUnsupportedBrowser": "La copia de cookies solo está disponible para Firefox; Chrome aún no es compatible",
     "cloneProfileFailed": "Error al clonar el perfil: {{error}}",
     "loadSupportedBrowsersFailed": "Error al cargar los navegadores compatibles",
     "setupExtensionListenersFailed": "Error al configurar los listeners de eventos de extensiones: {{error}}",
@@ -981,13 +962,11 @@
       "browser": "Navegador",
       "releaseType": "Tipo de Versión",
       "proxyVpn": "Proxy / VPN",
-      "launchHook": "Hook de inicio",
       "group": "Grupo",
       "tags": "Etiquetas",
       "note": "Nota",
       "lastLaunched": "Último Lanzamiento",
       "hostOs": "SO Host",
-      "ephemeral": "Efímero",
       "extensionGroup": "Grupo de Extensiones",
       "totalSessions": "Sesiones totales",
       "proxy": "PROXY",
@@ -1018,13 +997,6 @@
       "vpnLabel": "VPN: {{name}}",
       "proxyLabel": "Proxy: {{name}}"
     },
-    "launchHook": {
-      "title": "URL del hook de inicio",
-      "label": "URL del hook de inicio",
-      "description": "Salamander Browser enviará una solicitud GET a esta URL cada vez que se inicie el perfil.",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "Introduce una URL válida http:// o https://."
-    },
     "actions": {
       "manageCookies": "Administrar Cookies",
       "assignExtensionGroup": "Asignar Grupo de Extensiones"
@@ -1044,24 +1016,19 @@
       "network": "Red",
       "cookies": "Cookies",
       "extensions": "Extensiones",
-      "automation": "Automatización",
       "security": "Seguridad",
       "delete": "Eliminar perfil",
-      "activity": "Actividad",
-      "launchHook": "Hook de inicio"
+      "activity": "Actividad"
     },
     "sectionDesc": {
       "fingerprint": "Configura cómo aparece este perfil para los scripts de fingerprinting.",
       "network": "Administra el proxy o la VPN que usa este perfil.",
       "cookies": "Importa, copia o borra cookies de este perfil.",
       "extensions": "Elige las extensiones que se cargan con este perfil.",
-      "automation": "Ejecuta un comando o script al iniciar este perfil.",
-      "security": "Cifra los datos del perfil con una contraseña.",
-      "launchHook": "Envía una solicitud GET a esta URL cada vez que se inicie el perfil."
+      "security": "Cifra los datos del perfil con una contraseña."
     },
     "badges": {
-      "locked": "BLOQUEADO",
-      "active": "ACTIVO"
+      "locked": "BLOQUEADO"
     },
     "cookies": {
       "runningNotice": "No se pueden leer las cookies mientras el navegador está en ejecución. Cierra este perfil primero.",
@@ -1075,36 +1042,9 @@
     "fingerprint": {
       "lockedTitle": "Ver y editar la huella digital es una función Pro",
       "lockedDescription": "La información de tu dispositivo está protegida en cada perfil. Ver y editar la huella digital de un perfil requiere un plan de pago activo.",
-      "camoufoxDescription": "Camoufox genera su huella digital localmente al crear (o importar) el perfil; todavía no hay un editor campo por campo. Puedes borrar la huella digital guardada para que se genere una nueva en el próximo inicio.",
+      "camoufoxDescription": "Firefox genera su huella digital localmente al crear (o importar) el perfil; todavía no hay un editor campo por campo. Puedes borrar la huella digital guardada para que se genere una nueva en el próximo inicio.",
       "camoufoxRegenerateButton": "Borrar huella digital (regenerar en el próximo inicio)",
       "camoufoxRegenerateQueued": "Huella digital borrada: se generará una nueva la próxima vez que se inicie este perfil."
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "Los perfiles efímeros se descartan al cerrar el navegador, así que aquí no hay cookies que gestionar.",
-      "extensionsUnavailable": "Los perfiles efímeros se descartan al cerrar el navegador, así que no se les pueden asignar grupos de extensiones.",
-      "hint": "Crea un perfil normal si necesitas que esto se conserve."
-    }
-  },
-  "extensions": {
-    "title": "Extensiones",
-    "description": "Administra extensiones de navegador y grupos de extensiones para tus perfiles.",
-    "upload": "Subir",
-    "delete": "Eliminar",
-    "extensionsTab": "Extensiones",
-    "groupsTab": "Grupos",
-    "managedNotice": "Las extensiones administradas aquí reemplazarán cualquier extensión instalada manualmente en los perfiles al iniciarlos.",
-    "proRequired": "La gestión de extensiones es una función Pro",
-    "empty": "No se han subido extensiones aún.",
-    "noGroups": "No se han creado grupos de extensiones aún.",
-    "createGroup": "Crear Grupo",
-    "newGroup": "Nuevo grupo",
-    "addToGroup": "Agregar extensión...",
-    "removeFromGroup": "Eliminar del grupo",
-    "deleteGroup": "Eliminar grupo",
-    "extensionGroup": "Grupo de Extensiones",
-    "compatibility": {
-      "label": "Compatibilidad",
-      "chromium": "Chromium"
     },
     "selectedFile": "Archivo seleccionado",
     "namePlaceholder": "Nombre de la extensión",
@@ -1653,62 +1593,6 @@
       "lookingForUpdates": "Buscando actualizaciones de {{browser}}"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "Establecer Contraseña del Perfil",
-      "description": "Cifra los datos en disco de {{name}}. Necesitarás esta contraseña cada vez que abras el perfil.",
-      "button": "Cifrar Perfil"
-    },
-    "unlock": {
-      "title": "Desbloquear Perfil",
-      "description": "Introduce la contraseña para desbloquear {{name}}.",
-      "button": "Desbloquear"
-    },
-    "change": {
-      "title": "Cambiar Contraseña del Perfil",
-      "description": "Vuelve a cifrar {{name}} con una nueva contraseña.",
-      "button": "Cambiar Contraseña"
-    },
-    "remove": {
-      "title": "Quitar Contraseña del Perfil",
-      "description": "Descifra los datos en disco de {{name}}. El perfil dejará de estar protegido por contraseña.",
-      "button": "Quitar Contraseña"
-    },
-    "fields": {
-      "password": "Contraseña",
-      "currentPassword": "Contraseña actual",
-      "newPassword": "Nueva contraseña",
-      "confirm": "Confirmar contraseña",
-      "confirmPassword": "Confirmar nueva contraseña"
-    },
-    "errors": {
-      "oldPasswordRequired": "Se requiere la contraseña actual",
-      "passwordRequired": "Se requiere la contraseña",
-      "tooShort": "La contraseña debe tener al menos 8 caracteres",
-      "mismatch": "Las contraseñas no coinciden"
-    },
-    "toasts": {
-      "set": "El perfil ahora está protegido por contraseña",
-      "changed": "Contraseña del perfil cambiada",
-      "removed": "Contraseña del perfil eliminada"
-    },
-    "warnings": {
-      "forgetWarningTitle": "Importante: esta contraseña no se puede recuperar",
-      "forgetWarningBody": "Salamander Browser no puede restablecer, recuperar ni omitir esta contraseña. Si la olvidas, perderás permanentemente el acceso a los datos de este perfil."
-    },
-    "modes": {
-      "set": "Establecer",
-      "change": "Cambiar",
-      "remove": "Quitar",
-      "validate": "Validar"
-    },
-    "verifyDialog": {
-      "title": "Validar contraseña del perfil",
-      "description": "Introduce la contraseña del perfil para confirmar que coincide con la almacenada en disco.",
-      "submit": "Validar",
-      "matchToast": "La contraseña es correcta"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "Contraseña incorrecta",
     "lockedOut": "Demasiados intentos incorrectos. Vuelve a intentar en {{duration}}.",
@@ -1741,7 +1625,6 @@
     "extensionPathHasComma": "La ruta de esa carpeta contiene una coma, que Chromium no puede cargar. Cambia el nombre de la carpeta o muévela.",
     "extensionLinkRequiresDirectory": "Solo se puede cargar en su ubicación una carpeta. Desactiva el enlace para añadir un archivo comprimido.",
     "internal": "Algo salió mal: {{detail}}",
-    "invalidLaunchHookUrl": "URL del hook de inicio no válida. Usa una URL completa http:// o https://.",
     "cookieDbLocked": "No se pudieron leer las cookies — la base de datos está bloqueada. Cierra el navegador e inténtalo de nuevo.",
     "cookieDbUnavailable": "No se pudieron leer las cookies — el almacén de cookies no está disponible.",
     "cookieImportBrowserRunning": "No se pueden importar cookies mientras el navegador está en ejecución. Ciérralo e inténtalo de nuevo.",
@@ -1761,9 +1644,7 @@
     "camoufoxImportCopyFailed": "La importación de Camoufox creó el perfil, pero no se pudieron copiar los archivos: {{detail}}",
     "browserNotDownloaded": "No hay ninguna versión descargada de {{browser}}. Descárgala primero y vuelve a intentar la importación.",
     "archiveExtractionFailed": "No se pudo extraer el archivo: {{detail}}",
-    "unsupportedArchiveFormat": "Formato de archivo no compatible. Solo se admiten archivos ZIP.",
-    "clearOnCloseUnavailable": "El borrado al cerrar no está disponible para perfiles efímeros o protegidos con contraseña.",
-    "proxyAndVpnMutuallyExclusive": "Un perfil puede usar un proxy o una VPN, pero no ambos.",
+    "unsupportedArchiveFormat": "Formato de archivo no compatible. Solo se admiten archivos ZIP.",    "proxyAndVpnMutuallyExclusive": "Un perfil puede usar un proxy o una VPN, pero no ambos.",
     "invalidDnsRulesJson": "El archivo seleccionado no es un JSON de reglas DNS válido.",
     "unsupportedDnsRulesFormat": "Formato de reglas no compatible: {{format}}",
     "dnsRulesSaveFailed": "No se pudieron guardar las reglas DNS.",
@@ -1878,7 +1759,7 @@
     "steps": {
       "createProfile": {
         "title": "Crea tu primer perfil",
-        "content": "Haz clic aquí para crear tu primer perfil. Camoufox, un navegador con protección contra huellas digitales, se usa automáticamente."
+        "content": "Haz clic aquí para crear tu primer perfil. Firefox, un navegador con protección contra huellas digitales, se usa automáticamente."
       },
       "dnsBlocking": {
         "title": "Bloqueo DNS",
@@ -1911,7 +1792,7 @@
     },
     "ready": {
       "title": "Preparando todo",
-      "descDownloading": "Descargando tu primer navegador (Camoufox). Esta configuración única se ejecuta en segundo plano; espera un momento.",
+      "descDownloading": "Descargando tu primer navegador (Firefox). Esta configuración única se ejecuta en segundo plano; espera un momento.",
       "descReady": "Tu navegador está listo. Vamos a crear tu primer perfil.",
       "cta": "Crear mi primer perfil",
       "downloading": "Descargando…",
@@ -1950,10 +1831,6 @@
     "searchLicenses": "Buscar licencias…",
     "noMatchingLicenses": "No hay licencias que coincidan.",
     "openSource": "Ver el código fuente de {{name}}"
-  },
-  "clearOnClose": {
-    "label": "Borrar datos al cerrar",
-    "description": "Elimina cookies, historial y caché al cerrar el navegador. Las extensiones y los marcadores se conservan."
   },
   "consistencyWarning": {
     "timezoneDetail": "El nodo de salida está en {{exit}}, pero la huella digital indica {{fingerprint}}.",

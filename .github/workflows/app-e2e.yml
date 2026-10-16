@@ -1,0 +1,82 @@
+name: Application E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "e2e/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/app-e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+
+    steps:
+      - name: Disable git core.autocrlf on Windows
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.autocrlf false
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo and E2E build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            e2e/app/target
+            e2e/.driver
+          key: e2e-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock', 'e2e/app/Cargo.toml', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            e2e-${{ runner.os }}-
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xvfb
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run smoke suite
+        if: matrix.os != 'ubuntu-22.04'
+        run: pnpm e2e:smoke
+        env:
+          SALAMANDER_E2E_OFFLINE: "1"
+
+      - name: Run smoke suite on Linux
+        if: matrix.os == 'ubuntu-22.04'
+        run: xvfb-run --auto-servernum pnpm e2e:smoke
+        env:
+          SALAMANDER_E2E_OFFLINE: "1"

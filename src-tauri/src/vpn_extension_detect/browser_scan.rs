@@ -54,9 +54,7 @@ fn candidate_profile_dirs(user_data_dir: &Path) -> Vec<PathBuf> {
       let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
         continue;
       };
-      if crate::profile::clear_on_close::is_profile_dir_name(name)
-        || path.join("Preferences").exists()
-      {
+      if is_profile_dir_name(name) || path.join("Preferences").exists() {
         dirs.push(path);
       }
     }
@@ -65,6 +63,15 @@ fn candidate_profile_dirs(user_data_dir: &Path) -> Vec<PathBuf> {
   dirs.sort();
   dirs.dedup();
   dirs
+}
+
+/// Chromium's own profile-directory naming scheme: `Default`, `Guest
+/// Profile`, `System Profile`, or `Profile <N>` for additional profiles.
+fn is_profile_dir_name(name: &str) -> bool {
+  matches!(name, "Default" | "Guest Profile" | "System Profile")
+    || name
+      .strip_prefix("Profile ")
+      .is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn read_json_file(path: &Path, max_bytes: Option<u64>) -> Option<serde_json::Value> {

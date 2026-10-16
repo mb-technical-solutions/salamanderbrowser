@@ -108,12 +108,11 @@ use browser_runner::{
 
 use profile::manager::{
   check_browser_status, clone_profile, create_browser_profile_new, delete_profile,
-  list_browser_profiles, rename_profile, update_camoufox_config, update_profile_clear_on_close,
-  update_profile_dns_blocklist, update_profile_launch_hook, update_profile_note,
+  list_browser_profiles, rename_profile, update_browser_config, update_camoufox_config,
+  update_profile_dns_blocklist, update_profile_note,
   update_profile_proxy, update_profile_proxy_bypass_rules, update_profile_tags, update_profile_vpn,
   update_profile_window_color,
 };
-
 use profile::password::{
   change_profile_password, is_profile_locked, lock_profile, remove_profile_password,
   set_profile_password, unlock_profile, verify_profile_password,
@@ -926,6 +925,7 @@ pub async fn check_vpn_validity_core(
   );
 
   let mut result = None;
+  let mut last_error = None;
   for attempt in 0..3 {
     if attempt > 0 {
       tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -949,6 +949,7 @@ pub async fn check_vpn_validity_core(
         break;
       }
       Err(error) => {
+        last_error = Some(error.to_string());
         log::warn!(
           "VPN validation attempt {} failed to fetch public IP through salamander-proxy: {}",
           attempt + 1,
@@ -958,21 +959,28 @@ pub async fn check_vpn_validity_core(
     }
   }
 
+  // Grab the worker's own log before it's (possibly) stopped below — it's
+  // the only place that shows whether the tunnel ever got as far as a
+  // handshake attempt. Without it, a failed check here is indistinguishable
+  // from "the VPN never tried anything" and "the peer never answered",
+  // which otherwise means debugging the same failure only showed generic
+  // HTTP timeouts, with no way to tell those two apart from the UI alone.
+  let worker_log_tail = vpn_worker_runner::read_worker_log_tail(&vpn_worker.id, 20);
+
   let _ = crate::proxy_runner::stop_proxy_process(&local_proxy.id).await;
   if !had_existing_worker {
     let _ = vpn_worker_runner::stop_vpn_worker(&vpn_worker.id).await;
   }
 
-  let result = result.unwrap_or(crate::proxy_manager::ProxyCheckResult {
-    ip: String::new(),
-    city: None,
-    country: None,
-    country_code: None,
-    timestamp: now,
-    is_valid: false,
-  });
-
-  Ok(result)
+  result.ok_or_else(|| {
+    let network_error = last_error.unwrap_or_else(|| "no public IP response".to_string());
+    match worker_log_tail {
+      Some(log) => format!(
+        "VPN traffic check failed after 3 attempts: {network_error}\n\nVPN worker log:\n{log}"
+      ),
+      None => format!("VPN traffic check failed after 3 attempts: {network_error}"),
+    }
+  })
 }
 
 #[tauri::command]
@@ -1058,9 +1066,19 @@ pub async fn validate_profile_network(
   vpn_id: Option<&str>,
 ) -> Result<(), String> {
   if let Some(vpn_id) = vpn_id.filter(|s| !s.is_empty()) {
-    let result = check_vpn_validity_core(vpn_id).await?;
-    if !result.is_valid {
-      return Err(serde_json::json!({ "code": "VPN_NOT_WORKING" }).to_string());
+    // Profile creation must not depend on third-party public-IP services.
+    // Those services are useful for the explicit Check action, but a blocked
+    // or temporarily unavailable checker must not prevent attaching a valid
+    // VPN config to a profile. Starting the worker still validates the native
+    // key/config and makes runtime failures visible immediately.
+    let had_existing_worker = vpn_worker_storage::find_vpn_worker_by_vpn_id(vpn_id).is_some();
+    vpn_worker_runner::start_vpn_worker(vpn_id)
+      .await
+      .map_err(|e| format!("Failed to start VPN worker: {e}"))?;
+    if !had_existing_worker {
+      if let Some(worker) = vpn_worker_storage::find_vpn_worker_by_vpn_id(vpn_id) {
+        let _ = vpn_worker_runner::stop_vpn_worker(&worker.id).await;
+      }
     }
     return Ok(());
   }
@@ -1111,10 +1129,26 @@ async fn kill_all_running_browsers(app_handle: &tauri::AppHandle) {
   }
 }
 
+/// VPN workers are intentionally spawned detached so a tunnel started from
+/// the VPN tab (not tied to any running profile) survives the window being
+/// hidden to the tray. But a real quit — the user picking "Quit" rather than
+/// closing the window — must still stop them: otherwise they outlive the GUI
+/// as orphaned background processes, same failure mode `kill_all_running_browsers`
+/// exists to prevent for profiles, and the leftover process holds the sidecar
+/// .exe open, breaking the next rebuild (`PermissionDenied` removing it).
+async fn stop_all_vpn_workers() {
+  for worker in crate::vpn_worker_storage::list_vpn_worker_configs() {
+    if let Err(e) = crate::vpn_worker_runner::stop_vpn_worker(&worker.id).await {
+      log::warn!("Failed to stop VPN worker '{}' while quitting: {e}", worker.id);
+    }
+  }
+}
+
 /// Confirm a quit chosen from the close-confirmation dialog and exit the app.
 #[tauri::command]
 async fn confirm_quit(app_handle: tauri::AppHandle) {
   kill_all_running_browsers(&app_handle).await;
+  stop_all_vpn_workers().await;
   QUIT_CONFIRMED.store(true, Ordering::SeqCst);
   app_handle.exit(0);
 }
@@ -1213,6 +1247,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
         let app_handle = app_handle.clone();
         tauri::async_runtime::spawn(async move {
           kill_all_running_browsers(&app_handle).await;
+          stop_all_vpn_workers().await;
           QUIT_CONFIRMED.store(true, Ordering::SeqCst);
           app_handle.exit(0);
         });
@@ -1418,9 +1453,6 @@ pub fn run_with_builder(
 
   builder
     .setup(|app| {
-      // Recover ephemeral dir mappings from RAM-backed storage (tmpfs/ramdisk)
-      ephemeral_dirs::recover_ephemeral_dirs();
-
       // Extract icons and metadata for existing extensions that don't have them yet
       {
         let mgr = extension_manager::ExtensionManager::new();
@@ -1447,7 +1479,7 @@ pub fn run_with_builder(
           // launched app process a non-persistent data store there, and also
           // prevents WebView2/WebKitGTK caches from escaping the session on
           // the other platforms. Durable app state is still exercised via
-          // SALAMANDERBROWSER_DATA_ROOT; only browser-engine storage is ephemeral.
+          // SALAMANDERBROWSER_DATA_ROOT; only browser-engine storage is temporary.
           .incognito(true),
         None => win_builder,
       };
@@ -2003,7 +2035,7 @@ pub fn run_with_builder(
                 // here leaves the stop button stuck.
                 let should_emit = last_state != is_running || (!is_running && had_pid);
 
-                if should_emit {
+                  if should_emit {
                   log::debug!(
                     "Status checker detected change for profile {}: {} -> {}",
                     profile.name,
@@ -2032,18 +2064,8 @@ pub fn run_with_builder(
                     );
                   }
 
-                  // Re-encrypt password-protected profiles when the browser
-                  // exits naturally (user closing the window) — the explicit
-                  // kill path in browser_runner.rs handles app-driven stops.
-                  if !is_running && profile.password_protected {
+                  if !is_running && (last_state || had_pid) && profile.password_protected {
                     crate::profile::password::complete_after_quit_and_wait(&profile).await;
-                  }
-
-                  // Clear-on-close for natural exits (user closed the window).
-                  // The explicit kill path in browser_runner.rs handles
-                  // app-driven stops.
-                  if !is_running {
-                    crate::profile::clear_on_close::clear_profile_browsing_data(&profile).await;
                   }
 
                   last_running_states.insert(profile_id, is_running);
@@ -2089,9 +2111,14 @@ pub fn run_with_builder(
       update_profile_vpn,
       update_profile_tags,
       update_profile_note,
-      update_profile_clear_on_close,
-      update_profile_launch_hook,
       update_profile_window_color,
+      set_profile_password,
+      change_profile_password,
+      remove_profile_password,
+      verify_profile_password,
+      unlock_profile,
+      lock_profile,
+      is_profile_locked,
       update_profile_proxy_bypass_rules,
       update_profile_dns_blocklist,
       check_browser_status,
@@ -2142,6 +2169,7 @@ pub fn run_with_builder(
       parse_txt_proxies,
       import_proxies_from_parsed,
       update_camoufox_config,
+      update_browser_config,
       get_profile_groups,
       get_groups_with_profile_counts,
       create_profile_group,
@@ -2202,14 +2230,6 @@ pub fn run_with_builder(
       dns_blocklist::set_custom_dns_config,
       dns_blocklist::import_custom_dns_rules,
       dns_blocklist::export_custom_dns_rules,
-      // Profile password commands
-      set_profile_password,
-      change_profile_password,
-      remove_profile_password,
-      verify_profile_password,
-      unlock_profile,
-      lock_profile,
-      is_profile_locked,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")
@@ -2310,20 +2330,20 @@ mod tests {
 
   fn check_unused_commands(verbose: bool) {
     // Commands that are intentionally not called directly from the frontend.
-    // "lock_profile": a manual "lock this profile" action isn't wired into
-    // the UI yet, but the command is a real, exercised capability — see
-    // profile/password.rs. The VPN control commands below let a VPN be
-    // connected/disconnected/inspected independent of launching a browser
-    // profile (profile launch itself calls vpn_worker_runner directly); no
-    // UI exposes standalone VPN control yet, but they're real capabilities
-    // exercised by the e2e suite (see e2e/coverage-map.mjs).
+    // The VPN control commands below let a VPN be connected/disconnected/
+    // inspected independent of launching a browser profile (profile launch
+    // itself calls vpn_worker_runner directly); no UI exposes standalone VPN
+    // control yet, but they're real capabilities exercised by the e2e suite
+    // (see e2e/coverage-map.mjs).
     let frontend_exempt_commands = [
-      "lock_profile",
       "connect_vpn",
       "disconnect_vpn",
       "get_vpn_status",
       "get_vpn_config",
       "list_active_vpn_connections",
+      "verify_profile_password",
+      "lock_profile",
+      "is_profile_locked",
     ];
 
     // Extract command names from the generate_handler! macro in this file

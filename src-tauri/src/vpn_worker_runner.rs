@@ -43,6 +43,22 @@ fn read_worker_log(id: &str) -> String {
   std::fs::read_to_string(worker_log_path(id)).unwrap_or_else(|_| "No log available".to_string())
 }
 
+/// The tail of a worker's own log — last-ditch context for callers (like the
+/// VPN traffic check) that only see the failure from the outside, as a
+/// generic network timeout, and otherwise have no way to tell "the tunnel
+/// never even tried a handshake" apart from "the handshake is retrying with
+/// no response from the peer". Keeping just the tail avoids multi-megabyte
+/// strings for a worker that's been up a long time.
+pub(crate) fn read_worker_log_tail(id: &str, max_lines: usize) -> Option<String> {
+  let content = std::fs::read_to_string(worker_log_path(id)).ok()?;
+  if content.trim().is_empty() {
+    return None;
+  }
+  let lines: Vec<&str> = content.lines().collect();
+  let start = lines.len().saturating_sub(max_lines);
+  Some(lines[start..].join("\n"))
+}
+
 async fn wait_for_vpn_worker_ready(
   id: &str,
 ) -> Result<VpnWorkerConfig, Box<dyn std::error::Error>> {
@@ -69,6 +85,7 @@ async fn wait_for_vpn_worker_ready(
 
       if !process_running && attempts > 2 {
         let log_output = read_worker_log(id);
+        let _ = std::fs::remove_file(&updated_config.config_file_path);
         delete_vpn_worker_config(id);
         return Err(format!("VPN worker process crashed. Log output:\n{}", log_output).into());
       }
@@ -85,6 +102,7 @@ async fn wait_for_vpn_worker_ready(
           .pid
           .is_some_and(|pid| process_identity_matches(pid, config.pid_start_time));
         let log_output = read_worker_log(id);
+        let _ = std::fs::remove_file(&config.config_file_path);
         delete_vpn_worker_config(id);
         return Err(
           format!(
@@ -156,6 +174,7 @@ pub async fn start_vpn_worker_tracked(
       .pid
       .is_some_and(|pid| !process_identity_matches(pid, config.pid_start_time));
     if dead || config.pid.is_none() {
+      let _ = std::fs::remove_file(&config.config_file_path);
       delete_vpn_worker_config(&config.id);
     }
   }
@@ -193,7 +212,9 @@ pub async fn start_vpn_worker_tracked(
       .map_err(|e| format!("Failed to load VPN config: {e}"))?
   };
 
-  let vpn_type_str = "wireguard";
+  let vpn_type_str = match vpn_config.vpn_type {
+    crate::vpn::VpnType::WireGuard => "wireguard",
+  };
 
   // Write decrypted config to a temp file
   let config_file_path = std::env::temp_dir()

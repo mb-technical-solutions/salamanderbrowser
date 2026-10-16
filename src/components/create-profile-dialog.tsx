@@ -11,8 +11,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { GoPlus } from "react-icons/go";
-import { LuCheck, LuChevronsUpDown, LuLoaderCircle } from "react-icons/lu";
+import { LuCheck, LuChevronsUpDown } from "react-icons/lu";
 import { LoadingButton } from "@/components/loading-button";
+import { PrelaunchSitesSelector } from "@/components/prelaunch-sites-selector";
 import { ProxyFormDialog } from "@/components/proxy-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,11 +52,17 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useBrowserDownload } from "@/hooks/use-browser-download";
 import { useProxyEvents } from "@/hooks/use-proxy-events";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
-import { getBrowserIcon } from "@/lib/browser-utils";
+import { getBrowserDisplayName, getBrowserIcon } from "@/lib/browser-utils";
 import { DNS_BLOCKLIST_LEVELS } from "@/lib/dns-blocklist-levels";
-import { PRESET_TAB_OPTIONS } from "@/lib/preset-tabs";
 import { cn } from "@/lib/utils";
-import type { BrowserReleaseTypes, CamoufoxConfig, CamoufoxOS } from "@/types";
+import type {
+  BrowserReleaseTypes,
+  BrowserType,
+  CamoufoxConfig,
+  CamoufoxOS,
+  ClearcoteConfig,
+  PrelaunchSite,
+} from "@/types";
 
 const getCurrentOS = (): CamoufoxOS => {
   if (typeof navigator === "undefined") return "linux";
@@ -67,7 +74,7 @@ const getCurrentOS = (): CamoufoxOS => {
 
 import { RippleButton } from "./ui/ripple";
 
-type BrowserTypeString = "camoufox";
+type BrowserTypeString = BrowserType;
 
 interface CreateProfileDialogProps {
   isOpen: boolean;
@@ -80,12 +87,10 @@ interface CreateProfileDialogProps {
     proxyId?: string;
     vpnId?: string;
     camoufoxConfig?: CamoufoxConfig;
+    browserConfig?: ClearcoteConfig;
     groupId?: string;
     extensionGroupId?: string;
-    ephemeral?: boolean;
     dnsBlocklist?: string;
-    launchHook?: string;
-    password?: string;
   }) => Promise<void>;
   selectedGroupId?: string;
   crossOsUnlocked?: boolean;
@@ -104,26 +109,27 @@ export function CreateProfileDialog({
   const [profileName, setProfileName] = useState("");
   const [activeTab, setActiveTab] = useState("anti-detect");
 
-  // Camoufox is the only creatable browser, so there is no browser-selection
-  // screen — the dialog opens straight into the config step.
   const [selectedBrowser, setSelectedBrowser] =
     useState<BrowserTypeString>("camoufox");
   const [selectedProxyId, setSelectedProxyId] = useState<string>();
   const [proxyPopoverOpen, setProxyPopoverOpen] = useState(false);
   const [dnsBlocklist, setDnsBlocklist] = useState<string>("");
-  const [launchHook, setLaunchHook] = useState("");
 
   // Camoufox anti-detect states
   const [camoufoxConfig, setCamoufoxConfig] = useState<CamoufoxConfig>(() => ({
     os: getCurrentOS(), // Default to current OS
   }));
+  const [clearcoteConfig, setClearcoteConfig] = useState<ClearcoteConfig>({});
+  const [globalPrelaunchSites, setGlobalPrelaunchSites] = useState<PrelaunchSite[]>([]);
 
   // Reset the form fields.
   const resetForm = () => {
     setSelectedBrowser("camoufox");
     setProfileName("");
     setSelectedProxyId(undefined);
-    setLaunchHook("");
+    const defaultSites = globalPrelaunchSites.map((site) => site.url);
+    setCamoufoxConfig({ preset_tabs: defaultSites });
+    setClearcoteConfig({ preset_tabs: defaultSites });
   };
 
   const handleTabChange = (value: string) => {
@@ -135,12 +141,6 @@ export function CreateProfileDialog({
   const { vpnConfigs } = useVpnEvents();
   const [showProxyForm, setShowProxyForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [ephemeral, setEphemeral] = useState(false);
-  const [enablePassword, setEnablePassword] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const PASSWORD_MIN_LEN = 8;
   const [selectedExtensionGroupId, setSelectedExtensionGroupId] =
     useState<string>();
   const [extensionGroups, setExtensionGroups] = useState<
@@ -149,6 +149,37 @@ export function CreateProfileDialog({
 
   useEffect(() => {
     if (isOpen) {
+      void invoke<{
+        global_preset_tabs?: string[];
+        global_prelaunch_sites?: PrelaunchSite[];
+      }>("get_app_settings")
+          .then((settings) => {
+            const legacySites = (settings.global_preset_tabs ?? [])
+              .filter((url) => /^https?:\/\/[^\s]+$/i.test(url))
+              .map((url) => ({ name: new URL(url).hostname, url }));
+            const sites = (settings.global_prelaunch_sites ?? []).filter(
+              (site): site is PrelaunchSite =>
+                typeof site?.name === "string" &&
+                site.name.trim().length > 0 &&
+                typeof site?.url === "string" &&
+                /^https?:\/\/[^\s]+$/i.test(site.url),
+            );
+            const mergedSites = [...sites];
+            for (const site of legacySites) {
+              if (!mergedSites.some((item) => item.url === site.url)) mergedSites.push(site);
+            }
+            const urls = mergedSites.map((site) => site.url);
+            setGlobalPrelaunchSites(mergedSites);
+            setCamoufoxConfig((previous) => ({
+              ...previous,
+              preset_tabs: previous.preset_tabs ?? urls,
+            }));
+            setClearcoteConfig((previous) => ({
+              ...previous,
+              preset_tabs: previous.preset_tabs ?? urls,
+            }));
+          })
+        .catch(() => setGlobalPrelaunchSites([]));
       void invoke<{ id: string; name: string; extension_ids: string[] }[]>(
         "list_extension_groups",
       )
@@ -253,8 +284,11 @@ export function CreateProfileDialog({
   // Load data when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Load downloaded Camoufox versions up front so the availability gate is accurate.
-      void loadDownloadedVersions("camoufox");
+      // Load downloaded versions up front so the availability gate is accurate.
+      void Promise.all([
+        loadDownloadedVersions("camoufox"),
+        loadDownloadedVersions("clearcote"),
+      ]);
       // Load release types when a browser is selected
       if (selectedBrowser) {
         void loadReleaseTypes(selectedBrowser);
@@ -333,20 +367,6 @@ export function CreateProfileDialog({
   const handleCreate = async () => {
     if (!profileName.trim()) return;
 
-    if (enablePassword && !ephemeral) {
-      if (password.length < PASSWORD_MIN_LEN) {
-        setPasswordError(
-          t("profilePassword.errors.tooShort", { min: PASSWORD_MIN_LEN }),
-        );
-        return;
-      }
-      if (password !== passwordConfirm) {
-        setPasswordError(t("profilePassword.errors.mismatch"));
-        return;
-      }
-    }
-    setPasswordError(null);
-
     setIsCreating(true);
 
     const isVpnSelection = selectedProxyId?.startsWith("vpn-") ?? false;
@@ -354,13 +374,9 @@ export function CreateProfileDialog({
     const resolvedVpnId =
       isVpnSelection && selectedProxyId ? selectedProxyId.slice(4) : undefined;
 
-    const passwordToSet =
-      enablePassword && !ephemeral && password.length >= PASSWORD_MIN_LEN
-        ? password
-        : undefined;
     try {
       if (activeTab === "anti-detect") {
-        // Only Camoufox anti-detect profiles are created.
+        // Camoufox is the only anti-detect profile.
         const bestCamoufoxVersion = getCreatableVersion("camoufox");
         if (!bestCamoufoxVersion) {
           console.error("No Camoufox version available");
@@ -368,11 +384,14 @@ export function CreateProfileDialog({
         }
 
         // The fingerprint will be generated at launch time by the Rust backend
-        const finalCamoufoxConfig = { ...camoufoxConfig };
+        const finalCamoufoxConfig = {
+          ...camoufoxConfig,
+          preset_tabs: camoufoxConfig.preset_tabs ?? [],
+        };
 
         await onCreateProfile({
           name: profileName.trim(),
-          browserStr: "camoufox" as BrowserTypeString,
+            browserStr: "camoufox",
           version: bestCamoufoxVersion.version,
           releaseType: bestCamoufoxVersion.releaseType,
           proxyId: resolvedProxyId,
@@ -383,10 +402,7 @@ export function CreateProfileDialog({
               ? selectedGroupId
               : undefined,
           extensionGroupId: selectedExtensionGroupId,
-          ephemeral,
           dnsBlocklist: dnsBlocklist || undefined,
-          launchHook: launchHook.trim() || undefined,
-          password: passwordToSet,
         });
       } else {
         // Regular browser
@@ -395,7 +411,7 @@ export function CreateProfileDialog({
           return;
         }
 
-        // Use the latest available Camoufox version
+        // Use the latest available version for the selected browser.
         const bestVersion = getCreatableVersion(selectedBrowser);
         if (!bestVersion) {
           console.error("No version available");
@@ -407,14 +423,17 @@ export function CreateProfileDialog({
           browserStr: selectedBrowser,
           version: bestVersion.version,
           releaseType: bestVersion.releaseType,
-          proxyId: selectedProxyId,
+          proxyId: resolvedProxyId,
+          vpnId: resolvedVpnId,
+          browserConfig: {
+            ...clearcoteConfig,
+            preset_tabs: clearcoteConfig.preset_tabs ?? [],
+          },
           groupId:
             selectedGroupId && selectedGroupId !== "__all__"
               ? selectedGroupId
               : undefined,
           dnsBlocklist: dnsBlocklist || undefined,
-          launchHook: launchHook.trim() || undefined,
-          password: passwordToSet,
         });
       }
 
@@ -435,18 +454,13 @@ export function CreateProfileDialog({
     setActiveTab("anti-detect");
     setSelectedBrowser("camoufox");
     setSelectedProxyId(undefined);
-    setLaunchHook("");
     setReleaseTypes({});
     setIsLoadingReleaseTypes(false);
     setReleaseTypesError(null);
     setCamoufoxConfig({
       os: getCurrentOS(), // Reset to current OS
     });
-    setEphemeral(false);
-    setEnablePassword(false);
-    setPassword("");
-    setPasswordConfirm("");
-    setPasswordError(null);
+    setClearcoteConfig({});
     onClose();
   };
 
@@ -494,7 +508,7 @@ export function CreateProfileDialog({
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {t("createProfile.configureTitle", {
-              browser: t("createProfile.chromiumLabel"),
+            browser: getBrowserDisplayName(selectedBrowser),
             })}
           </DialogTitle>
         </DialogHeader>
@@ -504,12 +518,100 @@ export function CreateProfileDialog({
           onValueChange={handleTabChange}
           className="flex min-h-0 w-full flex-1 flex-col"
         >
-          {/* Tab list hidden - only anti-detect browsers are supported */}
+          <div className="grid grid-cols-2 gap-2 border-b pb-4">
+            {(["camoufox", "clearcote"] as const).map((browser) => {
+              const Icon = getBrowserIcon(browser);
+              const selected = selectedBrowser === browser;
+              return (
+                <Button
+                  key={browser}
+                  type="button"
+                  variant={selected ? "secondary" : "outline"}
+                  className="h-auto justify-start gap-2 py-3"
+                  onClick={() => {
+                    setSelectedBrowser(browser);
+                    setActiveTab(browser === "camoufox" ? "anti-detect" : "regular");
+                  }}
+                >
+                  <Icon className="size-4" />
+                  <span>{getBrowserDisplayName(browser)}</span>
+                </Button>
+              );
+            })}
+           </div>
+
+           {selectedBrowser === "clearcote" && (
+            <div className="mt-4 space-y-4 rounded-lg border bg-muted/20 p-4">
+              <div>
+                <h3 className="font-medium">
+                  {t("createProfile.engineSettings.title")}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("createProfile.engineSettings.description")}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="clearcote-fingerprint-platform">
+                    {t("createProfile.engineSettings.platform")}
+                  </Label>
+                  <Select
+                    value={clearcoteConfig.fingerprint_platform ?? "auto"}
+                    onValueChange={(value) =>
+                      setClearcoteConfig((current) => ({
+                        ...current,
+                        fingerprint_platform:
+                          value === "auto" ? undefined : (value as CamoufoxOS),
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="clearcote-fingerprint-platform">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">
+                        {t("createProfile.engineSettings.auto")}
+                      </SelectItem>
+                      <SelectItem value="windows">
+                        {t("createProfile.os.windows")}
+                      </SelectItem>
+                      <SelectItem value="macos">
+                        {t("createProfile.os.macos")}
+                      </SelectItem>
+                      <SelectItem value="linux">
+                        {t("createProfile.os.linux")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clearcote-fingerprint-seed">
+                    {t("createProfile.engineSettings.seed")}
+                  </Label>
+                  <Input
+                    id="clearcote-fingerprint-seed"
+                    value={clearcoteConfig.fingerprint_seed ?? ""}
+                    onChange={(event) =>
+                      setClearcoteConfig((current) => ({
+                        ...current,
+                        fingerprint_seed: event.target.value || undefined,
+                      }))
+                    }
+                    placeholder={t(
+                      "createProfile.engineSettings.seedPlaceholder",
+                    )}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("createProfile.engineSettings.seedHint")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <ScrollArea className="flex-1 overflow-y-auto">
             <div className="flex w-full flex-col items-center justify-center">
               <div className="w-full space-y-6 py-4">
-                <>
                     <TabsContent value="anti-detect" className="mt-0">
                       {/* Anti-Detect Configuration */}
                       <div className="space-y-6">
@@ -538,87 +640,6 @@ export function CreateProfileDialog({
                             )}
                           />
                         </div>
-
-                        {/* Ephemeral Option */}
-                        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                          <div className="flex items-center gap-x-2">
-                            <Checkbox
-                              id="ephemeral"
-                              checked={ephemeral}
-                              onCheckedChange={(checked) => {
-                                setEphemeral(checked === true);
-                              }}
-                            />
-                            <Label htmlFor="ephemeral" className="font-medium">
-                              {t("profiles.ephemeral")}
-                            </Label>
-                          </div>
-                          <p className="ml-6 text-sm text-muted-foreground">
-                            {t("profiles.ephemeralDescription")}
-                          </p>
-                        </div>
-
-                        {/* Password Option */}
-                        {!ephemeral && (
-                          <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                            <div className="flex items-center gap-x-2">
-                              <Checkbox
-                                id="enable-password"
-                                checked={enablePassword}
-                                onCheckedChange={(checked) => {
-                                  setEnablePassword(checked === true);
-                                  if (checked !== true) {
-                                    setPassword("");
-                                    setPasswordConfirm("");
-                                    setPasswordError(null);
-                                  }
-                                }}
-                              />
-                              <Label
-                                htmlFor="enable-password"
-                                className="font-medium"
-                              >
-                                {t("createProfile.passwordProtect.label")}
-                              </Label>
-                            </div>
-                            <p className="ml-6 text-sm text-muted-foreground">
-                              {t("createProfile.passwordProtect.description")}
-                            </p>
-                            {enablePassword && (
-                              <div className="ml-6 space-y-2">
-                                <Input
-                                  type="password"
-                                  value={password}
-                                  onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    setPasswordError(null);
-                                  }}
-                                  placeholder={t(
-                                    "profilePassword.fields.newPassword",
-                                  )}
-                                  autoComplete="new-password"
-                                />
-                                <Input
-                                  type="password"
-                                  value={passwordConfirm}
-                                  onChange={(e) => {
-                                    setPasswordConfirm(e.target.value);
-                                    setPasswordError(null);
-                                  }}
-                                  placeholder={t(
-                                    "profilePassword.fields.confirm",
-                                  )}
-                                  autoComplete="new-password"
-                                />
-                                {passwordError && (
-                                  <p className="text-sm text-destructive-text">
-                                    {passwordError}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
 
                         <div className="space-y-6">
                           {/* Camoufox Download Status */}
@@ -653,7 +674,7 @@ export function CreateProfileDialog({
                               <div className="flex items-center gap-3 rounded-md border border-warning/50 bg-warning/10 p-3">
                                 <p className="text-sm text-warning-text">
                                   {t("createProfile.platformUnavailable", {
-                                    browser: "Camoufox",
+                                    browser: "Firefox",
                                   })}
                                 </p>
                               </div>
@@ -666,7 +687,7 @@ export function CreateProfileDialog({
                               <div className="flex items-center gap-3 rounded-md border p-3">
                                 <p className="text-sm text-muted-foreground">
                                   {t("createProfile.version.needsDownload", {
-                                    browser: "Camoufox",
+                                    browser: "Firefox",
                                     version:
                                       getBestAvailableVersion("camoufox")
                                         ?.version,
@@ -697,7 +718,7 @@ export function CreateProfileDialog({
                               <div className="rounded-md border p-3 text-sm text-muted-foreground">
                                 ✓{" "}
                                 {t("createProfile.version.available", {
-                                  browser: "Camoufox",
+                                  browser: "Firefox",
                                   version:
                                     getCreatableVersion("camoufox")?.version,
                                 })}
@@ -714,7 +735,7 @@ export function CreateProfileDialog({
                                   {t(
                                     "createProfile.version.upgradeAvailable",
                                     {
-                                      browser: "Camoufox",
+                                      browser: "Firefox",
                                       version:
                                         getBestAvailableVersion("camoufox")
                                           ?.version,
@@ -743,7 +764,7 @@ export function CreateProfileDialog({
                           {isBrowserCurrentlyDownloading("camoufox") && (
                             <div className="rounded-md border p-3 text-sm text-muted-foreground">
                               {t("createProfile.version.downloading", {
-                                browser: "Camoufox",
+                                browser: "Firefox",
                                 version:
                                   getBestAvailableVersion("camoufox")?.version,
                               })}
@@ -779,6 +800,74 @@ export function CreateProfileDialog({
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {([
+                                [
+                                  "screen_min_width",
+                                  "createProfile.screen.minWidth",
+                                ],
+                                [
+                                  "screen_max_width",
+                                  "createProfile.screen.maxWidth",
+                                ],
+                                [
+                                  "screen_min_height",
+                                  "createProfile.screen.minHeight",
+                                ],
+                                [
+                                  "screen_max_height",
+                                  "createProfile.screen.maxHeight",
+                                ],
+                              ] as const).map(([key, label]) => (
+                                <div className="space-y-2" key={key}>
+                                  <Label htmlFor={`camoufox-${key}`}>
+                                    {t(label)}
+                                  </Label>
+                                  <Input
+                                    id={`camoufox-${key}`}
+                                    type="number"
+                                    min={1}
+                                    value={camoufoxConfig[key] ?? ""}
+                                    onChange={(event) =>
+                                      updateCamoufoxConfig(
+                                        key,
+                                        event.target.value
+                                          ? Number(event.target.value)
+                                          : undefined,
+                                      )
+                                    }
+                                    placeholder={t(
+                                      "createProfile.screen.autoPlaceholder",
+                                    )}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-4">
+                              <div>
+                                <Label htmlFor="camoufox-randomize-fingerprint">
+                                  {t("createProfile.randomizeFingerprint.label")}
+                                </Label>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {t("createProfile.randomizeFingerprint.description")}
+                                </p>
+                              </div>
+                              <Checkbox
+                                id="camoufox-randomize-fingerprint"
+                                checked={
+                                  camoufoxConfig.randomize_fingerprint_on_launch ??
+                                  false
+                                }
+                                onCheckedChange={(checked) =>
+                                  updateCamoufoxConfig(
+                                    "randomize_fingerprint_on_launch",
+                                    checked === true,
+                                  )
+                                }
+                              />
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -847,32 +936,13 @@ export function CreateProfileDialog({
 
                             <div className="space-y-2">
                               <Label>{t("createProfile.presetTabs.label")}</Label>
-                              <div className="space-y-2">
-                                {PRESET_TAB_OPTIONS.map((preset) => (
-                                  <div
-                                    key={preset.url}
-                                    className="flex items-center justify-between"
-                                  >
-                                    <Label htmlFor={`camoufox-preset-${preset.key}`}>
-                                      {t(`createProfile.presetTabs.${preset.key}`)}
-                                    </Label>
-                                    <Checkbox
-                                      id={`camoufox-preset-${preset.key}`}
-                                      checked={(camoufoxConfig.preset_tabs ?? []).includes(
-                                        preset.url,
-                                      )}
-                                      onCheckedChange={(checked) => {
-                                        const current = camoufoxConfig.preset_tabs ?? [];
-                                        const next =
-                                          checked === true
-                                            ? [...current, preset.url]
-                                            : current.filter((u) => u !== preset.url);
-                                        updateCamoufoxConfig("preset_tabs", next);
-                                      }}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
+                              <PrelaunchSitesSelector
+                                idPrefix="camoufox-preset"
+                                t={t}
+                                customSites={globalPrelaunchSites}
+                                selectedUrls={camoufoxConfig.preset_tabs ?? []}
+                                onChange={(urls) => updateCamoufoxConfig("preset_tabs", urls)}
+                              />
                             </div>
                           </div>
                         </div>
@@ -915,7 +985,7 @@ export function CreateProfileDialog({
                                           v.id === selectedProxyId.slice(4),
                                       );
                                       return vpn
-                                        ? `WG — ${vpn.name}`
+                                         ? `WG — ${vpn.name}`
                                         : t("createProfile.proxy.noProxy");
                                     }
                                     const proxy = storedProxies.find(
@@ -1009,7 +1079,7 @@ export function CreateProfileDialog({
                                               variant="outline"
                                               className="mr-1 px-1 py-0 text-[10px] leading-tight"
                                             >
-                                              WG
+                                               WG
                                             </Badge>
                                             {vpn.name}
                                           </CommandItem>
@@ -1025,23 +1095,6 @@ export function CreateProfileDialog({
                               {t("createProfile.proxy.noProxiesAvailable")}
                             </div>
                           )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="launch-hook-url">
-                            {t("createProfile.launchHook.label")}
-                          </Label>
-                          <Input
-                            id="launch-hook-url"
-                            value={launchHook}
-                            onChange={(e) => {
-                              setLaunchHook(e.target.value);
-                            }}
-                            placeholder={t(
-                              "createProfile.launchHook.placeholder",
-                            )}
-                            disabled={isCreating}
-                          />
                         </div>
 
                         {/* DNS Blocklist */}
@@ -1134,6 +1187,24 @@ export function CreateProfileDialog({
                               "createProfile.profileNamePlaceholder",
                             )}
                           />
+                        </div>
+
+                        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                          <Label className="font-medium">
+                            {t("createProfile.presetTabs.label")}
+                          </Label>
+                           <PrelaunchSitesSelector
+                             idPrefix="clearcote-preset"
+                             t={t}
+                             customSites={globalPrelaunchSites}
+                             selectedUrls={clearcoteConfig.preset_tabs ?? []}
+                             onChange={(urls) =>
+                               setClearcoteConfig((prev) => ({
+                                 ...prev,
+                                 preset_tabs: urls,
+                               }))
+                             }
+                           />
                         </div>
 
                         {/* Regular Browser Configuration */}
@@ -1275,7 +1346,7 @@ export function CreateProfileDialog({
                                           v.id === selectedProxyId.slice(4),
                                       );
                                       return vpn
-                                        ? `WG — ${vpn.name}`
+                                         ? `WG — ${vpn.name}`
                                         : t("createProfile.proxy.noProxy");
                                     }
                                     const proxy = storedProxies.find(
@@ -1369,7 +1440,7 @@ export function CreateProfileDialog({
                                               variant="outline"
                                               className="mr-1 px-1 py-0 text-[10px] leading-tight"
                                             >
-                                              WG
+                                               WG
                                             </Badge>
                                             {vpn.name}
                                           </CommandItem>
@@ -1386,26 +1457,8 @@ export function CreateProfileDialog({
                             </div>
                           )}
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="launch-hook-url-regular">
-                            {t("createProfile.launchHook.label")}
-                          </Label>
-                          <Input
-                            id="launch-hook-url-regular"
-                            value={launchHook}
-                            onChange={(e) => {
-                              setLaunchHook(e.target.value);
-                            }}
-                            placeholder={t(
-                              "createProfile.launchHook.placeholder",
-                            )}
-                            disabled={isCreating}
-                          />
-                        </div>
                       </div>
                     </TabsContent>
-                  </>
               </div>
             </div>
           </ScrollArea>

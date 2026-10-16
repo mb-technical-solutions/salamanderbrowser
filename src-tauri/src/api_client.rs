@@ -421,6 +421,60 @@ impl ApiClient {
     Ok(compatible_releases)
   }
 
+  fn has_compatible_clearcote_asset(assets: &[GithubAsset], os: &str, arch: &str) -> bool {
+    let suffix = match (os, arch) {
+      ("windows", "x64") => "-windows-x64.zip",
+      ("linux", "x64") => "-linux-x64.tar.xz",
+      _ => return false,
+    };
+    assets.iter().any(|asset| {
+      asset.name.to_lowercase().starts_with("clearcote-")
+        && asset.name.to_lowercase().ends_with(suffix)
+    })
+  }
+
+  pub fn find_clearcote_asset<'a>(
+    release: &'a GithubRelease,
+    os: &str,
+    arch: &str,
+  ) -> Option<&'a GithubAsset> {
+    let suffix = match (os, arch) {
+      ("windows", "x64") => "-windows-x64.zip",
+      ("linux", "x64") => "-linux-x64.tar.xz",
+      _ => return None,
+    };
+    release.assets.iter().find(|asset| {
+      asset.name.to_lowercase().starts_with("clearcote-")
+        && asset.name.to_lowercase().ends_with(suffix)
+    })
+  }
+
+  pub async fn fetch_clearcote_releases_with_caching(
+    &self,
+    no_caching: bool,
+  ) -> Result<Vec<GithubRelease>, Box<dyn std::error::Error + Send + Sync>> {
+    if !no_caching {
+      if let Some(releases) = self.load_cached_github_releases("clearcote") {
+        return Ok(releases);
+      }
+    }
+    let releases = self
+      .fetch_github_releases_multiple_pages(
+        "https://api.github.com/repos/clearcotelabs/clearcote-browser/releases",
+      )
+      .await?;
+    let (os, arch) = Self::get_platform_info();
+    let mut compatible: Vec<GithubRelease> = releases
+      .into_iter()
+      .filter(|release| Self::has_compatible_clearcote_asset(&release.assets, &os, &arch))
+      .collect();
+    sort_github_releases(&mut compatible);
+    if !no_caching {
+      self.save_cached_github_releases("clearcote", &compatible)?;
+    }
+    Ok(compatible)
+  }
+
   pub fn clear_all_cache(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cache_dir = Self::get_cache_dir()?;
 
@@ -528,6 +582,30 @@ mod tests {
         "v152.0.4-beta.26",
       ]
     );
+  }
+
+  #[test]
+  fn clearcote_asset_lookup_matches_only_supported_x64_archives() {
+    let release: GithubRelease = serde_json::from_value(serde_json::json!({
+      "tag_name": "v0.1.0-pre.23",
+      "assets": [
+        {"name": "clearcote-150.0.7871.114-linux-x64.tar.xz", "browser_download_url": "https://example.invalid/linux"},
+        {"name": "clearcote-150.0.7871.114-windows-x64.zip", "browser_download_url": "https://example.invalid/windows"}
+      ]
+    })).unwrap();
+    assert_eq!(
+      ApiClient::find_clearcote_asset(&release, "linux", "x64")
+        .unwrap()
+        .name,
+      "clearcote-150.0.7871.114-linux-x64.tar.xz"
+    );
+    assert_eq!(
+      ApiClient::find_clearcote_asset(&release, "windows", "x64")
+        .unwrap()
+        .name,
+      "clearcote-150.0.7871.114-windows-x64.zip"
+    );
+    assert!(ApiClient::find_clearcote_asset(&release, "linux", "arm64").is_none());
   }
 
   #[test]

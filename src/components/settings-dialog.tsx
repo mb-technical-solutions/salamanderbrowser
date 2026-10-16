@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -57,7 +58,7 @@ import {
 } from "@/lib/themes";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
-import type { SetDefaultBrowserOutcome } from "@/types";
+import type { PrelaunchSite, SetDefaultBrowserOutcome } from "@/types";
 import { RippleButton } from "./ui/ripple";
 
 interface AppSettings {
@@ -65,9 +66,10 @@ interface AppSettings {
   theme: string;
   custom_theme?: Record<string, string>;
   disable_auto_updates?: boolean;
-  keep_decrypted_profiles_in_ram?: boolean;
   fingerprint_gate_disabled?: boolean;
   vpn_extension_warning_disabled?: boolean;
+  global_preset_tabs?: string[];
+  global_prelaunch_sites?: PrelaunchSite[];
 }
 
 interface CustomThemeState {
@@ -150,6 +152,10 @@ export function SettingsDialog({
   } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [originalLanguage, setOriginalLanguage] = useState<string | null>(null);
+  const [globalPrelaunchSites, setGlobalPrelaunchSites] = useState<PrelaunchSite[]>([]);
+  const [newPresetSiteName, setNewPresetSiteName] = useState("");
+  const [newPresetSiteUrl, setNewPresetSiteUrl] = useState("");
+  const prelaunchSaveChainRef = useRef(Promise.resolve());
 
   const getPermissionIcon = useCallback((type: PermissionType) => {
     switch (type) {
@@ -264,6 +270,17 @@ export function SettingsDialog({
 
       setSettings(migrated);
       setOriginalSettings(migrated);
+      const legacySites = (migrated.global_preset_tabs ?? [])
+        .filter((url) => /^https?:\/\/[^\s]+$/i.test(url))
+        .map((url) => ({ name: new URL(url).hostname, url }));
+      const namedSites = (migrated.global_prelaunch_sites ?? []).filter(
+        (site) => site.name.trim().length > 0 && /^https?:\/\/[^\s]+$/i.test(site.url),
+      );
+      const mergedSites = [...namedSites];
+      for (const site of legacySites) {
+        if (!mergedSites.some((item) => item.url === site.url)) mergedSites.push(site);
+      }
+      setGlobalPrelaunchSites(mergedSites);
       originalSettingsRef.current = migrated;
       hasLoadedSettingsRef.current = true;
       setHasLoadedSettings(true);
@@ -466,12 +483,55 @@ export function SettingsDialog({
     [requestPermission, t],
   );
 
+  const persistPrelaunchSites = useCallback((sites: PrelaunchSite[]) => {
+    const save = async () => {
+      const current = await invoke<AppSettings>("get_app_settings");
+      await invoke("save_app_settings", {
+        settings: {
+          ...current,
+          global_preset_tabs: [],
+          global_prelaunch_sites: sites,
+        },
+      });
+    };
+
+    // Preserve click order if the user adds/removes several sites quickly.
+    prelaunchSaveChainRef.current = prelaunchSaveChainRef.current
+      .catch(() => undefined)
+      .then(save)
+      .catch((error) => {
+        console.error("Failed to save pre-launch sites:", error);
+        showErrorToast(t("common.errors.unknown"));
+      });
+  }, [t]);
+
+  const addPrelaunchSite = useCallback(() => {
+    const name = newPresetSiteName.trim();
+    const url = newPresetSiteUrl.trim();
+    if (!name || !/^https?:\/\/[^\s]+$/i.test(url)) return;
+    if (globalPrelaunchSites.some((site) => site.url === url)) return;
+
+    const next = [...globalPrelaunchSites, { name, url }];
+    setGlobalPrelaunchSites(next);
+    persistPrelaunchSites(next);
+    setNewPresetSiteName("");
+    setNewPresetSiteUrl("");
+  }, [globalPrelaunchSites, newPresetSiteName, newPresetSiteUrl, persistPrelaunchSites]);
+
+  const removePrelaunchSite = useCallback((url: string) => {
+    const next = globalPrelaunchSites.filter((site) => site.url !== url);
+    setGlobalPrelaunchSites(next);
+    persistPrelaunchSites(next);
+  }, [globalPrelaunchSites, persistPrelaunchSites]);
+
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
       // Update settings with current custom theme state
       let settingsToSave: AppSettings = {
         ...settings,
+        global_preset_tabs: [],
+        global_prelaunch_sites: globalPrelaunchSites,
         custom_theme:
           settings.theme === "custom"
             ? customThemeState.colors
@@ -561,6 +621,7 @@ export function SettingsDialog({
     setTheme,
     settings,
     customThemeState,
+    globalPrelaunchSites,
     selectedLanguage,
     originalLanguage,
     changeLanguage,
@@ -1088,6 +1149,73 @@ export function SettingsDialog({
                 </RippleButton>
               </div>
 
+               <div className="space-y-3 rounded-lg border p-3">
+                <div>
+                  <Label className="text-sm font-medium">
+                    {t("settings.prelaunchSites.title")}
+                  </Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("settings.prelaunchSites.description")}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    aria-label={t("settings.prelaunchSites.namePlaceholder")}
+                    placeholder={t("settings.prelaunchSites.namePlaceholder")}
+                    required
+                    value={newPresetSiteName}
+                    onChange={(event) => setNewPresetSiteName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addPrelaunchSite();
+                      }
+                    }}
+                  />
+                  <Input
+                    aria-label={t("settings.prelaunchSites.placeholder")}
+                    placeholder={t("settings.prelaunchSites.placeholder")}
+                    required
+                    value={newPresetSiteUrl}
+                    onChange={(event) => setNewPresetSiteUrl(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addPrelaunchSite();
+                      }
+                    }}
+                  />
+                  <RippleButton
+                    type="button"
+                    variant="outline"
+                    onClick={addPrelaunchSite}
+                  >
+                    +
+                  </RippleButton>
+                </div>
+                <div className="space-y-1">
+                  {globalPrelaunchSites.map((site) => (
+                      <div key={site.url} className="flex items-center gap-2 rounded border px-2 py-1 text-sm">
+                        <span className="min-w-0 flex-1 truncate" title={site.url}>
+                          <span className="font-medium">{site.name}</span>
+                          <span className="ml-2 text-muted-foreground">{site.url}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove ${site.name}`}
+                          onClick={() => removePrelaunchSite(site.url)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.prelaunchSites.hint")}
+                </p>
+              </div>
+
               {/* Advanced Section */}
               <div className="space-y-4">
                 <Label className="text-base font-medium">
@@ -1119,30 +1247,6 @@ export function SettingsDialog({
                     </div>
                   </div>
                 )}
-
-                <div className="flex items-start gap-x-3 rounded-lg border p-3">
-                  <Checkbox
-                    id="keep-decrypted-profiles-in-ram"
-                    checked={settings.keep_decrypted_profiles_in_ram ?? false}
-                    onCheckedChange={(checked) => {
-                      updateSetting(
-                        "keep_decrypted_profiles_in_ram",
-                        checked as boolean,
-                      );
-                    }}
-                  />
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="keep-decrypted-profiles-in-ram"
-                      className="text-sm font-medium"
-                    >
-                      {t("settings.keepDecryptedProfilesInRam")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("settings.keepDecryptedProfilesInRamDescription")}
-                    </p>
-                  </div>
-                </div>
 
                 <LoadingButton
                   isLoading={isClearingCache}

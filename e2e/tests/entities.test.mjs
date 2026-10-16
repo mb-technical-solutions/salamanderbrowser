@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import http from "node:http";
 import {
   mkdir,
   readdir,
@@ -8,6 +7,7 @@ import {
   realpath,
   writeFile,
 } from "node:fs/promises";
+import http from "node:http";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
@@ -33,7 +33,6 @@ async function createProfile(app, name = "Entity Profile") {
     // suite separately exercises real Wayfern fingerprint generation.
     wayfernConfig: { fingerprint: "{}" },
     groupId: null,
-    ephemeral: false,
     dnsBlocklist: null,
     launchHook: null,
   });
@@ -46,6 +45,19 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
   await withApp(
     "entities-core",
     async (app) => {
+      const missingCamoufoxError = await app.invokeError(
+        "import_camoufox_profile",
+        {
+          sourcePath: path.join(app.root, "missing-camoufox-profile"),
+          newProfileName: "Missing Camoufox Profile",
+          proxyId: null,
+          vpnId: null,
+          groupId: null,
+          fingerprintJson: null,
+        },
+      );
+      assert.match(missingCamoufoxError, /PROFILE|NOT_FOUND|missing/i);
+
       const group = await app.invoke("create_profile_group", {
         name: "Research",
       });
@@ -276,11 +288,6 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
         profileId: profile.id,
         dnsBlocklist: "light",
       });
-      await app.invoke("update_profile_clear_on_close", {
-        profileId: profile.id,
-        clearOnClose: true,
-      });
-
       const profiles = await app.invoke("list_browser_profiles");
       const changed = profiles.find((item) => item.id === profile.id);
       assert.deepEqual(changed.tags, ["alpha", "automation"]);
@@ -292,7 +299,6 @@ test("profile, group, proxy, tag, metadata, clone, and bulk-delete lifecycle", a
         "*.internal.example",
       ]);
       assert.equal(changed.dns_blocklist, "light");
-      assert.equal(changed.clear_on_close, true);
       assert.deepEqual((await app.invoke("get_all_tags")).sort(), [
         "alpha",
         "automation",

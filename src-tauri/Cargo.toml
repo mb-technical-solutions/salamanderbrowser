@@ -1,6 +1,6 @@
 [package]
 name = "salamanderbrowser"
-version = "0.30.0"
+version = "1.0.0"
 description = "Simple Yet Powerful Anti-Detect Browser"
 authors = ["zhom@github"]
 edition = "2021"

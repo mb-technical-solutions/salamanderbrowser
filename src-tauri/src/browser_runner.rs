@@ -9,6 +9,46 @@ use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+fn apply_clearcote_config(args: &mut Vec<String>, config: Option<&serde_json::Value>) {
+  let Some(config) = config.and_then(serde_json::Value::as_object) else {
+    return;
+  };
+
+  if let Some(seed) = config
+    .get("fingerprint_seed")
+    .and_then(serde_json::Value::as_str)
+    .map(str::trim)
+    .filter(|seed| !seed.is_empty())
+  {
+    if let Some(argument) = args.iter_mut().find(|arg| arg.starts_with("--fingerprint=")) {
+      *argument = format!("--fingerprint={seed}");
+    }
+  }
+
+  if let Some(platform) = config
+    .get("fingerprint_platform")
+    .and_then(serde_json::Value::as_str)
+    .filter(|platform| matches!(*platform, "windows" | "macos" | "linux"))
+  {
+    if let Some(argument) = args
+      .iter_mut()
+      .find(|arg| arg.starts_with("--fingerprint-platform="))
+    {
+      *argument = format!("--fingerprint-platform={platform}");
+    }
+  }
+
+  if let Some(urls) = config.get("preset_tabs").and_then(serde_json::Value::as_array) {
+    for url in urls.iter().filter_map(serde_json::Value::as_str).map(str::trim).filter(|url| {
+      matches!(url.strip_prefix("https://").or_else(|| url.strip_prefix("http://")), Some(host) if !host.is_empty())
+    }) {
+      if !args.iter().any(|arg| arg == url) {
+        args.push(url.to_string());
+      }
+    }
+  }
+}
+
 static PROFILE_LAUNCH_LOCKS: LazyLock<
   tokio::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
 > = LazyLock::new(|| tokio::sync::Mutex::new(HashMap::new()));
@@ -91,70 +131,6 @@ impl BrowserRunner {
       None => return Ok(None),
     };
     Ok(PROXY_MANAGER.get_proxy_settings_by_id(proxy_id))
-  }
-
-  fn fire_launch_hook(profile: &BrowserProfile) {
-    let Some(raw_url) = profile.launch_hook.as_deref() else {
-      return;
-    };
-    let trimmed = raw_url.trim();
-    if trimmed.is_empty() {
-      return;
-    }
-
-    let parsed = match url::Url::parse(trimmed) {
-      Ok(u) => u,
-      Err(e) => {
-        log::warn!(
-          "Skipping launch hook for profile {} (ID: {}): invalid URL: {e}",
-          profile.name,
-          profile.id
-        );
-        return;
-      }
-    };
-
-    if !matches!(parsed.scheme(), "http" | "https") {
-      log::warn!(
-        "Skipping launch hook for profile {} (ID: {}): URL must be http or https",
-        profile.name,
-        profile.id
-      );
-      return;
-    }
-
-    let url = parsed.to_string();
-    let url_label = crate::log_redaction::url_label(&url);
-
-    log::info!("Firing launch hook GET {url_label}");
-
-    tokio::spawn(async move {
-      let client = match reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-      {
-        Ok(c) => c,
-        Err(e) => {
-          log::warn!(
-            "Launch hook client build failed: {}",
-            crate::log_redaction::text(&e.to_string())
-          );
-          return;
-        }
-      };
-
-      match client.get(&url).send().await {
-        Ok(resp) => {
-          log::info!("Launch hook {url_label} returned status {}", resp.status());
-        }
-        Err(e) => {
-          log::warn!(
-            "Launch hook {url_label} failed: {}",
-            crate::log_redaction::text(&e.to_string())
-          );
-        }
-      }
-    });
   }
 
   /// Resolve the upstream a launch will use.
@@ -303,6 +279,10 @@ impl BrowserRunner {
     headless: bool,
     gate: &crate::launch_gate::FingerprintGate,
   ) -> Result<BrowserProfile, Box<dyn std::error::Error + Send + Sync>> {
+    if profile.password_protected {
+      crate::profile::password::prepare_for_launch(profile)
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
+    }
     // Handle Camoufox profiles using CamoufoxManager. Proxy is applied
     // directly into the Firefox profile's user.js by CamoufoxManager itself
     // (no local SOCKS5 proxy worker the way Wayfern uses for CDP-based
@@ -326,8 +306,6 @@ impl BrowserRunner {
       let gate_result =
         crate::launch_gate::enforce_fingerprint_gate(profile, upstream_proxy.as_ref(), gate).await;
       gate_result.map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
-
-      Self::fire_launch_hook(profile);
 
       if let Some(proxy) = &upstream_proxy {
         let proxy_url = if let (Some(username), Some(password)) = (&proxy.username, &proxy.password)
@@ -353,17 +331,13 @@ impl BrowserRunner {
         camoufox_config.proxy = None;
       }
 
-      if profile.password_protected {
-        crate::profile::password::prepare_for_launch(profile)
-          .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
-      } else if profile.ephemeral {
-        crate::ephemeral_dirs::create_ephemeral_dir(&profile.id.to_string())
-          .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
-      }
-
       let mut updated_profile = profile.clone();
 
-      if camoufox_config.fingerprint.is_none() {
+      if camoufox_config.fingerprint.is_none()
+        || camoufox_config
+          .randomize_fingerprint_on_launch
+          .unwrap_or(false)
+      {
         log::info!(
           "No stored device for Camoufox profile {}; generating one",
           profile.name
@@ -380,8 +354,10 @@ impl BrowserRunner {
       log::info!("Launching Camoufox for profile: {}", profile.name);
 
       let profiles_dir = self.profile_manager.get_profiles_dir();
-      let profile_data_path =
-        crate::ephemeral_dirs::get_effective_profile_path(&updated_profile, &profiles_dir);
+      let profile_data_path = crate::ephemeral_dirs::get_effective_profile_path(
+        &updated_profile,
+        &profiles_dir,
+      );
       let profile_path_str = profile_data_path.to_string_lossy().to_string();
 
       let camoufox_result = self
@@ -391,11 +367,6 @@ impl BrowserRunner {
           updated_profile.clone(),
           camoufox_config,
           url.clone(),
-          if profile.ephemeral || profile.password_protected {
-            Some(profile_data_path.clone())
-          } else {
-            None
-          },
           remote_debugging_port,
           headless,
         )
@@ -459,6 +430,51 @@ impl BrowserRunner {
       return Ok(updated_profile);
     }
 
+    if profile.browser == "clearcote" {
+      let proxy = self.resolve_launch_proxy(profile).await?;
+      let browser = crate::browser::create_browser(crate::browser::BrowserType::Clearcote);
+      let profiles_dir = self.profile_manager.get_profiles_dir();
+      let profile_path = crate::ephemeral_dirs::get_effective_profile_path(profile, &profiles_dir);
+      let mut args = browser
+        .create_launch_args(
+          &profile_path.to_string_lossy(),
+          proxy.as_ref(),
+          url,
+          remote_debugging_port,
+          headless,
+        )
+        .map_err(|e| e.to_string())?;
+      apply_clearcote_config(&mut args, profile.browser_config.as_ref());
+      let executable = self.get_browser_executable_path(profile)?;
+      browser
+        .prepare_executable(&executable)
+        .map_err(|e| e.to_string())?;
+      let child = {
+        #[cfg(target_os = "windows")]
+        {
+          crate::platform_browser::windows::launch_browser_process(&executable, &args).await?
+        }
+        #[cfg(target_os = "linux")]
+        {
+          crate::platform_browser::linux::launch_browser_process(&executable, &args).await?
+        }
+        #[cfg(target_os = "macos")]
+        {
+          return Err("Clearcote does not publish macOS builds".into());
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+        {
+          return Err("Clearcote is unsupported on this platform".into());
+        }
+      };
+      let mut updated_profile = profile.clone();
+      updated_profile.process_id = Some(child.id());
+      updated_profile.last_launch = Some(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs());
+      self.save_process_info(&updated_profile)?;
+      let _ = events::emit("profile-updated", &updated_profile);
+      return Ok(updated_profile);
+    }
+
     Err(format!("Unsupported browser type: {}", profile.browser).into())
   }
 
@@ -469,8 +485,38 @@ impl BrowserRunner {
     url: &str,
     _internal_proxy_settings: Option<&ProxySettings>,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    if profile.browser != "camoufox" {
+    if profile.browser != "camoufox" && profile.browser != "clearcote" {
       return Err(format!("Unsupported browser type: {}", profile.browser).into());
+    }
+
+    if profile.browser == "clearcote" {
+      let executable_path = self.get_browser_executable_path(profile)?;
+      let profiles_dir = self.profile_manager.get_profiles_dir();
+      #[cfg(target_os = "windows")]
+      {
+        crate::platform_browser::windows::open_url_in_existing_browser_chromium(
+          profile,
+          url,
+          crate::browser::BrowserType::Clearcote,
+          executable_path.parent().unwrap_or(&executable_path),
+          &profiles_dir,
+        )
+        .await?;
+      }
+      #[cfg(target_os = "linux")]
+      {
+        crate::platform_browser::linux::open_url_in_existing_browser_chromium(
+          profile,
+          url,
+          crate::browser::BrowserType::Clearcote,
+          executable_path.parent().unwrap_or(&executable_path),
+          &profiles_dir,
+        )
+        .await?;
+      }
+      #[cfg(target_os = "macos")]
+      return Err("Clearcote does not publish macOS builds".into());
+      return Ok(());
     }
 
     // Camoufox (Firefox) has its own remoting protocol: launching the same
@@ -768,16 +814,6 @@ impl BrowserRunner {
         log::warn!("Warning: Failed to emit profile running changed event: {e}");
       }
 
-      if profile.password_protected {
-        crate::profile::password::complete_after_quit_and_wait(profile).await;
-      } else if profile.ephemeral {
-        let id = profile.id.to_string();
-        crate::ephemeral_dirs::remove_ephemeral_dir(&id);
-        crate::traffic_stats::delete_traffic_stats(&id);
-      } else if profile.clear_on_close {
-        crate::profile::clear_on_close::clear_profile_browsing_data(profile).await;
-      }
-
       crate::extension_manager::ExtensionManager::cleanup_unpacked_for_profile(
         &profile.id.to_string(),
       );
@@ -800,6 +836,80 @@ impl BrowserRunner {
         }
       }
 
+      if profile.password_protected {
+        crate::profile::password::complete_after_quit_and_wait(profile).await;
+      }
+
+      return Ok(());
+    }
+
+    if profile.browser == "clearcote" {
+      let mut live_profile = profile.clone();
+      // Matches the Camoufox branch above: a process that's already gone is
+      // "already stopped", not a failure to stop it. Treating it as a hard
+      // error left the UI stuck showing the profile as running (and once
+      // reported, blocked the one thing that could clear that stale state —
+      // this same kill call) whenever the browser had already exited or
+      // crashed on its own, or Chromium's own single-instance handoff meant
+      // the PID we launched no longer matched the window actually on screen.
+      let is_running = self
+        .profile_manager
+        .check_browser_status(app_handle.clone(), &live_profile)
+        .await?;
+      if is_running {
+        live_profile = self
+          .profile_manager
+          .list_profiles()
+          .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.to_string().into() })?
+          .into_iter()
+          .find(|candidate| candidate.id == profile.id)
+          .unwrap_or(live_profile);
+
+        let pid = live_profile
+          .process_id
+          .ok_or("Clearcote process ID is missing")?;
+        #[cfg(target_os = "windows")]
+        crate::platform_browser::windows::kill_browser_process_impl(pid).await?;
+        #[cfg(target_os = "linux")]
+        {
+          let profile_path =
+            live_profile.get_profile_data_path(&self.profile_manager.get_profiles_dir());
+          crate::platform_browser::linux::kill_browser_process_impl(
+            pid,
+            Some(&profile_path.to_string_lossy()),
+          )
+          .await?;
+        }
+        #[cfg(target_os = "macos")]
+        return Err("Clearcote does not publish macOS builds".into());
+      } else if let Some(pid) = live_profile.process_id {
+        // `check_browser_status` didn't match this PID against the profile's
+        // launch arguments, which is the normal "already exited" case — but
+        // Chromium can also hand a profile off to a differently-numbered
+        // process on its own, leaving the original PID still alive and
+        // unaccounted for. Best-effort kill it directly so a detection miss
+        // can't leave a real browser process orphaned; "already gone" here
+        // is an expected, non-fatal outcome, not reported to the caller.
+        #[cfg(target_os = "windows")]
+        let _ = crate::platform_browser::windows::kill_browser_process_impl(pid).await;
+        #[cfg(target_os = "linux")]
+        {
+          let profile_path =
+            live_profile.get_profile_data_path(&self.profile_manager.get_profiles_dir());
+          let _ = crate::platform_browser::linux::kill_browser_process_impl(
+            pid,
+            Some(&profile_path.to_string_lossy()),
+          )
+          .await;
+        }
+      }
+      let mut updated_profile = live_profile;
+      updated_profile.process_id = None;
+      self.save_process_info(&updated_profile)?;
+      let _ = events::emit("profile-updated", &updated_profile);
+      if updated_profile.password_protected {
+        crate::profile::password::complete_after_quit_and_wait(&updated_profile).await;
+      }
       return Ok(());
     }
 
@@ -1060,7 +1170,10 @@ pub async fn launch_browser_profile_impl(
         if io_error.kind() == std::io::ErrorKind::Other
           && io_error.to_string().contains("Exec format error")
         {
-          return Err(format!("Failed to launch browser: Executable format error. This browser version is not compatible with your system architecture ({}). Please try a different browser or version that supports your platform.", std::env::consts::ARCH));
+          return Err(format!(
+            "Failed to launch browser: Executable format error. This browser version is not compatible with your system architecture ({}). Please try a different browser or version that supports your platform.",
+            std::env::consts::ARCH
+          ));
         }
       }
       return Err(crate::wrap_backend_error(
@@ -1213,12 +1326,14 @@ mod tests {
     let other_profile = format!("launch-lock-{}", uuid::Uuid::new_v4());
     let first = lock_profile_launch(&profile).await;
 
-    assert!(tokio::time::timeout(
-      Duration::from_millis(100),
-      lock_profile_launch(&other_profile)
-    )
-    .await
-    .is_ok());
+    assert!(
+      tokio::time::timeout(
+        Duration::from_millis(100),
+        lock_profile_launch(&other_profile)
+      )
+      .await
+      .is_ok()
+    );
     assert!(
       tokio::time::timeout(Duration::from_millis(100), lock_profile_launch(&profile))
         .await
@@ -1230,6 +1345,52 @@ mod tests {
       tokio::time::timeout(Duration::from_millis(100), lock_profile_launch(&profile))
         .await
         .is_ok()
+    );
+  }
+
+  #[test]
+  fn clearcote_config_overrides_only_explicit_fingerprint_values() {
+    let mut args = vec![
+      "--fingerprint=auto-seed".to_string(),
+      "--fingerprint-platform=windows".to_string(),
+    ];
+    apply_clearcote_config(
+      &mut args,
+      Some(&serde_json::json!({
+        "fingerprint_seed": "repeatable-seed",
+        "fingerprint_platform": "linux"
+      })),
+    );
+    assert!(args.iter().any(|arg| arg == "--fingerprint=repeatable-seed"));
+    assert!(args
+      .iter()
+      .any(|arg| arg == "--fingerprint-platform=linux"));
+
+    apply_clearcote_config(&mut args, Some(&serde_json::json!({})));
+    assert!(args.iter().any(|arg| arg == "--fingerprint=repeatable-seed"));
+  }
+
+  #[test]
+  fn clearcote_config_appends_valid_preset_tabs_without_duplicates() {
+    let mut args = vec!["https://already.example/".to_string()];
+    apply_clearcote_config(
+      &mut args,
+      Some(&serde_json::json!({
+        "preset_tabs": [
+          "https://already.example/",
+          "https://new.example/",
+          "javascript:alert(1)",
+          "not a url"
+        ]
+      })),
+    );
+
+    assert_eq!(
+      args,
+      vec![
+        "https://already.example/".to_string(),
+        "https://new.example/".to_string()
+      ]
     );
   }
 }

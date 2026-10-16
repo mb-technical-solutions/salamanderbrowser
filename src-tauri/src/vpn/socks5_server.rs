@@ -68,8 +68,66 @@ fn build_udp_datagram(src: IpEndpoint, payload: &[u8]) -> Vec<u8> {
   out
 }
 
+pub(crate) enum PacketEngineOutput {
+  Network(Vec<u8>),
+  TunnelV4(Vec<u8>),
+  TunnelV6(Vec<u8>),
+  Done,
+  Error(String),
+}
+
+pub(crate) trait PacketEngine: Send {
+  fn handshake_initiation(&mut self) -> PacketEngineOutput;
+  fn decapsulate(&mut self, packet: &[u8]) -> Vec<PacketEngineOutput>;
+  fn encapsulate(&mut self, packet: &[u8]) -> PacketEngineOutput;
+  fn update_timers(&mut self) -> PacketEngineOutput;
+  fn poll(&mut self) -> Vec<PacketEngineOutput>;
+}
+
+struct BoringTunEngine {
+  tunn: Tunn,
+}
+
+impl BoringTunEngine {
+  fn output(result: TunnResult<'_>) -> PacketEngineOutput {
+    match result {
+      TunnResult::WriteToNetwork(data) => PacketEngineOutput::Network(data.to_vec()),
+      TunnResult::WriteToTunnelV4(data, _) => PacketEngineOutput::TunnelV4(data.to_vec()),
+      TunnResult::WriteToTunnelV6(data, _) => PacketEngineOutput::TunnelV6(data.to_vec()),
+      TunnResult::Done => PacketEngineOutput::Done,
+      TunnResult::Err(error) => PacketEngineOutput::Error(format!("{error:?}")),
+    }
+  }
+}
+
+impl PacketEngine for BoringTunEngine {
+  fn handshake_initiation(&mut self) -> PacketEngineOutput {
+    let mut output = vec![0u8; 2048];
+    Self::output(self.tunn.format_handshake_initiation(&mut output, false))
+  }
+
+  fn decapsulate(&mut self, packet: &[u8]) -> Vec<PacketEngineOutput> {
+    let mut output = vec![0u8; 2048];
+    vec![Self::output(self.tunn.decapsulate(None, packet, &mut output))]
+  }
+
+  fn encapsulate(&mut self, packet: &[u8]) -> PacketEngineOutput {
+    let mut output = vec![0u8; packet.len() + 256];
+    Self::output(self.tunn.encapsulate(packet, &mut output))
+  }
+
+  fn update_timers(&mut self) -> PacketEngineOutput {
+    let mut output = vec![0u8; 2048];
+    Self::output(self.tunn.update_timers(&mut output))
+  }
+
+  fn poll(&mut self) -> Vec<PacketEngineOutput> {
+    Vec::new()
+  }
+}
+
 struct WgDevice {
-  tunn: Arc<Mutex<Box<Tunn>>>,
+  engine: Arc<Mutex<Box<dyn PacketEngine>>>,
   udp_socket: Arc<UdpSocket>,
   peer_addr: SocketAddr,
   rx_queue: VecDeque<Vec<u8>>,
@@ -78,21 +136,29 @@ struct WgDevice {
 
 impl WgDevice {
   fn pump_wg_to_rx(&mut self) {
+    let mut engine = self.engine.lock().unwrap();
+    for result in engine.poll() {
+      if let PacketEngineOutput::TunnelV4(data) | PacketEngineOutput::TunnelV6(data) = result {
+        self.rx_queue.push_back(data);
+      }
+    }
+    drop(engine);
     let mut recv_buf = vec![0u8; 2048];
     loop {
       match self.udp_socket.recv_from(&mut recv_buf) {
         Ok((len, _)) => {
-          let mut dst = vec![0u8; 2048];
-          let mut tunn = self.tunn.lock().unwrap();
-          let result = tunn.decapsulate(None, &recv_buf[..len], &mut dst);
-          match result {
-            TunnResult::WriteToTunnelV4(data, _) | TunnResult::WriteToTunnelV6(data, _) => {
-              self.rx_queue.push_back(data.to_vec());
+          let mut engine = self.engine.lock().unwrap();
+          for result in engine.decapsulate(&recv_buf[..len]) {
+            match result {
+              PacketEngineOutput::TunnelV4(data) | PacketEngineOutput::TunnelV6(data) => {
+                self.rx_queue.push_back(data);
+              }
+              PacketEngineOutput::Network(response) => {
+                let _ = self.udp_socket.send_to(&response, self.peer_addr);
+              }
+              PacketEngineOutput::Error(error) => log::error!("[vpn] decapsulate error: {error}"),
+              PacketEngineOutput::Done => {}
             }
-            TunnResult::WriteToNetwork(response) => {
-              let _ = self.udp_socket.send_to(response, self.peer_addr);
-            }
-            _ => {}
           }
         }
         Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
@@ -103,26 +169,22 @@ impl WgDevice {
 
   fn flush_tx_queue(&mut self) {
     while let Some(ip_packet) = self.tx_queue.pop_front() {
-      let mut dst = vec![0u8; ip_packet.len() + 256];
-      let mut tunn = self.tunn.lock().unwrap();
-      let result = tunn.encapsulate(&ip_packet, &mut dst);
+      let mut engine = self.engine.lock().unwrap();
+      let result = engine.encapsulate(&ip_packet);
       match result {
-        TunnResult::WriteToNetwork(packet) => {
-          if let Err(e) = self.udp_socket.send_to(packet, self.peer_addr) {
+        PacketEngineOutput::Network(packet) => {
+          if let Err(e) = self.udp_socket.send_to(&packet, self.peer_addr) {
             log::error!("[wg] udp send_to failed: {e}");
           }
         }
-        TunnResult::Done => {
+        PacketEngineOutput::Done => {
           // boringtun has nothing to send right now (e.g. handshake not yet
           // complete); silently drop. smoltcp will retransmit.
         }
-        TunnResult::Err(e) => {
-          log::error!(
-            "[wg] encapsulate error for {}B IP packet: {e:?}",
-            ip_packet.len()
-          );
+        PacketEngineOutput::Error(error) => {
+          log::error!("[wg] encapsulate error for {}B IP packet: {error}", ip_packet.len());
         }
-        TunnResult::WriteToTunnelV4(_, _) | TunnResult::WriteToTunnelV6(_, _) => {
+        PacketEngineOutput::TunnelV4(_) | PacketEngineOutput::TunnelV6(_) => {
           log::error!("[wg] encapsulate returned unexpected WriteToTunnel — bug?");
         }
       }
@@ -130,11 +192,9 @@ impl WgDevice {
   }
 
   fn tick_timers(&mut self) {
-    let mut dst = vec![0u8; 2048];
-    let mut tunn = self.tunn.lock().unwrap();
-    let result = tunn.update_timers(&mut dst);
-    if let TunnResult::WriteToNetwork(packet) = result {
-      let _ = self.udp_socket.send_to(packet, self.peer_addr);
+    let mut engine = self.engine.lock().unwrap();
+    if let PacketEngineOutput::Network(packet) = engine.update_timers() {
+      let _ = self.udp_socket.send_to(&packet, self.peer_addr);
     }
   }
 }
@@ -294,7 +354,7 @@ impl WireGuardSocks5Server {
     Self { config, port }
   }
 
-  fn create_tunnel(&self) -> Result<Box<Tunn>, VpnError> {
+  fn create_tunnel(&self) -> Result<Box<dyn PacketEngine>, VpnError> {
     let private_key_bytes = parse_key(&self.config.private_key)?;
     let static_private = StaticSecret::from(private_key_bytes);
 
@@ -307,14 +367,16 @@ impl WireGuardSocks5Server {
       None
     };
 
-    Ok(Box::new(Tunn::new(
-      static_private,
-      peer_public,
-      preshared_key,
-      self.config.persistent_keepalive,
-      0,
-      None,
-    )))
+    Ok(Box::new(BoringTunEngine {
+      tunn: Tunn::new(
+        static_private,
+        peer_public,
+        preshared_key,
+        self.config.persistent_keepalive,
+        0,
+        None,
+      ),
+    }))
   }
 
   fn resolve_endpoint(&self) -> Result<SocketAddr, VpnError> {
@@ -338,7 +400,7 @@ impl WireGuardSocks5Server {
   }
 
   fn do_handshake(
-    tunn: &mut Tunn,
+    engine: &mut dyn PacketEngine,
     socket: &UdpSocket,
     peer_addr: SocketAddr,
   ) -> Result<(), VpnError> {
@@ -354,42 +416,68 @@ impl WireGuardSocks5Server {
     let mut last_error = String::from("no handshake attempt completed");
 
     for attempt in 1..=max_attempts {
-      let mut dst = vec![0u8; 2048];
-      let result = tunn.format_handshake_initiation(&mut dst, false);
-
-      match result {
-        TunnResult::WriteToNetwork(packet) => {
+      match engine.handshake_initiation() {
+        PacketEngineOutput::Network(packet) => {
           socket
-            .send_to(packet, peer_addr)
+            .send_to(&packet, peer_addr)
             .map_err(|e| VpnError::Connection(format!("Failed to send handshake: {e}")))?;
         }
-        TunnResult::Err(e) => {
+        PacketEngineOutput::Error(e) => {
           return Err(VpnError::Tunnel(format!(
-            "Handshake initiation failed: {e:?}"
+            "Handshake initiation failed: {e}"
           )));
         }
+        // `Done` here just means boringtun had nothing to transmit this
+        // round (e.g. its internal rate limiter is holding off a retry) —
+        // it is NOT a signal that the handshake completed. Fall through and
+        // still wait for a response; if the peer's earlier reply is still
+        // in flight this read will pick it up, otherwise we retry below.
+        PacketEngineOutput::Done => {}
         _ => {}
       }
 
       let mut recv_buf = vec![0u8; 2048];
       match socket.recv_from(&mut recv_buf) {
+        Ok((0, _)) => {
+          // A zero-length read is never a real WireGuard packet — on Windows
+          // it can show up as a residual artifact of an earlier ICMP
+          // port-unreachable notification on this socket. Treating it as
+          // success (as a prior version of this code did) let a dead peer
+          // silently "complete" the handshake with no real session.
+          last_error = "received an empty datagram".to_string();
+          log::warn!(
+            "[vpn-worker] Handshake attempt {attempt}/{max_attempts} got an empty response, retrying"
+          );
+          continue;
+        }
         Ok((len, _)) => {
-          let result = tunn.decapsulate(None, &recv_buf[..len], &mut dst);
-          match result {
-            TunnResult::WriteToNetwork(response) => {
-              socket
-                .send_to(response, peer_addr)
-                .map_err(|e| VpnError::Connection(format!("Failed to send response: {e}")))?;
+          let mut saw_error = false;
+          for result in engine.decapsulate(&recv_buf[..len]) {
+            match result {
+              PacketEngineOutput::Network(response) => {
+                socket
+                  .send_to(&response, peer_addr)
+                  .map_err(|e| VpnError::Connection(format!("Failed to send response: {e}")))?;
+              }
+              PacketEngineOutput::Done => {}
+              PacketEngineOutput::Error(e) => {
+                last_error = format!("handshake response error: {e}");
+                saw_error = true;
+              }
+              _ => {}
             }
-            TunnResult::Done => {}
-            TunnResult::Err(e) => {
-              last_error = format!("handshake response error: {e:?}");
-              log::warn!(
-                "[vpn-worker] Handshake attempt {attempt}/{max_attempts} failed: {last_error}"
-              );
-              continue;
-            }
-            _ => {}
+          }
+
+          if saw_error {
+            // The datagram we received did not decode as a valid handshake
+            // response (garbage, a stray packet, or a stale network error
+            // surfaced as readable data). Retry instead of declaring the
+            // tunnel up — otherwise the worker starts the SOCKS5 listener
+            // over a session that was never actually established.
+            log::warn!(
+              "[vpn-worker] Handshake attempt {attempt}/{max_attempts} failed: {last_error}, retrying"
+            );
+            continue;
           }
 
           socket
@@ -399,13 +487,13 @@ impl WireGuardSocks5Server {
         }
         Err(e) if attempt < max_attempts => {
           log::warn!(
-            "[vpn-worker] Handshake attempt {attempt}/{max_attempts} timed out: {e}, retrying"
+            "[vpn-worker] Handshake attempt {attempt}/{max_attempts} failed: {e}, retrying"
           );
-          last_error = format!("timeout: {e}");
+          last_error = format!("{e}");
           continue;
         }
         Err(e) => {
-          last_error = format!("timeout: {e}");
+          last_error = format!("{e}");
         }
       }
     }
@@ -426,7 +514,7 @@ impl WireGuardSocks5Server {
     let udp_socket = UdpSocket::bind("0.0.0.0:0")
       .map_err(|e| VpnError::Connection(format!("Failed to create UDP socket: {e}")))?;
 
-    Self::do_handshake(&mut tunn, &udp_socket, peer_addr)?;
+    Self::do_handshake(tunn.as_mut(), &udp_socket, peer_addr)?;
 
     udp_socket
       .set_nonblocking(true)
@@ -440,7 +528,7 @@ impl WireGuardSocks5Server {
     let udp_arc = Arc::new(udp_socket);
 
     let mut device = WgDevice {
-      tunn: tunn_arc.clone(),
+      engine: tunn_arc.clone(),
       udp_socket: udp_arc.clone(),
       peer_addr,
       rx_queue: VecDeque::new(),

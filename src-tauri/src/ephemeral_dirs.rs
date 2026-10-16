@@ -299,106 +299,8 @@ pub fn remove_ephemeral_dir(profile_id: &str) -> bool {
   }
 }
 
-/// Recover ephemeral dir mappings on startup by scanning the RAM-backed base dir.
-/// Dir names are profile UUIDs, so we re-populate the in-memory HashMap.
-/// Also cleans up old disk-based dirs from previous versions.
-pub fn recover_ephemeral_dirs() {
-  cleanup_legacy_dirs();
-
-  let (base, backing) = match get_ephemeral_base_dir() {
-    Ok(base) => base,
-    Err(e) => {
-      log::warn!("Cannot recover ephemeral dirs: {e}");
-      return;
-    }
-  };
-
-  // Sweep the disk fallback even when this run resolved to a RAM disk. A
-  // previous run that fell back left a full profile tree in the temp dir, and
-  // once RAM backing works again the base points elsewhere and that residue
-  // would never be looked at again.
-  sweep_disk_fallback_residue(&base);
-
-  let entries = match std::fs::read_dir(&base) {
-    Ok(entries) => entries,
-    Err(_) => return,
-  };
-
-  let mut dirs = match EPHEMERAL_DIRS.lock() {
-    Ok(dirs) => dirs,
-    Err(_) => return,
-  };
-
-  for entry in entries.flatten() {
-    if entry.path().is_dir() {
-      if let Some(name) = entry.file_name().to_str() {
-        if uuid::Uuid::parse_str(name).is_ok() {
-          dirs.insert(
-            name.to_string(),
-            EphemeralEntry {
-              path: entry.path(),
-              // Judge a recovered directory by the base it was found under, not
-              // by what some earlier run happened to resolve.
-              backing,
-            },
-          );
-          log::info!("Recovered ephemeral dir for profile {}", name);
-        }
-      }
-    }
-  }
-}
-
-/// Securely erase leftovers from a run that was downgraded to the disk
-/// fallback, unless that fallback is the base being used right now (in which
-/// case `recover_ephemeral_dirs` is about to adopt them instead).
-fn sweep_disk_fallback_residue(current_base: &Path) {
-  let fallback = std::env::temp_dir().join("salamander-ephemeral");
-  if !fallback.exists() || fallback == current_base {
-    return;
-  }
-
-  match crate::fs_secure::secure_remove_dir_all(&fallback, true) {
-    Ok(files) if files > 0 => log::info!(
-      "Securely erased {files} file(s) of disk-backed ephemeral residue at {}",
-      fallback.display()
-    ),
-    Ok(_) => {}
-    Err(e) => log::error!(
-      "Failed to erase disk-backed ephemeral residue at {}: {e}",
-      fallback.display()
-    ),
-  }
-}
-
-/// Remove old-format ephemeral dirs from /tmp (pre-tmpfs migration).
-fn cleanup_legacy_dirs() {
-  let temp_dir = std::env::temp_dir();
-  let entries = match std::fs::read_dir(&temp_dir) {
-    Ok(entries) => entries,
-    Err(_) => return,
-  };
-
-  for entry in entries.flatten() {
-    if let Some(name) = entry.file_name().to_str() {
-      // These are always in the system temp dir by construction, so they are
-      // always on real disk and always worth zeroing.
-      if name.starts_with("donut-ephemeral-") && entry.path().is_dir() {
-        if let Err(e) = crate::fs_secure::secure_remove_dir_all(&entry.path(), true) {
-          log::warn!("Failed to clean up legacy ephemeral dir: {e}");
-        } else {
-          log::info!(
-            "Cleaned up legacy ephemeral dir: {}",
-            entry.path().display()
-          );
-        }
-      }
-    }
-  }
-}
-
 pub fn get_effective_profile_path(profile: &BrowserProfile, profiles_dir: &Path) -> PathBuf {
-  if profile.ephemeral || profile.password_protected {
+  if profile.password_protected {
     if let Some(dir) = get_ephemeral_dir(&profile.id.to_string()) {
       return dir;
     }
@@ -410,7 +312,7 @@ pub fn get_effective_profile_path(profile: &BrowserProfile, profiles_dir: &Path)
 mod tests {
   use super::*;
 
-  fn make_test_profile(id: uuid::Uuid, ephemeral: bool) -> BrowserProfile {
+  fn make_test_profile(id: uuid::Uuid, _ephemeral: bool) -> BrowserProfile {
     BrowserProfile {
       id,
       name: "test".to_string(),
@@ -418,23 +320,21 @@ mod tests {
       version: "1.0".to_string(),
       proxy_id: None,
       vpn_id: None,
-      launch_hook: None,
       process_id: None,
       last_launch: None,
       release_type: "stable".to_string(),
       camoufox_config: None,
+      browser_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
       encryption_salt: None,
       host_os: None,
-      ephemeral,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
       dns_blocklist: None,
-      password_protected: false,
-      clear_on_close: false,
+      password_protected: _ephemeral,
       created_at: None,
       updated_at: None,
     }
@@ -495,26 +395,6 @@ mod tests {
       get_effective_profile_path(&persistent_profile, &profiles_dir),
       expected
     );
-  }
-
-  #[test]
-  #[serial_test::serial]
-  fn test_recover_ephemeral_dirs() {
-    let _base = BaseGuard::new();
-    let (base, _) = get_ephemeral_base_dir().unwrap();
-    let test_id = uuid::Uuid::new_v4().to_string();
-    let test_dir = base.join(&test_id);
-    std::fs::create_dir_all(&test_dir).unwrap();
-
-    // Clear the HashMap so recovery has something to find
-    EPHEMERAL_DIRS.lock().unwrap().remove(&test_id);
-    assert!(get_ephemeral_dir(&test_id).is_none());
-
-    recover_ephemeral_dirs();
-    assert_eq!(get_ephemeral_dir(&test_id), Some(test_dir.clone()));
-
-    // Clean up
-    remove_ephemeral_dir(&test_id);
   }
 
   #[test]

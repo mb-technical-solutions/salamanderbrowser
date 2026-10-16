@@ -13,8 +13,6 @@ pub struct BrowserProfile {
   #[serde(default)]
   pub vpn_id: Option<String>, // Reference to stored VPN config
   #[serde(default)]
-  pub launch_hook: Option<String>,
-  #[serde(default)]
   pub process_id: Option<u32>,
   #[serde(default)]
   pub last_launch: Option<u64>,
@@ -22,6 +20,10 @@ pub struct BrowserProfile {
   pub release_type: String,
   #[serde(default)]
   pub camoufox_config: Option<CamoufoxConfig>, // Camoufox configuration
+  /// Browser-specific settings. Camoufox profiles continue to use
+  /// `camoufox_config`; this field gives other engines a stable extension point.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub browser_config: Option<serde_json::Value>,
   #[serde(default)]
   pub group_id: Option<String>, // Reference to profile group
   #[serde(default)]
@@ -34,22 +36,15 @@ pub struct BrowserProfile {
   pub encryption_salt: Option<String>, // Per-profile salt for password-protected profile encryption
   #[serde(default)]
   pub host_os: Option<String>, // OS where profile was created ("macos", "windows", "linux")
+  /// True when the on-disk profile directory is encrypted with a profile password.
   #[serde(default)]
-  pub ephemeral: bool,
+  pub password_protected: bool,
   #[serde(default)]
   pub extension_group_id: Option<String>,
   #[serde(default)]
   pub proxy_bypass_rules: Vec<String>,
   #[serde(default)]
   pub dns_blocklist: Option<String>,
-  /// True when the on-disk profile dir is encrypted with a per-profile password.
-  /// Decryption goes to a RAM-backed ephemeral dir, never to disk.
-  #[serde(default)]
-  pub password_protected: bool,
-  /// Wipe browsing data (except extensions and bookmarks) when the browser
-  /// exits. Ignored for ephemeral and password-protected profiles.
-  #[serde(default)]
-  pub clear_on_close: bool,
   /// Profile creation timestamp (epoch seconds, UTC). `None` for legacy
   /// profiles that pre-date this field — those are treated as ancient by
   /// any staleness check.

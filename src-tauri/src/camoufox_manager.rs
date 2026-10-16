@@ -101,9 +101,8 @@ impl CamoufoxManager {
   /// path prefixed with `\\?\` (or `\\?\UNC\` for network shares). Gecko's
   /// Glean telemetry init does not understand that prefix and fails with
   /// `ERROR_INVALID_NAME` (os error 123), which crashes the browser within
-  /// about a second of launch with no visible error to the user — this bit
-  /// hard on ephemeral profiles, whose ostensibly-absolute temp-dir path still
-  /// needs canonicalizing. Strip the prefix back off after resolving symlinks.
+  /// about a second of launch with no visible error to the user. Strip the
+  /// prefix back off after resolving symlinks.
   pub(crate) fn canonicalize_profile_path(profile_path: &str) -> String {
     let canonical = std::path::Path::new(profile_path)
       .canonicalize()
@@ -713,17 +712,12 @@ impl CamoufoxManager {
     profile: BrowserProfile,
     config: CamoufoxConfig,
     url: Option<String>,
-    override_profile_path: Option<std::path::PathBuf>,
     remote_debugging_port: Option<u16>,
     headless: bool,
   ) -> Result<CamoufoxLaunchResult, String> {
     // Get profile path
-    let profile_path = if let Some(ref override_path) = override_profile_path {
-      override_path.clone()
-    } else {
-      let profiles_dir = self.get_profiles_dir();
-      profile.get_profile_data_path(&profiles_dir)
-    };
+    let profiles_dir = self.get_profiles_dir();
+    let profile_path = crate::ephemeral_dirs::get_effective_profile_path(&profile, &profiles_dir);
     let profile_path_str = profile_path.to_string_lossy();
 
     // Check if there's already a running instance for this profile
@@ -734,29 +728,6 @@ impl CamoufoxManager {
 
     // Clean up any dead instances before launching
     let _ = self.cleanup_dead_instances().await;
-
-    // For ephemeral profiles, write Firefox prefs to minimize disk writes
-    if override_profile_path.is_some() {
-      let user_js_path = profile_path.join("user.js");
-      let prefs = concat!(
-        "user_pref(\"browser.cache.disk.enable\", false);\n",
-        "user_pref(\"browser.cache.memory.enable\", true);\n",
-        "user_pref(\"browser.sessionstore.resume_from_crash\", false);\n",
-        "user_pref(\"browser.sessionstore.max_tabs_undo\", 0);\n",
-        "user_pref(\"browser.sessionstore.max_windows_undo\", 0);\n",
-        "user_pref(\"places.history.enabled\", false);\n",
-        "user_pref(\"browser.formfill.enable\", false);\n",
-        "user_pref(\"signon.rememberSignons\", false);\n",
-        "user_pref(\"browser.bookmarks.max_backups\", 0);\n",
-        "user_pref(\"browser.shell.checkDefaultBrowser\", false);\n",
-        "user_pref(\"toolkit.crashreporter.enabled\", false);\n",
-        "user_pref(\"browser.pagethumbnails.capturing_disabled\", true);\n",
-        "user_pref(\"browser.download.manager.addToRecentDocs\", false);\n",
-      );
-      if let Err(e) = std::fs::write(&user_js_path, prefs) {
-        log::warn!("Failed to write ephemeral user.js: {e}");
-      }
-    }
 
     // Patch user.js with Camoufox-specific overrides on every launch. This
     // always runs (not gated on the proxy being set) because Camoufox's

@@ -278,6 +278,11 @@ function ensureDriver() {
     log(`tauri-wd ${version} already installed at ${driverBinary}`);
     return;
   }
+  if (process.env.SALAMANDER_E2E_OFFLINE === "1") {
+    throw new Error(
+      `tauri-wd ${version} is not cached; unset SALAMANDER_E2E_OFFLINE to install it`,
+    );
+  }
   run(
     "cargo",
     [
@@ -315,7 +320,9 @@ function buildAll() {
   run("pnpm", ["copy-proxy-binary"], projectRoot);
   run(process.execPath, ["src-tauri/download-xray.mjs"], projectRoot);
   syncHarnessLockfile();
-  run("cargo", ["build", "--manifest-path", "e2e/app/Cargo.toml"], projectRoot);
+  const cargoArgs = ["build", "--manifest-path", "e2e/app/Cargo.toml"];
+  if (process.env.SALAMANDER_E2E_OFFLINE === "1") cargoArgs.push("--offline");
+  run("cargo", cargoArgs, projectRoot);
   ensureDriver();
 }
 
@@ -391,6 +398,10 @@ async function ensureGeoIpFixture() {
       throw new Error(`SALAMANDER_E2E_GEOIP_FIXTURE does not exist: ${fixture}`);
     }
     return fixture;
+  }
+  if (process.env.SALAMANDER_E2E_OFFLINE === "1") {
+    log("Offline E2E mode: skipping optional GeoIP download");
+    return null;
   }
   const toolsDir = path.join(os.tmpdir(), "salamander-e2e-tools");
   const fixture = path.join(toolsDir, "GeoLite2-City.mmdb");

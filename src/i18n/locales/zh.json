@@ -159,10 +159,7 @@
       "copyLogsDescription": "复制经过脱敏的近期日志包（最多 5 MB）。脱敏无法识别所有类型的个人数据，请在分享前检查内容。"
     },
     "disableAutoUpdates": "禁用应用自动更新",
-    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 Salamander Browser 更新。浏览器更新不受影响。",
-    "keepDecryptedProfilesInRam": "在内存中保留已解密的配置文件",
-    "keepDecryptedProfilesInRamDescription": "在启动之间保留密码保护配置文件的已解密内存副本,以便更快地启动。无论如何磁盘上的副本始终保持加密。",
-    "privacy": {
+    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 Salamander Browser 更新。浏览器更新不受影响。",    "privacy": {
       "consistencyWarning": "指纹不匹配时阻止启动",
       "consistencyWarningDescription": "当配置文件的时区或语言与其代理出口节点不一致时，阻止浏览器启动。你仍可以选择启动。",
       "clearTraffic": "清除所有流量历史",
@@ -211,7 +208,6 @@
       "status": "是否正在运行",
       "version": "浏览器版本",
       "locked": "密码保护",
-      "ephemeral": "临时配置文件",
       "created": "创建日期",
       "launched": "上次启动日期"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "分配到组",
       "changeFingerprint": "更改指纹",
       "copyCookiesToProfile": "复制 Cookies 到配置文件",
-      "launchHook": "启动钩子 URL",
       "setPassword": "设置密码",
       "changePassword": "更改密码",
       "removePassword": "移除密码"
     },
-    "ephemeral": "临时",
     "ephemeralDescription": "浏览器被强制将配置文件数据写入内存而不是磁盘。请注意,在系统负载较高时,操作系统可能会将部分内存换出到磁盘(swap),因此会话的某些痕迹仍可能被恢复。",
     "ephemeralBadge": "临时",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "运行所选",
       "stopSelected": "停止所选",
       "proRequired": "批量运行/停止需要 Pro 套餐"
-    },
-    "passwordProtectedBadge": "密码保护",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "运行 {{count}} 个配置文件？",
       "confirmDescription": "一次启动 {{count}} 个配置文件可能会占用大量系统资源。是否继续？",
       "confirmButton": "运行 {{count}} 个",
@@ -347,10 +336,6 @@
       "search": "搜索代理或 VPN...",
       "notFound": "未找到代理或 VPN。"
     },
-    "launchHook": {
-      "label": "启动钩子 URL",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "正在获取可用版本...",
       "fetchError": "获取浏览器版本失败。请检查您的网络连接并重试。",
@@ -362,12 +347,8 @@
       "latestDownloading": "正在下载版本 ({{version}})...",
       "upgradeAvailable": "{{browser}} 有新版本（{{version}}）可用。"
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} 在您的平台上尚不可用。",
-    "passwordProtect": {
-      "label": "为此配置文件设置密码保护",
-      "description": "加密磁盘上的配置文件数据。启动时需要密码。"
-    },
     "downloadingSubtitle": "正在下载…",
     "browsersDownloading": "浏览器仍在下载中。下载完成后即可创建配置文件。",
     "os": {
@@ -618,7 +599,7 @@
       "sourcePlaceholder": "选择要复制 Cookie 的配置文件",
       "running": "(运行中)",
       "targetProfiles": "目标配置文件 ({{count}})",
-      "noOtherTargets": "未选择其他 Camoufox 配置文件",
+      "noOtherTargets": "未选择其他 Firefox 配置文件",
       "selectSourceFirst": "请先选择源配置文件",
       "selectionStatus": "(已选择 {{selected}} / {{total}})",
       "searchPlaceholder": "搜索域名或 Cookie...",
@@ -832,7 +813,7 @@
     "renameProfileFailed": "重命名配置文件失败: {{error}}",
     "killBrowserFailed": "终止浏览器失败: {{error}}",
     "deleteSelectedProfilesFailed": "删除所选配置文件失败: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Cookie 复制仅适用于 Camoufox 配置文件",
+    "cookieCopyUnsupportedBrowser": "Cookie 复制仅适用于 Firefox 配置文件；Chrome 暂不支持",
     "cloneProfileFailed": "克隆配置文件失败: {{error}}",
     "loadSupportedBrowsersFailed": "加载受支持的浏览器失败",
     "setupExtensionListenersFailed": "设置扩展事件监听器失败: {{error}}",
@@ -978,13 +959,11 @@
       "browser": "浏览器",
       "releaseType": "发布类型",
       "proxyVpn": "代理 / VPN",
-      "launchHook": "启动钩子",
       "group": "分组",
       "tags": "标签",
       "note": "备注",
       "lastLaunched": "上次启动",
       "hostOs": "主机操作系统",
-      "ephemeral": "临时",
       "extensionGroup": "扩展程序组",
       "totalSessions": "总会话",
       "proxy": "代理",
@@ -1015,13 +994,6 @@
       "vpnLabel": "VPN：{{name}}",
       "proxyLabel": "代理：{{name}}"
     },
-    "launchHook": {
-      "title": "启动钩子 URL",
-      "label": "启动钩子 URL",
-      "description": "每次启动配置文件时，Salamander Browser 都会向此 URL 发送一个 GET 请求。",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "请输入有效的 http:// 或 https:// URL。"
-    },
     "actions": {
       "manageCookies": "管理 Cookie",
       "assignExtensionGroup": "分配扩展程序组"
@@ -1041,24 +1013,19 @@
       "network": "网络",
       "cookies": "Cookie",
       "extensions": "扩展",
-      "automation": "自动化",
       "security": "安全",
       "delete": "删除配置文件",
-      "activity": "活动",
-      "launchHook": "启动钩子"
+      "activity": "活动"
     },
     "sectionDesc": {
       "fingerprint": "配置此配置文件如何对指纹脚本显示。",
       "network": "管理此配置文件使用的代理或 VPN。",
       "cookies": "导入、复制或清除此配置文件的 Cookie。",
       "extensions": "选择启动此配置文件时加载的扩展。",
-      "automation": "在启动此配置文件时运行命令。",
-      "security": "用密码加密配置文件数据。",
-      "launchHook": "每次启动配置文件时向此 URL 发送一个 GET 请求。"
+      "security": "用密码加密配置文件数据。"
     },
     "badges": {
-      "locked": "已锁",
-      "active": "已启用"
+      "locked": "已锁"
     },
     "cookies": {
       "runningNotice": "浏览器运行时无法读取 Cookie。请先关闭此配置文件。",
@@ -1072,36 +1039,9 @@
     "fingerprint": {
       "lockedTitle": "查看和编辑指纹是 Pro 功能",
       "lockedDescription": "每个配置文件中都会保护你的设备信息。查看和编辑配置文件的指纹需要有效的付费方案。",
-      "camoufoxDescription": "Camoufox 会在创建（或导入）配置文件时在本地生成指纹；目前还没有逐字段编辑器。您可以清除已保存的指纹，以便下次启动时生成新的指纹。",
+      "camoufoxDescription": "Firefox 会在创建（或导入）配置文件时在本地生成指纹；目前还没有逐字段编辑器。您可以清除已保存的指纹，以便下次启动时生成新的指纹。",
       "camoufoxRegenerateButton": "清除指纹（下次启动时重新生成）",
       "camoufoxRegenerateQueued": "指纹已清除——下次启动此配置文件时将生成新的指纹。"
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "临时配置在浏览器关闭时会被丢弃，因此这里没有可管理的 Cookie。",
-      "extensionsUnavailable": "临时配置在浏览器关闭时会被丢弃，因此无法为其分配扩展分组。",
-      "hint": "如果需要保留这些数据，请创建普通配置。"
-    }
-  },
-  "extensions": {
-    "title": "扩展程序",
-    "description": "管理配置文件的浏览器扩展程序和扩展程序组。",
-    "upload": "上传",
-    "delete": "删除",
-    "extensionsTab": "扩展程序",
-    "groupsTab": "分组",
-    "managedNotice": "此处管理的扩展程序将在启动时替换配置文件中手动安装的所有扩展程序。",
-    "proRequired": "扩展程序管理是 Pro 功能",
-    "empty": "尚未上传任何扩展程序。",
-    "noGroups": "尚未创建任何扩展程序组。",
-    "createGroup": "创建分组",
-    "newGroup": "新建分组",
-    "addToGroup": "添加扩展程序...",
-    "removeFromGroup": "从分组中移除",
-    "deleteGroup": "删除分组",
-    "extensionGroup": "扩展程序组",
-    "compatibility": {
-      "label": "兼容性",
-      "chromium": "Chromium"
     },
     "selectedFile": "已选文件",
     "namePlaceholder": "扩展程序名称",
@@ -1646,62 +1586,6 @@
       "lookingForUpdates": "正在检查 {{browser}} 的更新"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "设置配置文件密码",
-      "description": "加密 {{name}} 的磁盘数据。每次启动配置文件时都需要输入此密码。",
-      "button": "加密配置文件"
-    },
-    "unlock": {
-      "title": "解锁配置文件",
-      "description": "输入密码以解锁 {{name}}。",
-      "button": "解锁"
-    },
-    "change": {
-      "title": "更改配置文件密码",
-      "description": "使用新密码重新加密 {{name}}。",
-      "button": "更改密码"
-    },
-    "remove": {
-      "title": "移除配置文件密码",
-      "description": "解密 {{name}} 的磁盘数据。配置文件将不再受密码保护。",
-      "button": "移除密码"
-    },
-    "fields": {
-      "password": "密码",
-      "currentPassword": "当前密码",
-      "newPassword": "新密码",
-      "confirm": "确认密码",
-      "confirmPassword": "确认新密码"
-    },
-    "errors": {
-      "oldPasswordRequired": "需要当前密码",
-      "passwordRequired": "需要密码",
-      "tooShort": "密码至少需要 8 个字符",
-      "mismatch": "密码不匹配"
-    },
-    "toasts": {
-      "set": "配置文件现在受密码保护",
-      "changed": "配置文件密码已更改",
-      "removed": "配置文件密码已移除"
-    },
-    "warnings": {
-      "forgetWarningTitle": "重要:此密码无法恢复",
-      "forgetWarningBody": "Salamander Browser 无法重置、恢复或绕过此密码。如果忘记,您将永久无法访问此配置文件的数据。"
-    },
-    "modes": {
-      "set": "设置",
-      "change": "更改",
-      "remove": "删除",
-      "validate": "验证"
-    },
-    "verifyDialog": {
-      "title": "验证配置文件密码",
-      "description": "输入配置文件密码以确认它与磁盘上存储的密码匹配。",
-      "submit": "验证",
-      "matchToast": "密码正确"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "密码不正确",
     "lockedOut": "尝试次数过多。请在 {{duration}} 后重试。",
@@ -1734,7 +1618,6 @@
     "extensionPathHasComma": "该文件夹路径中包含逗号，Chromium 无法加载。请重命名或移动该文件夹。",
     "extensionLinkRequiresDirectory": "只有文件夹才能就地加载。要添加压缩包，请关闭链接选项。",
     "internal": "出现问题:{{detail}}",
-    "invalidLaunchHookUrl": "启动钩子 URL 无效。请使用完整的 http:// 或 https:// URL。",
     "cookieDbLocked": "无法读取 Cookie — 数据库已锁定。请关闭浏览器后重试。",
     "cookieDbUnavailable": "无法读取 Cookie — Cookie 存储不可用。",
     "cookieImportBrowserRunning": "浏览器运行时无法导入 Cookie。请关闭浏览器后重试。",
@@ -1754,9 +1637,7 @@
     "camoufoxImportCopyFailed": "Camoufox 导入已创建配置文件，但复制文件失败：{{detail}}",
     "browserNotDownloaded": "没有已下载的 {{browser}} 版本。请先下载，然后重试导入。",
     "archiveExtractionFailed": "解压压缩包失败：{{detail}}",
-    "unsupportedArchiveFormat": "不支持的压缩包格式。仅支持 ZIP 压缩包。",
-    "clearOnCloseUnavailable": "关闭时清除功能不适用于临时配置文件或受密码保护的配置文件。",
-    "proxyAndVpnMutuallyExclusive": "配置文件只能使用代理或 VPN，不能同时使用两者。",
+    "unsupportedArchiveFormat": "不支持的压缩包格式。仅支持 ZIP 压缩包。",    "proxyAndVpnMutuallyExclusive": "配置文件只能使用代理或 VPN，不能同时使用两者。",
     "invalidDnsRulesJson": "所选文件不是有效的 DNS 规则 JSON。",
     "unsupportedDnsRulesFormat": "不支持的规则格式：{{format}}",
     "dnsRulesSaveFailed": "保存 DNS 规则失败。",
@@ -1871,7 +1752,7 @@
     "steps": {
       "createProfile": {
         "title": "创建你的第一个配置文件",
-        "content": "点击这里创建您的第一个配置文件。系统会自动使用具备指纹保护的浏览器 Camoufox。"
+        "content": "点击这里创建您的第一个配置文件。系统会自动使用具备指纹保护的浏览器 Firefox。"
       },
       "dnsBlocking": {
         "title": "DNS 拦截",
@@ -1904,7 +1785,7 @@
     },
     "ready": {
       "title": "正在准备",
-      "descDownloading": "正在下载你的第一个浏览器（Camoufox）。此一次性设置在后台运行——请稍候。",
+      "descDownloading": "正在下载你的第一个浏览器（Firefox）。此一次性设置在后台运行——请稍候。",
       "descReady": "你的浏览器已就绪。来创建你的第一个配置文件吧。",
       "cta": "创建我的第一个配置文件",
       "downloading": "正在下载…",
@@ -1943,10 +1824,6 @@
     "searchLicenses": "搜索许可证…",
     "noMatchingLicenses": "没有匹配的许可证。",
     "openSource": "查看 {{name}} 源代码"
-  },
-  "clearOnClose": {
-    "label": "关闭时清除数据",
-    "description": "浏览器关闭时清除 Cookie、历史记录和缓存。扩展和书签将被保留。"
   },
   "consistencyWarning": {
     "timezoneDetail": "出口节点位于 {{exit}},但指纹报告为 {{fingerprint}}。",

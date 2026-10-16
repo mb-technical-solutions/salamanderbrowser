@@ -247,10 +247,6 @@ export function PreLaunchGateDialog({
 
   const scanNotice = (() => {
     switch (findings?.scanState) {
-      case "encrypted":
-        return t("prelaunchGate.scanIncompleteEncrypted");
-      case "ephemeral":
-        return t("prelaunchGate.scanIncompleteEphemeral");
       case "partial":
         return t("prelaunchGate.scanIncompletePartial");
       case "missing":

@@ -19,7 +19,6 @@ export interface BrowserProfile {
   version: string;
   proxy_id?: string; // Reference to stored proxy
   vpn_id?: string; // Reference to stored VPN config
-  launch_hook?: string;
   process_id?: number;
   last_launch?: number;
   release_type: string;
@@ -28,17 +27,31 @@ export interface BrowserProfile {
   tags?: string[];
   note?: string; // User note
   window_color?: string; // Per-profile window frame color "#RRGGBB"; auto-derived from the id when unset
+  password_protected?: boolean;
+  encryption_salt?: string;
   host_os?: string; // OS where profile was created ("macos", "windows", "linux")
-  ephemeral?: boolean;
-  clear_on_close?: boolean;
   extension_group_id?: string;
   proxy_bypass_rules?: string[];
   /** Profile creation timestamp (epoch seconds, UTC). Undefined for legacy
    * profiles created before this field existed. */
   created_at?: number;
   dns_blocklist?: string;
-  password_protected?: boolean;
+  /** Browser-specific settings for engines other than Camoufox. */
+  browser_config?: Record<string, unknown>;
 }
+
+export interface PrelaunchSite {
+  name: string;
+  url: string;
+}
+
+export interface ClearcoteConfig {
+  fingerprint_seed?: string;
+  fingerprint_platform?: CamoufoxOS;
+  preset_tabs?: string[];
+}
+
+export type BrowserType = "camoufox" | "clearcote";
 
 export interface Extension {
   id: string;
@@ -287,7 +300,6 @@ export interface CookieAnalysis {
   expiredCount: number;
   /** `null` when the store cannot be read, which is not the same as zero. */
   replaceDeleteCount: number | null;
-  clearsOnClose: boolean;
   /** A `{"code":…}` string for `translateBackendError`, or `null` to proceed. */
   blockedBy: string | null;
 }
@@ -404,12 +416,7 @@ export interface ConsistencyResult {
 export type VpnExtensionConfidence = "confirmed" | "likely" | "capability";
 
 /** How much of a profile's extension set could be read. */
-export type ExtensionScanState =
-  | "scanned"
-  | "partial"
-  | "encrypted"
-  | "ephemeral"
-  | "missing";
+export type ExtensionScanState = "scanned" | "partial" | "missing";
 
 /** An extension found in a profile that could change where the browser connects. */
 export interface DetectedVpnExtension {

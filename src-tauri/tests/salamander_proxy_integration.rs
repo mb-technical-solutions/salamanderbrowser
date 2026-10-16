@@ -126,14 +126,14 @@ impl ProxyTestTracker {
 
 impl Drop for ProxyTestTracker {
   fn drop(&mut self) {
-    let proxy_ids = self.proxy_ids.clone();
-    let binary_path = self.binary_path.clone();
-    tokio::spawn(async move {
-      for proxy_id in &proxy_ids {
-        let _ =
-          TestUtils::execute_command(&binary_path, &["proxy", "stop", "--id", proxy_id]).await;
-      }
-    });
+    // Drop runs after the test future is gone. Spawning cleanup here leaves a
+    // detached Tokio task and can keep the test process alive indefinitely.
+    // Use synchronous best-effort cleanup instead.
+    for proxy_id in &self.proxy_ids {
+      let _ = std::process::Command::new(&self.binary_path)
+        .args(["proxy", "stop", "--id", proxy_id])
+        .status();
+    }
   }
 }
 
@@ -478,7 +478,7 @@ async fn test_local_proxy_direct() -> Result<(), Box<dyn std::error::Error + Sen
   stream.write_all(request).await?;
 
   let mut response = Vec::new();
-  stream.read_to_end(&mut response).await?;
+  tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
   let response_str = String::from_utf8_lossy(&response);
 
   if response_str.contains("200 OK") || response_str.contains("origin") {
@@ -573,7 +573,7 @@ async fn test_chained_local_proxies() -> Result<(), Box<dyn std::error::Error + 
   stream.write_all(request).await?;
 
   let mut response = Vec::new();
-  stream.read_to_end(&mut response).await?;
+  tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
   let response_str = String::from_utf8_lossy(&response);
 
   if response_str.contains("200 OK") || response_str.contains("origin") {
@@ -838,7 +838,7 @@ async fn test_traffic_tracking() -> Result<(), Box<dyn std::error::Error + Send 
 
   // Read response
   let mut response = Vec::new();
-  stream.read_to_end(&mut response).await?;
+  tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
   let bytes_received = response.len();
 
   println!(
@@ -1029,7 +1029,7 @@ async fn test_bypass_rules_http_direct() -> Result<(), Box<dyn std::error::Error
     stream.write_all(request.as_bytes()).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     println!(
@@ -1057,7 +1057,7 @@ async fn test_bypass_rules_http_direct() -> Result<(), Box<dyn std::error::Error
     stream.write_all(request).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     println!(
@@ -1139,7 +1139,7 @@ async fn test_bypass_rules_regex_pattern() -> Result<(), Box<dyn std::error::Err
     stream.write_all(request.as_bytes()).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     assert!(
@@ -1158,7 +1158,7 @@ async fn test_bypass_rules_regex_pattern() -> Result<(), Box<dyn std::error::Err
     stream.write_all(request).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     assert!(
@@ -1289,7 +1289,7 @@ async fn test_bypass_rules_multiple_rules() -> Result<(), Box<dyn std::error::Er
     stream.write_all(request.as_bytes()).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     assert!(
@@ -1309,7 +1309,7 @@ async fn test_bypass_rules_multiple_rules() -> Result<(), Box<dyn std::error::Er
     stream.write_all(request.as_bytes()).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     assert!(
@@ -1328,7 +1328,7 @@ async fn test_bypass_rules_multiple_rules() -> Result<(), Box<dyn std::error::Er
     stream.write_all(request).await?;
 
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).await?;
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
     let response_str = String::from_utf8_lossy(&response);
 
     assert!(
@@ -1396,7 +1396,7 @@ async fn test_no_bypass_rules_all_through_upstream(
   stream.write_all(request).await?;
 
   let mut response = Vec::new();
-  stream.read_to_end(&mut response).await?;
+  tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut response)).await??;
   let response_str = String::from_utf8_lossy(&response);
 
   assert!(

@@ -28,7 +28,6 @@ export type ProfileSearchFieldKind =
   | "id"
   | "lookup"
   | "enum"
-  | "boolean"
   | "date"
   | "version";
 
@@ -114,20 +113,6 @@ export const PROFILE_SEARCH_FIELDS: readonly ProfileSearchField[] = [
     aliases: [],
     kind: "version",
     labelKey: "search.fields.version",
-  },
-  {
-    key: "locked",
-    aliases: ["password"],
-    kind: "boolean",
-    labelKey: "search.fields.locked",
-    values: ["yes", "no"],
-  },
-  {
-    key: "ephemeral",
-    aliases: [],
-    kind: "boolean",
-    labelKey: "search.fields.ephemeral",
-    values: ["yes", "no"],
   },
   {
     key: "created",
@@ -565,12 +550,6 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-function parseBoolean(value: string): boolean | null {
-  if (value === "yes" || value === "true" || value === "1") return true;
-  if (value === "no" || value === "false" || value === "0") return false;
-  return null;
-}
-
 interface FieldValue {
   /** The profile has something here, even if its name cannot be resolved. */
   readonly present: boolean;
@@ -664,14 +643,6 @@ function matchesFieldTerm(
   ctx: ProfileSearchContext,
 ): boolean {
   const field = term.field;
-
-  if (field.kind === "boolean") {
-    const actual =
-      field.key === "locked"
-        ? profile.password_protected === true
-        : profile.ephemeral === true;
-    return term.values.some((value) => parseBoolean(value) === actual);
-  }
 
   if (field.kind === "date") {
     const now = ctx.now ?? Date.now();

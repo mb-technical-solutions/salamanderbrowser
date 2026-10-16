@@ -159,10 +159,7 @@
       "copyLogsDescription": "Son günlüklerin hassas verileri ayıklanmış bir paketini kopyalar (en fazla 5 MB). Ayıklama her tür kişisel veriyi belirleyemeyeceğinden paylaşmadan önce inceleyin."
     },
     "disableAutoUpdates": "Uygulama Otomatik Güncellemelerini Devre Dışı Bırak",
-    "disableAutoUpdatesDescription": "Uygulamanın Salamander Browser güncellemelerini otomatik olarak denetlemesini ve yüklemesini engelleyin. Tarayıcı güncellemeleri bundan etkilenmez.",
-    "keepDecryptedProfilesInRam": "Şifresi Çözülmüş Profilleri RAM'de Tut",
-    "keepDecryptedProfilesInRamDescription": "Daha hızlı başlatma için parola korumalı profillerin şifresi çözülmüş RAM kopyasını başlatmalar arasında koruyun. Diskteki kopya her durumda şifreli kalır.",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Uygulamanın Salamander Browser güncellemelerini otomatik olarak denetlemesini ve yüklemesini engelleyin. Tarayıcı güncellemeleri bundan etkilenmez.",    "privacy": {
       "consistencyWarning": "Parmak izi uyuşmazlığında engelle",
       "consistencyWarningDescription": "Bir profilin saat dilimi veya dili proxy çıkış düğümüyle eşleşmediğinde tarayıcının başlamasını durdurur. Yine de başlatmayı seçebilirsiniz.",
       "clearTraffic": "Tüm trafik geçmişini temizle",
@@ -211,7 +208,6 @@
       "status": "Çalışıyor mu",
       "version": "Tarayıcı sürümü",
       "locked": "Parola korumalı",
-      "ephemeral": "Geçici profil",
       "created": "Oluşturulma tarihi",
       "launched": "Son başlatma tarihi"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "Gruba Ata",
       "changeFingerprint": "Parmak İzini Değiştir",
       "copyCookiesToProfile": "Çerezleri Profile Kopyala",
-      "launchHook": "Başlatma Kancası URL'si",
       "setPassword": "Parola Belirle",
       "changePassword": "Parolayı Değiştir",
       "removePassword": "Parolayı Kaldır"
     },
-    "ephemeral": "Geçici",
     "ephemeralDescription": "Tarayıcı, profil verilerini disk yerine belleğe yazmaya zorlanır. İşletim sisteminizin yük altında belleğin bir kısmını diske takas edebileceğini, dolayısıyla oturum izlerinin yine de kurtarılabilir olabileceğini unutmayın.",
     "ephemeralBadge": "Geçici",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "Seçilenleri çalıştır",
       "stopSelected": "Seçilenleri durdur",
       "proRequired": "Toplu çalıştırma/durdurma için Pro plan gerekli"
-    },
-    "passwordProtectedBadge": "Parola Korumalı",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "{{count}} profil çalıştırılsın mı?",
       "confirmDescription": "{{count}} profili aynı anda başlatmak çok fazla sistem kaynağı kullanabilir. Devam edilsin mi?",
       "confirmButton": "{{count}} Profili Çalıştır",
@@ -347,10 +336,6 @@
       "search": "Proxy veya VPN ara...",
       "notFound": "Proxy veya VPN bulunamadı."
     },
-    "launchHook": {
-      "label": "Başlatma Kancası URL'si",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "Kullanılabilir sürümler getiriliyor...",
       "fetchError": "Tarayıcı sürümleri getirilemedi. Lütfen internet bağlantınızı kontrol edip yeniden deneyin.",
@@ -362,12 +347,8 @@
       "latestDownloading": "Sürüm ({{version}}) indiriliyor...",
       "upgradeAvailable": "{{browser}} tarayıcısının daha yeni bir sürümü ({{version}}) mevcut."
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} henüz platformunuzda kullanılamıyor.",
-    "passwordProtect": {
-      "label": "Bu profili parolayla koru",
-      "description": "Diskteki profil verilerini şifreler. Başlatmak için gereklidir."
-    },
     "downloadingSubtitle": "İndiriliyor…",
     "browsersDownloading": "Tarayıcılar hâlâ indiriliyor. Bir indirme tamamlandığında profil oluşturma kullanılabilir olacak.",
     "os": {
@@ -618,7 +599,7 @@
       "sourcePlaceholder": "Çerezlerin kopyalanacağı profili seçin",
       "running": "(çalışıyor)",
       "targetProfiles": "Hedef Profiller ({{count}})",
-      "noOtherTargets": "Başka Camoufox profili seçilmedi",
+      "noOtherTargets": "Başka Firefox profili seçilmedi",
       "selectSourceFirst": "Önce bir kaynak profil seçin",
       "selectionStatus": "({{total}} çerezden {{selected}} tanesi seçildi)",
       "searchPlaceholder": "Alan adı veya çerez ara...",
@@ -832,7 +813,7 @@
     "renameProfileFailed": "Profil yeniden adlandırılamadı: {{error}}",
     "killBrowserFailed": "Tarayıcı sonlandırılamadı: {{error}}",
     "deleteSelectedProfilesFailed": "Seçili profiller silinemedi: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Çerez kopyalama yalnızca Camoufox profilleriyle çalışır",
+    "cookieCopyUnsupportedBrowser": "Çerez kopyalama yalnızca Firefox için kullanılabilir; Chrome henüz desteklenmiyor",
     "cloneProfileFailed": "Profil klonlanamadı: {{error}}",
     "loadSupportedBrowsersFailed": "Desteklenen tarayıcılar yüklenemedi",
     "setupExtensionListenersFailed": "Uzantı olay dinleyicileri kurulamadı: {{error}}",
@@ -978,13 +959,11 @@
       "browser": "Tarayıcı",
       "releaseType": "Yayın Türü",
       "proxyVpn": "Proxy / VPN",
-      "launchHook": "Başlatma Kancası",
       "group": "Grup",
       "tags": "Etiketler",
       "note": "Not",
       "lastLaunched": "Son Başlatma",
       "hostOs": "Ana İşletim Sistemi",
-      "ephemeral": "Geçici",
       "extensionGroup": "Uzantı Grubu",
       "totalSessions": "Toplam oturum",
       "proxy": "PROXY",
@@ -1015,13 +994,6 @@
       "vpnLabel": "VPN: {{name}}",
       "proxyLabel": "Proxy: {{name}}"
     },
-    "launchHook": {
-      "title": "Başlatma Kancası URL'si",
-      "label": "Başlatma Kancası URL'si",
-      "description": "Salamander Browser, profil her başlatıldığında bu URL'ye bir GET isteği gönderir.",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "Geçerli bir http:// veya https:// URL'si girin."
-    },
     "actions": {
       "manageCookies": "Çerezleri Yönet",
       "assignExtensionGroup": "Uzantı Grubu Ata"
@@ -1041,24 +1013,19 @@
       "network": "Ağ",
       "cookies": "Çerezler",
       "extensions": "Uzantılar",
-      "automation": "Otomasyon",
       "security": "Güvenlik",
       "delete": "Profili sil",
-      "activity": "Etkinlik",
-      "launchHook": "Başlatma kancası"
+      "activity": "Etkinlik"
     },
     "sectionDesc": {
       "fingerprint": "Bu profilin parmak izi tarama betiklerine nasıl görüneceğini yapılandırın.",
       "network": "Bu profilin internete erişmek için kullandığı proxy veya VPN'i yönetin.",
       "cookies": "Bu profil için çerezleri içe aktarın, kopyalayın veya silin.",
       "extensions": "Bu profil başlatıldığında hangi uzantıların yükleneceğini seçin.",
-      "automation": "Bu profil her başlatıldığında bir komut veya betik çalıştırın.",
-      "security": "Profil verilerini bir parolayla şifreleyin.",
-      "launchHook": "Profil her başlatıldığında bu URL'ye bir GET isteği gönderin."
+      "security": "Profil verilerini bir parolayla şifreleyin."
     },
     "badges": {
-      "locked": "KİLİTLİ",
-      "active": "ETKİN"
+      "locked": "KİLİTLİ"
     },
     "cookies": {
       "runningNotice": "Tarayıcı çalışırken çerezler okunamaz. Önce bu profili kapatın.",
@@ -1072,36 +1039,9 @@
     "fingerprint": {
       "lockedTitle": "Parmak izini görüntülemek ve düzenlemek bir Pro özelliğidir",
       "lockedDescription": "Cihaz bilgileriniz her profilde korunur. Bir profilin parmak izini görüntülemek ve düzenlemek etkin bir ücretli plan gerektirir.",
-      "camoufoxDescription": "Camoufox, profil oluşturma (veya içe aktarma) sırasında parmak izini yerel olarak oluşturur; henüz alan alan bir düzenleyici yok. Bir sonraki başlatmada yeni bir tane oluşturulması için kaydedilmiş parmak izini temizleyebilirsiniz.",
+      "camoufoxDescription": "Firefox, profil oluşturma (veya içe aktarma) sırasında parmak izini yerel olarak oluşturur; henüz alan alan bir düzenleyici yok. Bir sonraki başlatmada yeni bir tane oluşturulması için kaydedilmiş parmak izini temizleyebilirsiniz.",
       "camoufoxRegenerateButton": "Parmak izini temizle (bir sonraki başlatmada yeniden oluştur)",
       "camoufoxRegenerateQueued": "Parmak izi temizlendi — bu profil bir sonraki başlatıldığında yeni biri oluşturulacak."
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "Geçici profiller tarayıcı kapandığında silinir, bu yüzden burada yönetilecek çerez yoktur.",
-      "extensionsUnavailable": "Geçici profiller tarayıcı kapandığında silinir, bu yüzden onlara uzantı grubu atanamaz.",
-      "hint": "Bunun kalıcı olmasını istiyorsanız normal bir profil oluşturun."
-    }
-  },
-  "extensions": {
-    "title": "Uzantılar",
-    "description": "Profilleriniz için tarayıcı uzantılarını ve uzantı gruplarını yönetin.",
-    "upload": "Yükle",
-    "delete": "Sil",
-    "extensionsTab": "Uzantılar",
-    "groupsTab": "Gruplar",
-    "managedNotice": "Burada yönetilen uzantılar, profiller başlatıldığında elle yüklenmiş uzantıların yerini alır.",
-    "proRequired": "Uzantı yönetimi bir Pro özelliğidir",
-    "empty": "Henüz uzantı yüklenmedi.",
-    "noGroups": "Henüz uzantı grubu oluşturulmadı.",
-    "createGroup": "Grup Oluştur",
-    "newGroup": "Yeni grup",
-    "addToGroup": "Uzantı ekle...",
-    "removeFromGroup": "Gruptan kaldır",
-    "deleteGroup": "Grubu sil",
-    "extensionGroup": "Uzantı Grubu",
-    "compatibility": {
-      "label": "Uyumluluk",
-      "chromium": "Chromium"
     },
     "selectedFile": "Seçilen dosya",
     "namePlaceholder": "Uzantı adı",
@@ -1646,62 +1586,6 @@
       "lookingForUpdates": "{{browser}} için güncellemeler aranıyor"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "Profil Parolası Belirle",
-      "description": "{{name}} profilinin diskteki verilerini şifreleyin. Profili her başlattığınızda bu parolaya ihtiyacınız olacak.",
-      "button": "Profili Şifrele"
-    },
-    "unlock": {
-      "title": "Profilin Kilidini Aç",
-      "description": "{{name}} profilinin kilidini açmak için parolayı girin.",
-      "button": "Kilidi Aç"
-    },
-    "change": {
-      "title": "Profil Parolasını Değiştir",
-      "description": "{{name}} profilini yeni bir parolayla yeniden şifreleyin.",
-      "button": "Parolayı Değiştir"
-    },
-    "remove": {
-      "title": "Profil Parolasını Kaldır",
-      "description": "{{name}} profilinin diskteki verilerinin şifresini çözün. Profil artık parola korumalı olmayacak.",
-      "button": "Parolayı Kaldır"
-    },
-    "fields": {
-      "password": "Parola",
-      "currentPassword": "Mevcut parola",
-      "newPassword": "Yeni parola",
-      "confirm": "Parolayı onaylayın",
-      "confirmPassword": "Yeni parolayı onaylayın"
-    },
-    "errors": {
-      "oldPasswordRequired": "Mevcut parola zorunludur",
-      "passwordRequired": "Parola zorunludur",
-      "tooShort": "Parola en az 8 karakter olmalıdır",
-      "mismatch": "Parolalar eşleşmiyor"
-    },
-    "toasts": {
-      "set": "Profil artık parola korumalı",
-      "changed": "Profil parolası değiştirildi",
-      "removed": "Profil parolası kaldırıldı"
-    },
-    "warnings": {
-      "forgetWarningTitle": "Önemli: bu parola kurtarılamaz",
-      "forgetWarningBody": "Salamander Browser bu parolayı sıfırlayamaz, kurtaramaz veya atlayamaz. Unutursanız bu profilin verilerine erişimi kalıcı olarak kaybedersiniz."
-    },
-    "modes": {
-      "set": "Belirle",
-      "change": "Değiştir",
-      "remove": "Kaldır",
-      "validate": "Doğrula"
-    },
-    "verifyDialog": {
-      "title": "Profil Parolasını Doğrula",
-      "description": "Diskte saklanan parolayla eşleştiğini onaylamak için profil parolasını girin.",
-      "submit": "Doğrula",
-      "matchToast": "Parola doğru"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "Yanlış parola",
     "lockedOut": "Çok fazla hatalı deneme. {{duration}} sonra yeniden deneyin.",
@@ -1734,7 +1618,6 @@
     "extensionPathHasComma": "Bu klasörün yolunda virgül var ve Chromium bunu yükleyemez. Klasörü yeniden adlandırın veya taşıyın.",
     "extensionLinkRequiresDirectory": "Yerinde yalnızca bir klasör yüklenebilir. Arşiv eklemek için bağlamayı kapatın.",
     "internal": "Bir şeyler ters gitti: {{detail}}",
-    "invalidLaunchHookUrl": "Geçersiz başlatma kancası URL'si. Tam bir http:// veya https:// URL'si kullanın.",
     "cookieDbLocked": "Çerezler okunamadı — veritabanı kilitli. Tarayıcıyı kapatıp yeniden deneyin.",
     "cookieDbUnavailable": "Çerezler okunamadı — çerez deposu kullanılamıyor.",
     "cookieImportBrowserRunning": "Tarayıcı çalışırken çerezler içe aktarılamaz. Tarayıcıyı kapatıp yeniden deneyin.",
@@ -1754,9 +1637,7 @@
     "camoufoxImportCopyFailed": "Camoufox içe aktarma profili oluşturdu, ancak dosyaların kopyalanması başarısız oldu: {{detail}}",
     "browserNotDownloaded": "{{browser}} tarayıcısının indirilmiş bir sürümü yok. Önce indirin, sonra içe aktarmayı yeniden deneyin.",
     "archiveExtractionFailed": "Arşiv çıkarılamadı: {{detail}}",
-    "unsupportedArchiveFormat": "Desteklenmeyen arşiv biçimi. Yalnızca ZIP arşivleri desteklenir.",
-    "clearOnCloseUnavailable": "Kapatırken temizleme, geçici veya parola korumalı profillerde kullanılamaz.",
-    "proxyAndVpnMutuallyExclusive": "Bir profil ya proxy ya da VPN kullanabilir, ikisini birden kullanamaz.",
+    "unsupportedArchiveFormat": "Desteklenmeyen arşiv biçimi. Yalnızca ZIP arşivleri desteklenir.",    "proxyAndVpnMutuallyExclusive": "Bir profil ya proxy ya da VPN kullanabilir, ikisini birden kullanamaz.",
     "invalidDnsRulesJson": "Seçilen dosya geçerli bir DNS kuralı JSON'u değil.",
     "unsupportedDnsRulesFormat": "Desteklenmeyen kural biçimi: {{format}}",
     "dnsRulesSaveFailed": "DNS kuralları kaydedilemedi.",
@@ -1871,7 +1752,7 @@
     "steps": {
       "createProfile": {
         "title": "İlk profilinizi oluşturun",
-        "content": "İlk profilinizi oluşturmak için buraya tıklayın. Parmak izi korumalı tarayıcı Camoufox otomatik olarak kullanılır."
+        "content": "İlk profilinizi oluşturmak için buraya tıklayın. Parmak izi korumalı tarayıcı Firefox otomatik olarak kullanılır."
       },
       "dnsBlocking": {
         "title": "DNS engelleme",
@@ -1904,7 +1785,7 @@
     },
     "ready": {
       "title": "Her şey hazırlanıyor",
-      "descDownloading": "İlk tarayıcınız (Camoufox) indiriliyor. Bu tek seferlik kurulum arka planda çalışır — biraz bekleyin.",
+      "descDownloading": "İlk tarayıcınız (Firefox) indiriliyor. Bu tek seferlik kurulum arka planda çalışır — biraz bekleyin.",
       "descReady": "Tarayıcınız hazır. Hadi ilk profilinizi oluşturalım.",
       "cta": "İlk profilimi oluştur",
       "downloading": "İndiriliyor…",
@@ -1943,10 +1824,6 @@
     "searchLicenses": "Lisanslarda ara…",
     "noMatchingLicenses": "Eşleşen lisans yok.",
     "openSource": "{{name}} kaynak kodunu görüntüle"
-  },
-  "clearOnClose": {
-    "label": "Kapatırken verileri temizle",
-    "description": "Tarayıcı kapanırken çerezleri, geçmişi ve önbelleği siler. Uzantılar ve yer imleri korunur."
   },
   "consistencyWarning": {
     "timezoneDetail": "Çıkış düğümü {{exit}} konumunda, ancak parmak izi {{fingerprint}} bildiriyor.",

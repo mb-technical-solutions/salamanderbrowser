@@ -151,9 +151,8 @@ async fn import_camoufox_profile_impl(
       proxy_id,
       vpn_id,
       Some(camoufox_config),
-      group_id,
-      false,
       None,
+      group_id,
       None,
     )
     .await?;

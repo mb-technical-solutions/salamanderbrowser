@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 
 /**
  * Backend error codes returned from Rust Tauri commands.
- * Keep this list in sync with the codes used in `src-tauri/src/profile/password.rs`.
+ * Keep this list in sync with the codes used in `src-tauri/src`.
  */
 export type BackendErrorCode =
   | "INCORRECT_PASSWORD"
@@ -11,12 +11,10 @@ export type BackendErrorCode =
   | "PROFILE_NOT_PROTECTED"
   | "PROFILE_ALREADY_PROTECTED"
   | "PROFILE_RUNNING"
-  | "PROFILE_EPHEMERAL"
+  | "INVALID_PROFILE_ID"
   | "PROFILE_MISSING_SALT"
   | "PROFILE_LOCKED"
-  | "INVALID_PROFILE_ID"
   | "PASSWORD_TOO_SHORT"
-  | "INVALID_LAUNCH_HOOK_URL"
   | "COOKIE_DB_LOCKED"
   | "COOKIE_DB_UNAVAILABLE"
   | "COOKIE_IMPORT_BROWSER_RUNNING"
@@ -53,7 +51,6 @@ export type BackendErrorCode =
   | "BROWSER_NOT_DOWNLOADED"
   | "ARCHIVE_EXTRACTION_FAILED"
   | "UNSUPPORTED_ARCHIVE_FORMAT"
-  | "CLEAR_ON_CLOSE_UNAVAILABLE"
   | "PROXY_AND_VPN_MUTUALLY_EXCLUSIVE"
   | "FINGERPRINT_MATCH_FAILED"
   | "INVALID_DNS_RULES_JSON"
@@ -118,6 +115,8 @@ export function translateBackendError(t: TFunction, err: unknown): string {
     return err instanceof Error ? err.message : String(err);
   }
   switch (parsed.code) {
+    case "PROFILE_NOT_FOUND":
+      return t("backendErrors.profileNotFound");
     case "INCORRECT_PASSWORD":
       return t("backendErrors.incorrectPassword");
     case "LOCKED_OUT": {
@@ -126,16 +125,12 @@ export function translateBackendError(t: TFunction, err: unknown): string {
         duration: formatLockoutDuration(t, seconds),
       });
     }
-    case "PROFILE_NOT_FOUND":
-      return t("backendErrors.profileNotFound");
     case "PROFILE_NOT_PROTECTED":
       return t("backendErrors.profileNotProtected");
     case "PROFILE_ALREADY_PROTECTED":
       return t("backendErrors.profileAlreadyProtected");
     case "PROFILE_RUNNING":
       return t("backendErrors.profileRunning");
-    case "PROFILE_EPHEMERAL":
-      return t("backendErrors.profileEphemeral");
     case "PROFILE_MISSING_SALT":
       return t("backendErrors.profileMissingSalt");
     case "PROFILE_LOCKED":
@@ -146,8 +141,6 @@ export function translateBackendError(t: TFunction, err: unknown): string {
       const min = Number.parseInt(parsed.params?.min ?? "8", 10);
       return t("backendErrors.passwordTooShort", { min });
     }
-    case "INVALID_LAUNCH_HOOK_URL":
-      return t("backendErrors.invalidLaunchHookUrl");
     case "COOKIE_DB_LOCKED":
       return t("backendErrors.cookieDbLocked");
     case "COOKIE_DB_UNAVAILABLE":
@@ -285,8 +278,6 @@ export function translateBackendError(t: TFunction, err: unknown): string {
       return t("backendErrors.xrayUnsupportedOs");
     case "XRAY_START_FAILED":
       return t("backendErrors.xrayStartFailed");
-    case "CLEAR_ON_CLOSE_UNAVAILABLE":
-      return t("backendErrors.clearOnCloseUnavailable");
     // The launch gate's block. The dialog renders the mismatch detail from
     // `params` itself; this string is the fallback for anywhere that only has
     // room for one sentence.
@@ -333,26 +324,6 @@ export function translateBackendError(t: TFunction, err: unknown): string {
   }
 }
 
-export function formatLockoutDuration(t: TFunction, seconds: number): string {
-  if (seconds < 60)
-    return t("backendErrors.lockedOutDuration.seconds", { seconds });
-  const minutes = Math.ceil(seconds / 60);
-  if (minutes < 60)
-    return t("backendErrors.lockedOutDuration.minutes", { minutes });
-  const hours = Math.ceil(minutes / 60);
-  return t("backendErrors.lockedOutDuration.hours", { hours });
-}
-
-/**
- * Extract the lockout countdown in seconds from a backend error, or null.
- */
-export function extractLockoutSeconds(err: unknown): number | null {
-  const parsed = parseBackendError(err);
-  if (parsed?.code !== "LOCKED_OUT") return null;
-  const secs = Number.parseInt(parsed.params?.seconds ?? "0", 10);
-  return Number.isFinite(secs) && secs > 0 ? secs : null;
-}
-
 /**
  * True if the error is a known structured backend error code.
  */
@@ -361,4 +332,20 @@ export function isBackendErrorCode(
   code: BackendErrorCode,
 ): boolean {
   return parseBackendError(err)?.code === code;
+}
+
+export function formatLockoutDuration(t: TFunction, seconds: number): string {
+  if (seconds < 60) return t("backendErrors.lockedOutDuration.seconds", { seconds });
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return t("backendErrors.lockedOutDuration.minutes", { minutes });
+  return t("backendErrors.lockedOutDuration.hours", {
+    hours: Math.ceil(minutes / 60),
+  });
+}
+
+export function extractLockoutSeconds(err: unknown): number | null {
+  const parsed = parseBackendError(err);
+  if (parsed?.code !== "LOCKED_OUT") return null;
+  const seconds = Number.parseInt(parsed.params?.seconds ?? "0", 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }

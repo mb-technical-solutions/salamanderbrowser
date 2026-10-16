@@ -248,7 +248,7 @@ jobs:
 
           # Copy sidecar binaries
           cp "src-tauri/target/${{ matrix.target }}/release/salamander-proxy.exe" "$PORTABLE_DIR/"
-          cp "src-tauri/binaries/xray-${{ matrix.target }}.exe" "$PORTABLE_DIR/xray.exe"
+           cp "src-tauri/binaries/xray-${{ matrix.target }}.exe" "$PORTABLE_DIR/xray.exe"
           mkdir -p "$PORTABLE_DIR/licenses"
           cp "src-tauri/binaries/xray-LICENSE.txt" "$PORTABLE_DIR/licenses/Xray-core-LICENSE.txt"
           # The daemon is currently disabled (no Cargo bin target), so it isn't

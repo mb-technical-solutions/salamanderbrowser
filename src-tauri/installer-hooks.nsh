@@ -13,3 +13,10 @@
 
   salamander_proxy_preinstall_done:
 !macroend
+
+!macro NSIS_HOOK_PREUNINSTALL
+  DetailPrint "Stopping Salamander network sidecars before uninstall"
+  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM "salamander-proxy.exe"'
+  Pop $0
+  Pop $1
+!macroend

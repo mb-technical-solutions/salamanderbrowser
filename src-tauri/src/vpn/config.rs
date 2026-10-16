@@ -109,24 +109,20 @@ pub fn detect_vpn_type(content: &str, filename: &str) -> Result<VpnType, VpnErro
 
 /// Parse a WireGuard configuration file
 pub fn parse_wireguard_config(content: &str) -> Result<WireGuardConfig, VpnError> {
-  let mut interface: HashMap<String, String> = HashMap::new();
-  let mut peer: HashMap<String, String> = HashMap::new();
-  let mut current_section: Option<&str> = None;
+  let (interface, peer) = parse_sections(content);
+  parse_standard_fields(&interface, &peer)
+}
 
-  // Strip a UTF-8 BOM if present — some editors/tools emit one and it would
-  // otherwise prepend invisible bytes to the first section header
+fn parse_sections(content: &str) -> (HashMap<String, String>, HashMap<String, String>) {
+  let mut interface = HashMap::new();
+  let mut peer = HashMap::new();
+  let mut current_section = None;
   let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-
-  for line in content.lines() {
-    let line = line.trim();
-
-    // Skip empty lines and comments
+  for line in content.lines().map(str::trim) {
     if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
       continue;
     }
-
-    // Check for section headers
-    if line == "[Interface]" {
+    if line == "[Interface]" || line == "[Device]" {
       current_section = Some("interface");
       continue;
     }
@@ -134,24 +130,25 @@ pub fn parse_wireguard_config(content: &str) -> Result<WireGuardConfig, VpnError
       current_section = Some("peer");
       continue;
     }
-
-    // Parse key-value pairs (split on the first `=` so base64 padding is preserved)
     if let Some((key, value)) = line.split_once('=') {
-      let key = key.trim().to_string();
-      let value = value.trim().to_string();
-
       match current_section {
         Some("interface") => {
-          interface.insert(key, value);
+          interface.insert(key.trim().to_string(), value.trim().to_string());
         }
         Some("peer") => {
-          peer.insert(key, value);
+          peer.insert(key.trim().to_string(), value.trim().to_string());
         }
         _ => {}
       }
     }
   }
+  (interface, peer)
+}
 
+fn parse_standard_fields(
+  interface: &HashMap<String, String>,
+  peer: &HashMap<String, String>,
+) -> Result<WireGuardConfig, VpnError> {
   // Validate required fields
   let private_key = interface
     .get("PrivateKey")

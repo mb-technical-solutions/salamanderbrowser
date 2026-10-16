@@ -1,13 +1,12 @@
-use crate::browser::{create_browser, BrowserType};
+use crate::browser::{BrowserType, create_browser};
 use crate::camoufox_manager::CamoufoxConfig;
 use crate::downloaded_browsers_registry::DownloadedBrowsersRegistry;
 use crate::events;
-use crate::profile::types::{get_host_os, is_host_os, BrowserProfile};
+use crate::profile::types::{BrowserProfile, get_host_os, is_host_os};
 use crate::proxy_manager::PROXY_MANAGER;
 use std::fs::{self, create_dir_all};
 use std::path::{Path, PathBuf};
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
-use url::Url;
 
 /// Derive a stable, deterministic pastel window-frame color from a profile's
 /// id, so every profile gets a distinct, stable color with no stored state.
@@ -103,25 +102,6 @@ impl ProfileManager {
     crate::app_dirs::binaries_dir()
   }
 
-  fn normalize_launch_hook(
-    launch_hook: Option<String>,
-  ) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let Some(raw) = launch_hook else {
-      return Ok(None);
-    };
-
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-      return Ok(None);
-    }
-
-    let parsed = Url::parse(trimmed).map_err(|e| format!("Invalid launch hook URL: {e}"))?;
-    match parsed.scheme() {
-      "http" | "https" => Ok(Some(parsed.to_string())),
-      _ => Err("Launch hook URL must use http or https".into()),
-    }
-  }
-
   #[allow(clippy::too_many_arguments)]
   pub async fn create_profile_with_group(
     &self,
@@ -133,10 +113,9 @@ impl ProfileManager {
     proxy_id: Option<String>,
     vpn_id: Option<String>,
     camoufox_config: Option<CamoufoxConfig>,
+    browser_config: Option<serde_json::Value>,
     group_id: Option<String>,
-    ephemeral: bool,
     dns_blocklist: Option<String>,
-    launch_hook: Option<String>,
   ) -> Result<BrowserProfile, Box<dyn std::error::Error>> {
     if name.trim().is_empty() {
       return Err(
@@ -149,8 +128,6 @@ impl ProfileManager {
     if proxy_id.is_some() && vpn_id.is_some() {
       return Err("Cannot set both proxy_id and vpn_id".into());
     }
-
-    let launch_hook = Self::normalize_launch_hook(launch_hook)?;
 
     log::info!("Attempting to create profile: {name}");
 
@@ -172,9 +149,7 @@ impl ProfileManager {
 
     // Create profile directory with UUID and profile subdirectory
     create_dir_all(&profile_uuid_dir)?;
-    if !ephemeral {
-      create_dir_all(&profile_data_dir)?;
-    }
+    create_dir_all(&profile_data_dir)?;
 
     // For Camoufox profiles, generate a fingerprint during creation
     let final_camoufox_config = if browser == "camoufox" {
@@ -218,23 +193,21 @@ impl ProfileManager {
           version: version.to_string(),
           proxy_id: proxy_id.clone(),
           vpn_id: None,
-          launch_hook: launch_hook.clone(),
           process_id: None,
           last_launch: None,
           release_type: release_type.to_string(),
           camoufox_config: None,
+          browser_config: None,
           group_id: group_id.clone(),
           tags: Vec::new(),
-          note: None,
-          window_color: None,
-          encryption_salt: None,
-          host_os: None,
-          ephemeral: false,
+           note: None,
+           window_color: None,
+           encryption_salt: None,
+           host_os: None,
+           password_protected: false,
           extension_group_id: None,
           proxy_bypass_rules: Vec::new(),
           dns_blocklist: None,
-          password_protected: false,
-          clear_on_close: false,
           created_at: None,
           updated_at: None,
         };
@@ -272,25 +245,23 @@ impl ProfileManager {
       version: version.to_string(),
       proxy_id: proxy_id.clone(),
       vpn_id: vpn_id.clone(),
-      launch_hook,
       process_id: None,
       last_launch: None,
       release_type: release_type.to_string(),
       camoufox_config: final_camoufox_config,
+      browser_config,
       group_id: group_id.clone(),
       tags: Vec::new(),
-      note: None,
+       note: None,
       // A random-looking pastel derived from the (random) profile id, so every
       // new profile gets a distinct, stable window color it can later override.
-      window_color: Some(derive_profile_color(&profile_id)),
-      encryption_salt: None,
-      host_os: Some(get_host_os()),
-      ephemeral,
+       window_color: Some(derive_profile_color(&profile_id)),
+       encryption_salt: None,
+       host_os: Some(get_host_os()),
+       password_protected: false,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
       dns_blocklist,
-      password_protected: false,
-      clear_on_close: false,
       created_at: Some(
         std::time::SystemTime::now()
           .duration_since(std::time::UNIX_EPOCH)
@@ -480,14 +451,6 @@ impl ProfileManager {
     // Launch-gate acknowledgements are keyed by profile id and are not synced,
     // so nothing else would ever clean them up.
     crate::launch_gate_prefs::forget_profile(profile_id);
-
-    // Deleting the profile never touched its ephemeral directory, so a
-    // decrypted or in-memory copy outlived the profile it belonged to with
-    // nothing left that knew to reap it. The running-browser guard above only
-    // rejects a live process_id, and the keep-decrypted path deliberately
-    // clears process_id while leaving the plaintext tree populated. No-ops
-    // when the profile has no ephemeral directory.
-    crate::ephemeral_dirs::remove_ephemeral_dir(profile_id);
 
     // Per-domain traffic history lives outside the profile directory, so it
     // survives the delete otherwise. It is already zero-overwritten on removal.
@@ -693,42 +656,6 @@ impl ProfileManager {
     Ok(profile)
   }
 
-  pub fn update_profile_clear_on_close(
-    &self,
-    _app_handle: &tauri::AppHandle,
-    profile_id: &str,
-    clear_on_close: bool,
-  ) -> Result<BrowserProfile, Box<dyn std::error::Error>> {
-    let profile_uuid =
-      uuid::Uuid::parse_str(profile_id).map_err(|_| format!("Invalid profile ID: {profile_id}"))?;
-    let profiles = self.list_profiles()?;
-    let mut profile = profiles
-      .into_iter()
-      .find(|p| p.id == profile_uuid)
-      .ok_or_else(|| format!("Profile with ID '{profile_id}' not found"))?;
-
-    // Ephemeral profiles are already wiped on close; password-protected ones
-    // re-encrypt and never persist plaintext — the flag is meaningless there.
-    if clear_on_close && (profile.ephemeral || profile.password_protected) {
-      return Err(
-        serde_json::json!({ "code": "CLEAR_ON_CLOSE_UNAVAILABLE" })
-          .to_string()
-          .into(),
-      );
-    }
-
-    profile.clear_on_close = clear_on_close;
-    profile.updated_at = Some(crate::proxy_manager::now_secs());
-
-    self.save_profile(&profile)?;
-
-    if let Err(e) = events::emit_empty("profiles-changed") {
-      log::warn!("Warning: Failed to emit profiles-changed event: {e}");
-    }
-
-    Ok(profile)
-  }
-
   pub fn update_profile_window_color(
     &self,
     _app_handle: &tauri::AppHandle,
@@ -753,36 +680,6 @@ impl ProfileManager {
     profile.updated_at = Some(crate::proxy_manager::now_secs());
 
     self.save_profile(&profile)?;
-    if let Err(e) = events::emit_empty("profiles-changed") {
-      log::warn!("Warning: Failed to emit profiles-changed event: {e}");
-    }
-
-    Ok(profile)
-  }
-
-  pub fn update_profile_launch_hook(
-    &self,
-    _app_handle: &tauri::AppHandle,
-    profile_id: &str,
-    launch_hook: Option<String>,
-  ) -> Result<BrowserProfile, Box<dyn std::error::Error>> {
-    let profile_uuid =
-      uuid::Uuid::parse_str(profile_id).map_err(|_| format!("Invalid profile ID: {profile_id}"))?;
-    let profiles = self.list_profiles()?;
-    let mut profile = profiles
-      .into_iter()
-      .find(|p| p.id == profile_uuid)
-      .ok_or_else(|| format!("Profile with ID '{profile_id}' not found"))?;
-
-    profile.launch_hook = Self::normalize_launch_hook(launch_hook)?;
-    profile.updated_at = Some(crate::proxy_manager::now_secs());
-
-    self.save_profile(&profile)?;
-
-    if let Err(e) = events::emit("profile-updated", &profile) {
-      log::warn!("Warning: Failed to emit profile update event: {e}");
-    }
-
     if let Err(e) = events::emit_empty("profiles-changed") {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
     }
@@ -946,23 +843,21 @@ impl ProfileManager {
       version: source.version,
       proxy_id: source.proxy_id,
       vpn_id: source.vpn_id,
-      launch_hook: source.launch_hook,
       process_id: None,
       last_launch: None,
       release_type: source.release_type,
       camoufox_config: source.camoufox_config,
+      browser_config: source.browser_config,
       group_id: source.group_id,
       tags: source.tags,
       note: source.note,
-      window_color: source.window_color,
-      encryption_salt: None,
-      host_os: Some(get_host_os()),
-      ephemeral: false,
+       window_color: source.window_color,
+       encryption_salt: None,
+       host_os: Some(get_host_os()),
+       password_protected: false,
       extension_group_id: source.extension_group_id,
       proxy_bypass_rules: source.proxy_bypass_rules,
       dns_blocklist: source.dns_blocklist,
-      password_protected: false,
-      clear_on_close: false,
       created_at: Some(
         std::time::SystemTime::now()
           .duration_since(std::time::UNIX_EPOCH)
@@ -1046,6 +941,37 @@ impl ProfileManager {
       log::warn!("Warning: Failed to emit profiles-changed event: {e}");
     }
 
+    Ok(())
+  }
+
+  pub async fn update_browser_config(
+    &self,
+    app_handle: tauri::AppHandle,
+    profile_id: &str,
+    config: serde_json::Value,
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let profile_uuid = uuid::Uuid::parse_str(profile_id).map_err(
+      |_| -> Box<dyn std::error::Error + Send + Sync> {
+        format!("Invalid profile ID: {profile_id}").into()
+      },
+    )?;
+    let profiles = self.list_profiles().map_err(|e| format!("Failed to list profiles: {e}"))?;
+    let mut profile = profiles
+      .into_iter()
+      .find(|p| p.id == profile_uuid)
+      .ok_or_else(|| format!("Profile with ID '{profile_id}' not found"))?;
+
+    if self.check_browser_status(app_handle, &profile).await? {
+      return Err("Cannot update browser configuration while browser is running. Please stop the browser first.".into());
+    }
+
+    profile.browser_config = Some(config);
+    self
+      .save_profile(&profile)
+      .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.to_string().into() })?;
+    if let Err(e) = events::emit_empty("profiles-changed") {
+      log::warn!("Warning: Failed to emit profiles-changed event: {e}");
+    }
     Ok(())
   }
 
@@ -1195,7 +1121,7 @@ impl ProfileManager {
         let cmd = process.cmd();
         // Verify this process is actually our browser with the correct profile
         let profiles_dir = self.get_profiles_dir();
-        let profile_data_path = profile.get_profile_data_path(&profiles_dir);
+         let profile_data_path = profile.get_profile_data_path(&profiles_dir);
         let profile_data_path_str = profile_data_path.to_string_lossy();
         let profile_path_match = cmd.iter().any(|s| {
           let arg = s.to_str().unwrap_or("");
@@ -1220,6 +1146,9 @@ impl ProfileManager {
           let exe_name = process.name().to_string_lossy().to_lowercase();
           let is_correct_browser = match profile.browser.as_str() {
             "camoufox" => exe_name.contains("camoufox"),
+            "clearcote" => {
+              exe_name.contains("clearcote") || exe_name == "chrome" || exe_name == "chrome.exe"
+            }
             _ => false,
           };
 
@@ -1229,7 +1158,7 @@ impl ProfileManager {
 
           // Check for profile path match
           let profiles_dir = self.get_profiles_dir();
-          let profile_data_path = profile.get_profile_data_path(&profiles_dir);
+           let profile_data_path = profile.get_profile_data_path(&profiles_dir);
           let profile_data_path_str = profile_data_path.to_string_lossy();
           let profile_path_match = cmd.iter().any(|s| {
             let arg = s.to_str().unwrap_or("");
@@ -1375,67 +1304,6 @@ mod tests {
     );
   }
 
-  #[test]
-  fn test_normalize_launch_hook_accepts_http_and_https() {
-    let http =
-      ProfileManager::normalize_launch_hook(Some(" http://localhost:3000/hook ".to_string()))
-        .unwrap();
-    let https = ProfileManager::normalize_launch_hook(Some(
-      "https://example.com/hooks/profile-launch".to_string(),
-    ))
-    .unwrap();
-
-    assert_eq!(http.as_deref(), Some("http://localhost:3000/hook"));
-    assert_eq!(
-      https.as_deref(),
-      Some("https://example.com/hooks/profile-launch")
-    );
-  }
-
-  #[test]
-  fn test_normalize_launch_hook_clears_empty_values() {
-    let result = ProfileManager::normalize_launch_hook(Some("   ".to_string())).unwrap();
-    assert!(result.is_none());
-  }
-
-  #[test]
-  fn test_normalize_launch_hook_rejects_invalid_scheme() {
-    let err = ProfileManager::normalize_launch_hook(Some("ftp://example.com/hook".to_string()))
-      .unwrap_err();
-    assert!(err.to_string().contains("http or https"));
-  }
-
-  #[test]
-  fn test_validate_launch_hook_accepts_https_url() {
-    let result = super::validate_launch_hook(Some("https://example.com/track")).unwrap();
-    assert_eq!(result.as_deref(), Some("https://example.com/track"));
-  }
-
-  #[test]
-  fn test_validate_launch_hook_rejects_garbage_with_code() {
-    let err = super::validate_launch_hook(Some("not a url")).unwrap_err();
-    let parsed: serde_json::Value = serde_json::from_str(&err).expect("error must be JSON");
-    assert_eq!(parsed["code"], "INVALID_LAUNCH_HOOK_URL");
-  }
-
-  #[test]
-  fn test_validate_launch_hook_rejects_non_http_scheme_with_code() {
-    let err = super::validate_launch_hook(Some("ftp://example.com/hook")).unwrap_err();
-    let parsed: serde_json::Value = serde_json::from_str(&err).expect("error must be JSON");
-    assert_eq!(parsed["code"], "INVALID_LAUNCH_HOOK_URL");
-  }
-
-  #[test]
-  fn test_validate_launch_hook_empty_clears_hook() {
-    let result = super::validate_launch_hook(Some("")).unwrap();
-    assert!(result.is_none());
-
-    let result_ws = super::validate_launch_hook(Some("   ")).unwrap();
-    assert!(result_ws.is_none());
-
-    let result_none = super::validate_launch_hook(None).unwrap();
-    assert!(result_none.is_none());
-  }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1448,11 +1316,10 @@ pub async fn create_browser_profile_with_group(
   release_type: String,
   proxy_id: Option<String>,
   vpn_id: Option<String>,
-  camoufox_config: Option<CamoufoxConfig>,
+    camoufox_config: Option<CamoufoxConfig>,
+    browser_config: Option<serde_json::Value>,
   group_id: Option<String>,
-  ephemeral: bool,
   dns_blocklist: Option<String>,
-  launch_hook: Option<String>,
 ) -> Result<BrowserProfile, String> {
   let profile_manager = ProfileManager::instance();
   profile_manager
@@ -1465,10 +1332,9 @@ pub async fn create_browser_profile_with_group(
       proxy_id,
       vpn_id,
       camoufox_config,
+      browser_config,
       group_id,
-      ephemeral,
       dns_blocklist,
-      launch_hook,
     )
     .await
     .map_err(|e| crate::wrap_backend_error(e, "Failed to create profile"))
@@ -1544,51 +1410,6 @@ pub fn update_profile_window_color(
 }
 
 #[tauri::command]
-pub fn update_profile_clear_on_close(
-  app_handle: tauri::AppHandle,
-  profile_id: String,
-  clear_on_close: bool,
-) -> Result<BrowserProfile, String> {
-  ProfileManager::instance()
-    .update_profile_clear_on_close(&app_handle, &profile_id, clear_on_close)
-    .map_err(|e| crate::wrap_backend_error(e, "Failed to update clear-on-close"))
-}
-
-/// Validate a launch hook value. Returns `Ok(None)` for "clear the hook"
-/// (`None`, empty, or whitespace-only), `Ok(Some(_))` for a valid http(s)
-/// URL, or `Err` with the `INVALID_LAUNCH_HOOK_URL` code payload.
-pub(crate) fn validate_launch_hook(launch_hook: Option<&str>) -> Result<Option<String>, String> {
-  let Some(raw) = launch_hook else {
-    return Ok(None);
-  };
-  let trimmed = raw.trim();
-  if trimmed.is_empty() {
-    return Ok(None);
-  }
-  let ok = url::Url::parse(trimmed)
-    .ok()
-    .map(|u| matches!(u.scheme(), "http" | "https"))
-    .unwrap_or(false);
-  if !ok {
-    return Err(serde_json::json!({ "code": "INVALID_LAUNCH_HOOK_URL" }).to_string());
-  }
-  Ok(Some(trimmed.to_string()))
-}
-
-#[tauri::command]
-pub fn update_profile_launch_hook(
-  app_handle: tauri::AppHandle,
-  profile_id: String,
-  launch_hook: Option<String>,
-) -> Result<BrowserProfile, String> {
-  validate_launch_hook(launch_hook.as_deref())?;
-  let profile_manager = ProfileManager::instance();
-  profile_manager
-    .update_profile_launch_hook(&app_handle, &profile_id, launch_hook)
-    .map_err(|e| format!("Failed to update profile launch hook: {e}"))
-}
-
-#[tauri::command]
 pub fn update_profile_proxy_bypass_rules(
   app_handle: tauri::AppHandle,
   profile_id: String,
@@ -1646,10 +1467,9 @@ pub async fn create_browser_profile_new(
   proxy_id: Option<String>,
   vpn_id: Option<String>,
   camoufox_config: Option<CamoufoxConfig>,
+  browser_config: Option<serde_json::Value>,
   group_id: Option<String>,
-  ephemeral: Option<bool>,
   dns_blocklist: Option<String>,
-  launch_hook: Option<String>,
 ) -> Result<BrowserProfile, String> {
   // A dead/unreachable proxy or VPN (or a 402 from an expired proxy
   // subscription) cancels creation with a translatable error.
@@ -1666,10 +1486,9 @@ pub async fn create_browser_profile_new(
     proxy_id,
     vpn_id,
     camoufox_config,
+    browser_config,
     group_id,
-    ephemeral.unwrap_or(false),
     dns_blocklist,
-    launch_hook,
   )
   .await
 }
@@ -1685,6 +1504,18 @@ pub async fn update_camoufox_config(
     .update_camoufox_config(app_handle, &profile_id, config)
     .await
     .map_err(|e| format!("Failed to update Camoufox config: {e}"))
+}
+
+#[tauri::command]
+pub async fn update_browser_config(
+  app_handle: tauri::AppHandle,
+  profile_id: String,
+  config: serde_json::Value,
+) -> Result<(), String> {
+  ProfileManager::instance()
+    .update_browser_config(app_handle, &profile_id, config)
+    .await
+    .map_err(|e| format!("Failed to update browser config: {e}"))
 }
 
 #[tauri::command]

@@ -34,7 +34,7 @@ use crate::profile::types::BrowserProfile;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExtensionScan {
   pub extensions: Vec<DetectedVpnExtension>,
-  /// `scanned` | `partial` | `encrypted` | `ephemeral` | `missing`.
+  /// `scanned` | `partial` | `missing`.
   ///
   /// Reported honestly so the dialog can say the scan was incomplete rather
   /// than implying a clean profile it never managed to read.
@@ -126,23 +126,9 @@ pub fn scan_profile(profile: &BrowserProfile) -> ExtensionScan {
   scan_salamander_extensions(profile, &mut extensions);
 
   let profiles_dir = crate::app_dirs::profiles_dir();
-  let user_data_dir = crate::ephemeral_dirs::get_effective_profile_path(profile, &profiles_dir);
+  let user_data_dir = profile.get_profile_data_path(&profiles_dir);
 
-  // `get_effective_profile_path` only returns the decrypted RAM copy while the
-  // profile is unlocked; locked, it falls back to the on-disk directory, which
-  // exists but is ciphertext. Walking that finds nothing — so the state has to
-  // be decided on whether we actually got a readable copy, not on the path
-  // existing, or a locked profile reports as verified-clean.
-  let has_plaintext_dir = !(profile.password_protected || profile.ephemeral)
-    || crate::ephemeral_dirs::get_ephemeral_dir(&profile.id.to_string()).is_some();
-
-  let scan_state = if !has_plaintext_dir {
-    if profile.password_protected {
-      "encrypted"
-    } else {
-      "ephemeral"
-    }
-  } else if !user_data_dir.is_dir() {
+  let scan_state = if !user_data_dir.is_dir() {
     // Never launched, so there is no profile directory to inspect yet.
     "missing"
   } else if browser_scan::scan_browser_extensions(&user_data_dir, &mut extensions, started) {

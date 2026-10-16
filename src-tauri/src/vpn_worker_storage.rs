@@ -1,7 +1,34 @@
 use crate::proxy_storage::get_storage_dir;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Write;
 use std::path::Path;
+use std::time::Duration;
+
+const TRANSIENT_IO_RETRY_ATTEMPTS: u32 = 25;
+const TRANSIENT_IO_RETRY_DELAY: Duration = Duration::from_millis(10);
+
+// Windows refuses to replace or open a file another handle holds without
+// FILE_SHARE_DELETE, and virus scanners open files exactly that way; the
+// detached worker process reads this config right after the parent writes
+// it, so both sides can hit that race. Those are worth retrying; every
+// other error is real and must surface. Mirrors `xray_worker_storage`'s
+// identical helper.
+#[cfg(windows)]
+fn io_error_is_transient(error: &std::io::Error) -> bool {
+  const ERROR_ACCESS_DENIED: i32 = 5;
+  const ERROR_SHARING_VIOLATION: i32 = 32;
+  const ERROR_LOCK_VIOLATION: i32 = 33;
+  matches!(
+    error.raw_os_error(),
+    Some(ERROR_ACCESS_DENIED | ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)
+  )
+}
+
+#[cfg(not(windows))]
+fn io_error_is_transient(_error: &std::io::Error) -> bool {
+  false
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VpnWorkerConfig {
@@ -58,11 +85,42 @@ pub fn save_vpn_worker_config_to_path(
   config: &VpnWorkerConfig,
   path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-  if let Some(parent) = path.parent() {
-    fs::create_dir_all(parent)?;
+  let parent = path.parent().ok_or("config path has no parent directory")?;
+  fs::create_dir_all(parent)?;
+  let content = serde_json::to_vec_pretty(config)?;
+
+  // The worker process is spawned, then the parent immediately writes its
+  // config back to this same path (to record its pid/port); the detached
+  // child reads that same path with no retry of its own. A plain `fs::write`
+  // truncates the file before writing the new bytes, so a child reading in
+  // that exact window sees 0 bytes and crashes on a JSON EOF error — this is
+  // what produced "EOF while parsing a value at line 1 column 0". Write to a
+  // sibling temp file and persist (rename) over the target instead: that's a
+  // single atomic directory-entry swap on both Windows and POSIX, so a
+  // concurrent reader always sees either the old or the new content in full,
+  // never a partial file. Mirrors `xray_worker_storage`'s identical helper.
+  let mut temporary = tempfile::Builder::new()
+    .prefix(".vpn-worker-config-")
+    .tempfile_in(parent)?;
+  temporary.write_all(&content)?;
+  temporary.flush()?;
+  temporary.as_file().sync_all()?;
+
+  let mut attempt = 0;
+  loop {
+    match temporary.persist(path) {
+      Ok(_) => break,
+      Err(error)
+        if attempt < TRANSIENT_IO_RETRY_ATTEMPTS && io_error_is_transient(&error.error) =>
+      {
+        temporary = error.file;
+        attempt += 1;
+        std::thread::sleep(TRANSIENT_IO_RETRY_DELAY);
+      }
+      Err(error) => return Err(error.error.into()),
+    }
   }
-  let content = serde_json::to_string_pretty(config)?;
-  fs::write(path, content)?;
+
   Ok(())
 }
 
@@ -139,4 +197,68 @@ pub fn generate_vpn_worker_id() -> String {
       .as_secs(),
     rand::random::<u32>()
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn sample_config(id: &str) -> VpnWorkerConfig {
+    VpnWorkerConfig::new(
+      id.to_string(),
+      "vpn-1".to_string(),
+      "wireguard".to_string(),
+      "/tmp/does-not-matter.conf".to_string(),
+    )
+  }
+
+  #[test]
+  fn save_and_load_round_trips_through_a_specific_path() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("vpn_worker_test.json");
+    let mut config = sample_config("test-1");
+    config.pid = Some(1234);
+
+    save_vpn_worker_config_to_path(&config, &path).unwrap();
+    let loaded = get_vpn_worker_config_from_path(&path).unwrap();
+
+    assert_eq!(loaded.id, config.id);
+    assert_eq!(loaded.pid, Some(1234));
+  }
+
+  // Regression test for the exact crash a detached worker hit in the wild:
+  // the parent writes the config once before spawning the worker, then again
+  // right after (to record its pid) while the worker is already reading the
+  // same path with no retry of its own. A plain truncate-then-write left a
+  // window where that read saw 0 bytes and failed with a JSON EOF error
+  // ("Failed to parse VPN worker config ... EOF while parsing a value at
+  // line 1 column 0"). The fix makes every write an atomic rename, so a
+  // concurrent reader must always see a complete, valid file.
+  #[test]
+  fn concurrent_writes_never_expose_a_partial_or_empty_config_to_a_reader() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("vpn_worker_race.json");
+    save_vpn_worker_config_to_path(&sample_config("race-1"), &path).unwrap();
+
+    let writer_path = path.clone();
+    let writer = std::thread::spawn(move || {
+      for pid in 1..=500u32 {
+        let mut config = sample_config("race-1");
+        config.pid = Some(pid);
+        save_vpn_worker_config_to_path(&config, &writer_path).unwrap();
+      }
+    });
+
+    // Bound the reader on the writer's own lifetime, same reasoning as
+    // `xray_worker_storage`'s identical test: a completion flag set last by
+    // the writer is never set if it panics, which would strand this loop.
+    while !writer.is_finished() {
+      let content = fs::read_to_string(&path).expect("config file stays readable while replaced");
+      let config: VpnWorkerConfig =
+        serde_json::from_str(&content).expect("config file is always fully-formed JSON");
+      assert_eq!(config.id, "race-1");
+      std::thread::yield_now();
+    }
+    writer.join().unwrap();
+  }
 }

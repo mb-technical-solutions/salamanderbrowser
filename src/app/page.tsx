@@ -31,10 +31,7 @@ import {
   PreLaunchGateDialog,
 } from "@/components/pre-launch-gate-dialog";
 import { ProfilesDataTable } from "@/components/profile-data-table";
-import {
-  type PasswordDialogMode,
-  ProfilePasswordDialog,
-} from "@/components/profile-password-dialog";
+import { ProfilePasswordDialog } from "@/components/profile-password-dialog";
 import { ProfileSelectorDialog } from "@/components/profile-selector-dialog";
 import { ProxyAssignmentDialog } from "@/components/proxy-assignment-dialog";
 import { ProxyManagementDialog } from "@/components/proxy-management-dialog";
@@ -54,6 +51,7 @@ import { useUpdateNotifications } from "@/hooks/use-update-notifications";
 import { useVersionUpdater } from "@/hooks/use-version-updater";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";
+import { supportsCookieBackend } from "@/lib/browser-utils";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import {
   ONBOARDING_TOUR_CLOSED_EVENT,
@@ -75,6 +73,7 @@ import { showErrorToast } from "@/lib/toast-utils";
 import type {
   BrowserProfile,
   CamoufoxConfig,
+  ClearcoteConfig,
   ConsistencyResult,
   ExtensionGroup,
   PreLaunchChecks,
@@ -109,7 +108,7 @@ function consistencyFromErrorParams(
   };
 }
 
-type BrowserTypeString = "camoufox";
+type BrowserTypeString = "camoufox" | "clearcote";
 
 interface PendingUrl {
   id: string;
@@ -339,11 +338,6 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [pendingUrls, setPendingUrls] = useState<PendingUrl[]>([]);
   const [cloneProfile, setCloneProfile] = useState<BrowserProfile | null>(null);
-  const [passwordDialogProfile, setPasswordDialogProfile] =
-    useState<BrowserProfile | null>(null);
-  const [passwordDialogMode, setPasswordDialogMode] =
-    useState<PasswordDialogMode>("set");
-  const pendingLaunchAfterUnlockRef = useRef<BrowserProfile | null>(null);
   const [windowResizeWarningOpen, setWindowResizeWarningOpen] = useState(false);
   const windowResizeWarningResolver = useRef<
     ((proceed: boolean) => void) | null
@@ -394,6 +388,8 @@ export default function Home() {
   // Owned by page.tsx so the command palette can request opening the profile
   // info dialog. ProfilesDataTable consumes it through controlled props.
   const [profileInfoDialog, setProfileInfoDialog] =
+    useState<BrowserProfile | null>(null);
+  const [profileToUnlock, setProfileToUnlock] =
     useState<BrowserProfile | null>(null);
   const { isMicrophoneAccessGranted, isCameraAccessGranted, isInitialized } =
     usePermissions();
@@ -831,12 +827,10 @@ export default function Home() {
       proxyId?: string;
       vpnId?: string;
       camoufoxConfig?: CamoufoxConfig;
+      browserConfig?: ClearcoteConfig;
       groupId?: string;
       extensionGroupId?: string;
-      ephemeral?: boolean;
       dnsBlocklist?: string;
-      launchHook?: string;
-      password?: string;
     }) => {
       try {
         const profile = await invoke<BrowserProfile>(
@@ -849,14 +843,13 @@ export default function Home() {
             proxyId: profileData.proxyId,
             vpnId: profileData.vpnId,
             camoufoxConfig: profileData.camoufoxConfig,
+            browserConfig: profileData.browserConfig,
             groupId:
               profileData.groupId ??
               (selectedGroupId && selectedGroupId !== "__all__"
                 ? selectedGroupId
                 : undefined),
-            ephemeral: profileData.ephemeral,
             dnsBlocklist: profileData.dnsBlocklist,
-            launchHook: profileData.launchHook,
           },
         );
 
@@ -868,21 +861,6 @@ export default function Home() {
             });
           } catch (err) {
             console.error("Failed to assign extension group:", err);
-          }
-        }
-
-        if (profileData.password && !profileData.ephemeral) {
-          try {
-            await invoke("set_profile_password", {
-              profileId: profile.id,
-              password: profileData.password,
-            });
-          } catch (err) {
-            showErrorToast(
-              t("errors.setProfilePasswordFailed", {
-                error: translateBackendError(t, err),
-              }),
-            );
           }
         }
 
@@ -1023,23 +1001,6 @@ export default function Home() {
     ): Promise<LaunchResult> => {
       console.log("Starting launch for profile:", profile.name);
 
-      // Password-protected: must be unlocked before launch
-      if (profile.password_protected) {
-        try {
-          const isLocked = await invoke<boolean>("is_profile_locked", {
-            profileId: profile.id,
-          });
-          if (isLocked) {
-            pendingLaunchAfterUnlockRef.current = profile;
-            setPasswordDialogMode("unlock");
-            setPasswordDialogProfile(profile);
-            return { status: "cancelled" };
-          }
-        } catch (err) {
-          console.error("Failed to check profile lock state:", err);
-        }
-      }
-
       // Show one-time warning about window resizing for fingerprinted browsers
       if (profile.browser === "camoufox") {
         try {
@@ -1116,8 +1077,8 @@ export default function Home() {
           consentToken = checks.consent_token;
         }
       } catch (err) {
-        // Same posture as the password and window-resize gates: a check that
-        // cannot run must not make profiles unlaunchable.
+        // Same posture as the window-resize gate: a check that cannot run
+        // must not make profiles unlaunchable.
         console.warn("Pre-launch checks failed, launching anyway:", err);
       }
 
@@ -1172,6 +1133,10 @@ export default function Home() {
         }
 
         console.error("Failed to launch browser:", err);
+        if (parseBackendError(err)?.code === "PROFILE_LOCKED") {
+          setProfileToUnlock(profile);
+          return { status: "blocked" };
+        }
         const errorMessage = translateBackendError(t, err);
         showErrorToast(
           t("errors.launchBrowserFailed", { error: errorMessage }),
@@ -1184,24 +1149,6 @@ export default function Home() {
 
   const handleCloneProfile = useCallback((profile: BrowserProfile) => {
     setCloneProfile(profile);
-  }, []);
-
-  const handleSetPassword = useCallback((profile: BrowserProfile) => {
-    pendingLaunchAfterUnlockRef.current = null;
-    setPasswordDialogMode("set");
-    setPasswordDialogProfile(profile);
-  }, []);
-
-  const handleChangePassword = useCallback((profile: BrowserProfile) => {
-    pendingLaunchAfterUnlockRef.current = null;
-    setPasswordDialogMode("change");
-    setPasswordDialogProfile(profile);
-  }, []);
-
-  const handleRemovePassword = useCallback((profile: BrowserProfile) => {
-    pendingLaunchAfterUnlockRef.current = null;
-    setPasswordDialogMode("remove");
-    setPasswordDialogProfile(profile);
   }, []);
 
   const handleDeleteProfile = useCallback(
@@ -1367,10 +1314,12 @@ export default function Home() {
   const handleBulkCopyCookies = useCallback(() => {
     if (selectedProfiles.length === 0) return;
     const eligibleProfiles = profiles.filter(
-      (p) => selectedProfiles.includes(p.id) && p.browser === "camoufox",
+      (p) => selectedProfiles.includes(p.id) && supportsCookieBackend(p.browser),
     );
-    if (eligibleProfiles.length === 0) {
+    if (eligibleProfiles.length < selectedProfiles.length) {
       showErrorToast(t("errors.cookieCopyUnsupportedBrowser"));
+    }
+    if (eligibleProfiles.length === 0) {
       return;
     }
     setSelectedProfilesForCookies(eligibleProfiles.map((p) => p.id));
@@ -1633,9 +1582,6 @@ export default function Home() {
                 onLaunchProfile={launchProfile}
                 onKillProfile={handleKillProfile}
                 onCloneProfile={handleCloneProfile}
-                onSetPassword={handleSetPassword}
-                onChangePassword={handleChangePassword}
-                onRemovePassword={handleRemovePassword}
                 onDeleteProfile={handleDeleteProfile}
                 onRenameProfile={handleRenameProfile}
                 onCopyCookiesToProfile={handleCopyCookiesToProfile}
@@ -1756,6 +1702,13 @@ export default function Home() {
         crossOsUnlocked={crossOsUnlocked}
       />
 
+      <ProfilePasswordDialog
+        isOpen={profileToUnlock !== null}
+        onClose={() => setProfileToUnlock(null)}
+        profile={profileToUnlock}
+        mode="unlock"
+      />
+
       <CommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
@@ -1842,27 +1795,6 @@ export default function Home() {
           setCloneProfile(null);
         }}
         profile={cloneProfile}
-      />
-
-      <ProfilePasswordDialog
-        isOpen={!!passwordDialogProfile}
-        onClose={() => {
-          pendingLaunchAfterUnlockRef.current = null;
-          setPasswordDialogProfile(null);
-        }}
-        profile={passwordDialogProfile}
-        mode={passwordDialogMode}
-        onSuccess={(p) => {
-          // Resume pending launch after unlock.
-          if (
-            passwordDialogMode === "unlock" &&
-            pendingLaunchAfterUnlockRef.current?.id === p.id
-          ) {
-            const target = pendingLaunchAfterUnlockRef.current;
-            pendingLaunchAfterUnlockRef.current = null;
-            void launchProfile(target);
-          }
-        }}
       />
 
       <GroupAssignmentDialog

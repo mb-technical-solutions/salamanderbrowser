@@ -8,6 +8,12 @@ pub struct TableSortingSettings {
   pub direction: String, // "asc" or "desc"
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PrelaunchSite {
+  pub name: String,
+  pub url: String,
+}
+
 impl Default for TableSortingSettings {
   fn default() -> Self {
     Self {
@@ -41,11 +47,12 @@ pub struct AppSettings {
   pub onboarding_completed: bool, // First-launch onboarding has been shown/handled (one-shot)
   #[serde(default)]
   pub disable_auto_updates: bool,
-  /// When true, the decrypted in-RAM copy of a password-protected profile is
-  /// preserved between launches for faster subsequent startups. The on-disk
-  /// copy is always re-encrypted regardless of this flag.
+  /// URLs opened for every newly created profile unless overridden per profile.
   #[serde(default)]
-  pub keep_decrypted_profiles_in_ram: bool,
+  pub global_preset_tabs: Vec<String>,
+  /// Named user-defined sites available for selection on profile forms.
+  #[serde(default)]
+  pub global_prelaunch_sites: Vec<PrelaunchSite>,
 }
 
 fn default_theme() -> String {
@@ -69,7 +76,8 @@ impl Default for AppSettings {
       // cut; the setting is still exposed in Settings for anyone who wants
       // to opt in once one exists.
       disable_auto_updates: true,
-      keep_decrypted_profiles_in_ram: false,
+      global_preset_tabs: Vec::new(),
+      global_prelaunch_sites: Vec::new(),
     }
   }
 }
@@ -493,7 +501,8 @@ mod tests {
       vpn_extension_warning_disabled: false,
       onboarding_completed: false,
       disable_auto_updates: false,
-      keep_decrypted_profiles_in_ram: false,
+      global_preset_tabs: Vec::new(),
+      global_prelaunch_sites: Vec::new(),
     };
 
     let save_result = manager.save_settings(&test_settings);
@@ -511,6 +520,22 @@ mod tests {
       loaded_settings.theme, "dark",
       "Loaded theme should match saved"
     );
+  }
+
+  #[test]
+  fn test_named_prelaunch_sites_round_trip() {
+    let (manager, _temp_dir, _guard) = create_test_settings_manager();
+    let mut settings = AppSettings::default();
+    settings.global_prelaunch_sites.push(PrelaunchSite {
+      name: "Work portal".to_string(),
+      url: "https://portal.example/".to_string(),
+    });
+
+    manager.save_settings(&settings).unwrap();
+    let loaded = manager.load_settings().unwrap();
+    assert_eq!(loaded.global_prelaunch_sites.len(), 1);
+    assert_eq!(loaded.global_prelaunch_sites[0].name, "Work portal");
+    assert_eq!(loaded.global_prelaunch_sites[0].url, "https://portal.example/");
   }
 
   #[test]

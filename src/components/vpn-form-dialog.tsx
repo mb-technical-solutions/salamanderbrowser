@@ -70,6 +70,30 @@ function buildWireGuardConfig(form: WireGuardFormData): string {
   return lines.join("\n");
 }
 
+function parseConfigFields(content: string): Partial<WireGuardFormData> {
+  const fields: Record<string, string> = {};
+  let section = "";
+  for (const line of content.split(/\r?\n/)) {
+    const sectionMatch = line.match(/^\s*\[([^\]]+)\]/);
+    if (sectionMatch) section = sectionMatch[1].toLowerCase();
+    const match = line.match(/^\s*([^#;=]+?)\s*=\s*(.*?)\s*$/);
+    if (match) fields[`${section}.${match[1].trim().toLowerCase()}`] = match[2];
+  }
+  const value = (section: string, key: string) =>
+    fields[`${section}.${key.toLowerCase()}`] ?? "";
+  return {
+    privateKey: value("interface", "PrivateKey"),
+    address: value("interface", "Address"),
+    dns: value("interface", "DNS"),
+    mtu: value("interface", "MTU"),
+    peerPublicKey: value("peer", "PublicKey"),
+    peerEndpoint: value("peer", "Endpoint"),
+    allowedIps: value("peer", "AllowedIPs"),
+    persistentKeepalive: value("peer", "PersistentKeepalive"),
+    presharedKey: value("peer", "PresharedKey"),
+  };
+}
+
 export function VpnFormDialog({
   isOpen,
   onClose,
@@ -87,7 +111,28 @@ export function VpnFormDialog({
   useEffect(() => {
     if (isOpen) {
       if (editingVpn) {
-        setWireGuardForm({ ...defaultWireGuardForm, name: editingVpn.name });
+        const loadConfig = async () => {
+          try {
+            const config =
+              editingVpn.config_data ||
+              (
+                await invoke<VpnConfig>("get_vpn_config", {
+                  vpnId: editingVpn.id,
+                })
+              ).config_data;
+            setWireGuardForm({
+              ...defaultWireGuardForm,
+              name: editingVpn.name,
+              ...parseConfigFields(config),
+            });
+          } catch {
+            setWireGuardForm({
+              ...defaultWireGuardForm,
+              name: editingVpn.name,
+            });
+          }
+        };
+        void loadConfig();
       } else {
         resetForms();
       }

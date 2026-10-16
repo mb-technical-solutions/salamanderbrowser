@@ -48,6 +48,13 @@ function transitionStep(current: StepState, next: ImportStep): StepState {
   };
 }
 
+function redactVpnConfigPreview(content: string): string {
+  return content.replace(
+    /^(\s*(?:PrivateKey|PresharedKey|HeaderProtectionKey)\s*=\s*).+$/gim,
+    "$1[redacted]",
+  );
+}
+
 interface VpnPreviewData {
   content: string;
   filename: string;
@@ -58,7 +65,11 @@ interface VpnPreviewData {
 const detectVpnType = (
   content: string,
   filename: string,
-): { isVpn: boolean; type: VpnType | null; endpoint: string | null } => {
+): {
+  isVpn: boolean;
+  type: VpnType | null;
+  endpoint: string | null;
+} => {
   const lowerFilename = filename.toLowerCase();
   if (
     lowerFilename.endsWith(".conf") &&
@@ -106,13 +117,14 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
 
   const processContent = useCallback(
     (content: string, filename: string) => {
-      const detection = detectVpnType(content, filename);
+      const normalizedContent = content.replace(/^\uFEFF/, "");
+      const detection = detectVpnType(normalizedContent, filename);
       if (!detection.isVpn) {
         toast.error(t("vpns.import.invalidContent"));
         return;
       }
       setVpnPreview({
-        content,
+        content: normalizedContent,
         filename,
         detectedType: detection.type,
         endpoint: detection.endpoint,
@@ -121,7 +133,7 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
         .replace(/\.conf$/i, "")
         .replace(/_/g, " ")
         .replace(/-/g, " ");
-      setVpnName(baseName || `${detection.type} VPN`);
+      setVpnName(baseName || `${detection.type ?? "Native"} VPN`);
       setStep("vpn-preview");
     },
     [t],
@@ -147,7 +159,15 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
       e.preventDefault();
       setIsDragOver(false);
       const files = Array.from(e.dataTransfer.files);
-      const validFile = files.find((f) => f.name.endsWith(".conf"));
+      const validFile = files.find((f) => {
+        const name = f.name.toLowerCase();
+        return (
+          name.endsWith(".conf") ||
+          name.endsWith(".vpn") ||
+          name.endsWith(".key") ||
+          name.endsWith(".txt")
+        );
+      });
       if (validFile) {
         handleFileRead(validFile);
       } else {
@@ -172,7 +192,12 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
 
     const handlePaste = (e: ClipboardEvent) => {
       const text = e.clipboardData?.getData("text");
-      if (text) {
+      if (
+        text &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
         processContent(text, "pasted.conf");
       }
     };
@@ -264,7 +289,7 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
                 <input
                   id="vpn-file-input"
                   type="file"
-                  accept=".conf"
+                   accept=".conf,.vpn,.key,.txt"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -317,7 +342,7 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
                 <Label>{t("vpns.import.configPreview")}</Label>
                 <ScrollArea className="h-[min(150px,25vh)] rounded-md border">
                   <pre className="p-2 font-mono text-xs break-all whitespace-pre-wrap">
-                    {vpnPreview.content.slice(0, 1000)}
+                    {redactVpnConfigPreview(vpnPreview.content).slice(0, 1000)}
                     {vpnPreview.content.length > 1000 && "..."}
                   </pre>
                 </ScrollArea>
@@ -378,9 +403,19 @@ export function VpnImportDialog({ isOpen, onClose }: VpnImportDialogProps) {
             )}
 
             {step === "vpn-result" && (
-              <RippleButton onClick={handleClose}>
-                {t("vpns.import.doneButton")}
-              </RippleButton>
+              <>
+                {!vpnImportResult?.success && (
+                  <RippleButton
+                    variant="outline"
+                    onClick={() => setStep("vpn-preview")}
+                  >
+                    {t("common.buttons.back")}
+                  </RippleButton>
+                )}
+                <RippleButton onClick={handleClose}>
+                  {t("vpns.import.doneButton")}
+                </RippleButton>
+              </>
             )}
           </DialogFooter>
         </StepTransition>

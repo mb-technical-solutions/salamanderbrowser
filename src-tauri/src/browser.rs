@@ -15,12 +15,14 @@ pub struct ProxySettings {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BrowserType {
   Camoufox,
+  Clearcote,
 }
 
 impl BrowserType {
   pub fn as_str(&self) -> &'static str {
     match self {
       BrowserType::Camoufox => "camoufox",
+      BrowserType::Clearcote => "clearcote",
     }
   }
 
@@ -29,12 +31,14 @@ impl BrowserType {
   pub fn display_name(&self) -> &'static str {
     match self {
       BrowserType::Camoufox => "Camoufox",
+      BrowserType::Clearcote => "Clearcote",
     }
   }
 
   pub fn from_str(s: &str) -> Result<Self, String> {
     match s {
       "camoufox" => Ok(BrowserType::Camoufox),
+      "clearcote" => Ok(BrowserType::Clearcote),
       _ => Err(format!("Unknown browser type: {s}")),
     }
   }
@@ -286,6 +290,64 @@ mod windows {
   }
 }
 
+#[cfg(target_os = "linux")]
+mod clearcote_linux {
+  use super::*;
+  use std::os::unix::fs::PermissionsExt;
+
+  pub fn prepare_executable(executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let metadata = std::fs::metadata(executable_path)?;
+    let mut permissions = metadata.permissions();
+    permissions.set_mode(permissions.mode() | 0o755);
+    std::fs::set_permissions(executable_path, permissions)?;
+    Ok(())
+  }
+
+  pub fn get_executable_path(install_dir: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let candidates = [install_dir.join("chrome"), install_dir.join("clearcote")];
+    candidates
+      .into_iter()
+      .find(|path| path.is_file())
+      .ok_or_else(|| {
+        format!(
+          "Clearcote executable not found in {}",
+          install_dir.display()
+        )
+        .into()
+      })
+  }
+
+  pub fn is_downloaded(install_dir: &Path) -> bool {
+    get_executable_path(install_dir).is_ok()
+  }
+}
+
+#[cfg(target_os = "windows")]
+mod clearcote_windows {
+  use super::*;
+
+  pub fn get_executable_path(install_dir: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let candidates = [
+      install_dir.join("chrome.exe"),
+      install_dir.join("clearcote.exe"),
+    ];
+    candidates
+      .into_iter()
+      .find(|path| path.is_file() && has_sibling_dll(path))
+      .ok_or_else(|| {
+        format!(
+          "Clearcote executable not found in {}",
+          install_dir.display()
+        )
+        .into()
+      })
+  }
+
+  pub fn is_downloaded(install_dir: &Path) -> bool {
+    get_executable_path(install_dir).is_ok()
+  }
+}
+
 /// Camoufox is a Firefox-based anti-detect browser. Fingerprint injection
 /// happens via `CAMOU_CONFIG_N` environment variables set by
 /// `camoufox_manager::launch_camoufox`, which is the actual launch path used
@@ -296,6 +358,127 @@ pub struct CamoufoxBrowser;
 impl CamoufoxBrowser {
   pub fn new() -> Self {
     Self
+  }
+}
+
+/// Clearcote is a Chromium build. Its release artifacts currently support only
+/// Windows x64 and Linux x64; macOS and ARM64 are rejected explicitly.
+pub struct ClearcoteBrowser;
+
+impl ClearcoteBrowser {
+  pub fn new() -> Self {
+    Self
+  }
+}
+
+impl Browser for ClearcoteBrowser {
+  fn get_executable_path(&self, install_dir: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    return clearcote_linux::get_executable_path(install_dir);
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    return clearcote_windows::get_executable_path(install_dir);
+    #[cfg(target_os = "macos")]
+    {
+      Err("Clearcote does not publish macOS builds".into())
+    }
+    #[cfg(all(
+      any(target_os = "linux", target_os = "windows"),
+      target_arch = "aarch64"
+    ))]
+    {
+      Err("Clearcote does not publish ARM64 builds".into())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+      Err("Clearcote is unsupported on this platform".into())
+    }
+  }
+
+  fn create_launch_args(
+    &self,
+    profile_path: &str,
+    proxy_settings: Option<&ProxySettings>,
+    url: Option<String>,
+    remote_debugging_port: Option<u16>,
+    headless: bool,
+  ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let fingerprint_platform = if cfg!(target_os = "windows") {
+      "windows"
+    } else if cfg!(target_os = "macos") {
+      "macos"
+    } else {
+      "linux"
+    };
+    let mut args = vec![
+      format!("--user-data-dir={profile_path}"),
+      "--no-first-run".to_string(),
+      "--no-default-browser-check".to_string(),
+      "--disable-background-networking".to_string(),
+      // Clearcote's native fingerprint is seeded per persistent profile. The
+      // profile UUID is the final path component, so it remains stable across
+      // launches without leaking the user's absolute data path to the engine.
+      format!(
+        "--fingerprint={}",
+        Path::new(profile_path)
+          .parent()
+          .and_then(Path::file_name)
+          .and_then(|name| name.to_str())
+          .unwrap_or("salamander-profile")
+      ),
+      format!("--fingerprint-platform={fingerprint_platform}"),
+      "--remote-debugging-address=127.0.0.1".to_string(),
+    ];
+    if let Some(proxy) = proxy_settings {
+      args.push(format!(
+        "--proxy-server={}://{}:{}",
+        proxy.proxy_type, proxy.host, proxy.port
+      ));
+    }
+    if let Some(port) = remote_debugging_port {
+      args.push(format!("--remote-debugging-port={port}"));
+      args.push(format!("--remote-allow-origins=http://127.0.0.1:{port}"));
+    }
+    if headless {
+      args.push("--headless=new".to_string());
+    }
+    if let Some(url) = url {
+      args.push(url);
+    }
+    Ok(args)
+  }
+
+  fn is_version_downloaded(&self, version: &str, binaries_dir: &Path) -> bool {
+    let install_dir = binaries_dir.join("clearcote").join(version);
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    return clearcote_linux::is_downloaded(&install_dir);
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    return clearcote_windows::is_downloaded(&install_dir);
+    #[cfg(any(target_os = "macos", target_arch = "aarch64"))]
+    {
+      false
+    }
+    #[cfg(not(any(
+      target_os = "macos",
+      target_os = "linux",
+      target_os = "windows",
+      target_arch = "aarch64"
+    )))]
+    {
+      false
+    }
+  }
+
+  fn prepare_executable(&self, _executable_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    return clearcote_linux::prepare_executable(_executable_path);
+    #[cfg(target_os = "windows")]
+    return Ok(());
+    #[cfg(target_os = "macos")]
+    return Err("Clearcote does not publish macOS builds".into());
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    return Err("Clearcote does not publish ARM64 builds".into());
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+    Err("Clearcote is unsupported on this platform".into())
   }
 }
 
@@ -388,6 +571,7 @@ impl BrowserFactory {
   pub fn create_browser(&self, browser_type: BrowserType) -> Box<dyn Browser> {
     match browser_type {
       BrowserType::Camoufox => Box::new(CamoufoxBrowser::new()),
+      BrowserType::Clearcote => Box::new(ClearcoteBrowser::new()),
     }
   }
 }
@@ -530,6 +714,40 @@ mod tests {
   }
 
   #[test]
+  fn clearcote_is_a_chromium_browser_with_profile_and_proxy_flags() {
+    let browser = ClearcoteBrowser::new();
+    let proxy = ProxySettings {
+      proxy_type: "http".to_string(),
+      host: "127.0.0.1".to_string(),
+      port: 8080,
+      username: None,
+      password: None,
+      vless_uri: None,
+    };
+    let args = browser
+      .create_launch_args(
+        "C:\\profiles\\one",
+        Some(&proxy),
+        Some("https://example.com".into()),
+        Some(9222),
+        true,
+      )
+      .unwrap();
+    assert!(
+      args
+        .iter()
+        .any(|arg| arg == "--user-data-dir=C:\\profiles\\one")
+    );
+    assert!(
+      args
+        .iter()
+        .any(|arg| arg == "--proxy-server=http://127.0.0.1:8080")
+    );
+    assert!(args.iter().any(|arg| arg == "--remote-debugging-port=9222"));
+    assert!(args.iter().any(|arg| arg == "--headless=new"));
+  }
+
+  #[test]
   fn test_camoufox_config_has_no_executable_path() {
     // Verify CamoufoxConfig does not store executable_path
     let config = crate::camoufox_manager::CamoufoxConfig::default();
@@ -551,23 +769,21 @@ mod tests {
       version: "1.0.0".to_string(),
       proxy_id: None,
       vpn_id: None,
-      launch_hook: None,
       process_id: None,
       last_launch: None,
       release_type: "stable".to_string(),
       camoufox_config: None,
+      browser_config: None,
       group_id: None,
       tags: Vec::new(),
       note: None,
       window_color: None,
       encryption_salt: None,
       host_os: None,
-      ephemeral: false,
+      password_protected: false,
       extension_group_id: None,
       proxy_bypass_rules: Vec::new(),
       dns_blocklist: None,
-      password_protected: false,
-      clear_on_close: false,
       created_at: None,
       updated_at: None,
     };

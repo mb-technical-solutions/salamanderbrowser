@@ -2,7 +2,7 @@
   "name": "salamanderbrowser",
   "private": true,
   "license": "AGPL-3.0",
-  "version": "0.30.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "predev": "pnpm licenses:generate",
@@ -21,7 +21,7 @@
     "licenses:generate": "node scripts/generate-licenses.mjs",
     "licenses:check": "node scripts/generate-licenses.mjs --check",
     "test:rust": "cd src-tauri && cargo test",
-    "test:rust:unit": "cd src-tauri && cargo test --lib && cargo test --test salamander_proxy_integration && cargo test --test vpn_integration",
+    "test:rust:unit": "cd src-tauri && cargo test --lib && cargo test --test salamander_proxy_integration -- --test-threads=1 && cargo test --test vpn_integration -- --test-threads=1",
     "e2e": "node e2e/run.mjs --suite=full",
     "e2e:smoke": "node e2e/run.mjs --suite=smoke",
     "e2e:ui": "node e2e/run.mjs --suite=ui",

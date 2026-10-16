@@ -4,6 +4,27 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { downloadXray } from "./download-xray.mjs";
 
+// VPN workers run `salamander-proxy.exe` detached so a tunnel survives the
+// window being hidden to tray — which also means a leftover process from a
+// prior dev/test run can still be holding the exe open. `cargo build` runs
+// this crate's build.rs regardless of which bin target you're building, and
+// that script copies the very same sidecar binary, so a locked file fails
+// the build with a raw `PermissionDenied` panic that gives no hint it's just
+// a stale process. Clear it first, on every local rebuild, not only inside
+// the packaged NSIS installer.
+function killLingeringSidecars() {
+  if (process.platform !== "win32") return;
+  try {
+    execFileSync("taskkill", ["/F", "/T", "/IM", "salamander-proxy.exe"], {
+      stdio: "ignore",
+    });
+  } catch {
+    // Nothing running under that name — fine, this is just a precaution.
+  }
+}
+
+killLingeringSidecars();
+
 const MANIFEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PROFILE =
   process.argv.includes("--release") || process.env.PROFILE === "release"

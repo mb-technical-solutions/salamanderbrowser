@@ -254,9 +254,9 @@ impl VersionUpdater {
   ) -> Result<Vec<BackgroundUpdateResult>, Box<dyn std::error::Error + Send + Sync>> {
     let supported_browsers = self.browser_version_manager.get_supported_browsers();
 
-    // Only fetch versions for active browsers (camoufox) plus any
+    // Only fetch versions for active browsers plus any
     // deprecated browsers that still have existing profiles
-    let active_browsers = ["camoufox"];
+    let active_browsers = ["camoufox", "clearcote"];
     let browsers_with_profiles: std::collections::HashSet<String> =
       crate::profile::ProfileManager::instance()
         .list_profiles()

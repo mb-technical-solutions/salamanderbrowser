@@ -1,4 +1,4 @@
-//! VPN support module for WireGuard configurations.
+//! VPN configuration support for WireGuard.
 //!
 //! This module provides:
 //! - WireGuard config parsing (`.conf` files)
@@ -12,8 +12,8 @@ mod tunnel;
 mod wireguard;
 
 pub use config::{
-  detect_vpn_type, parse_wireguard_config, VpnConfig, VpnError, VpnImportResult, VpnStatus,
-  VpnType, WireGuardConfig,
+  detect_vpn_type, parse_wireguard_config, VpnConfig, VpnError, VpnImportResult, VpnStatus, VpnType,
+  WireGuardConfig,
 };
 pub use storage::VpnStorage;
 pub use tunnel::{TunnelManager, VpnTunnel};

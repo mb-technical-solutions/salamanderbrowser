@@ -39,7 +39,6 @@ import {
   ProfileBypassRulesDialog,
   ProfileDnsBlocklistDialog,
   ProfileInfoDialog,
-  ProfileLaunchHookDialog,
 } from "@/components/profile-info-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1076,9 +1075,6 @@ interface ProfilesDataTableProps {
   onBulkExtensionGroupAssignment?: () => void;
   onAssignExtensionGroup?: (profileIds: string[]) => void;
   crossOsUnlocked?: boolean;
-  onSetPassword?: (profile: BrowserProfile) => void;
-  onChangePassword?: (profile: BrowserProfile) => void;
-  onRemovePassword?: (profile: BrowserProfile) => void;
   /**
    * When provided, the info dialog is controlled by the parent. Allows the
    * command palette in page.tsx to open the dialog directly without lifting
@@ -1120,9 +1116,6 @@ export function ProfilesDataTable({
   onBulkExtensionGroupAssignment,
   onAssignExtensionGroup,
   crossOsUnlocked = false,
-  onSetPassword,
-  onChangePassword,
-  onRemovePassword,
   infoDialogProfile,
   onInfoDialogProfileChange,
   isLoading = false,
@@ -1221,8 +1214,6 @@ export function ProfilesDataTable({
   const [bypassRulesProfile, setBypassRulesProfile] =
     React.useState<BrowserProfile | null>(null);
   const [dnsBlocklistProfile, setDnsBlocklistProfile] =
-    React.useState<BrowserProfile | null>(null);
-  const [launchHookProfile, setLaunchHookProfile] =
     React.useState<BrowserProfile | null>(null);
   const [launchingProfiles, setLaunchingProfiles] = React.useState<Set<string>>(
     new Set(),
@@ -3040,13 +3031,7 @@ export function ProfilesDataTable({
               onOpenDnsBlocklist={(profile) => {
                 setDnsBlocklistProfile(profile);
               }}
-              onOpenLaunchHook={(profile) => {
-                setLaunchHookProfile(profile);
-              }}
               onCloneProfile={onCloneProfile}
-              onSetPassword={onSetPassword}
-              onChangePassword={onChangePassword}
-              onRemovePassword={onRemovePassword}
               onDeleteProfile={(profile) => {
                 setProfileForInfoDialog(null);
                 setProfileToDelete(profile);
@@ -3174,14 +3159,6 @@ export function ProfilesDataTable({
         }}
         profileId={dnsBlocklistProfile?.id ?? null}
         currentLevel={dnsBlocklistProfile?.dns_blocklist ?? null}
-      />
-      <ProfileLaunchHookDialog
-        isOpen={launchHookProfile !== null}
-        onClose={() => {
-          setLaunchHookProfile(null);
-        }}
-        profileId={launchHookProfile?.id ?? null}
-        currentLaunchHook={launchHookProfile?.launch_hook ?? null}
       />
     </>
   );

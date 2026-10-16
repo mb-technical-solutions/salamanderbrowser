@@ -148,10 +148,6 @@ pub struct CookiePasteAnalysis {
   /// read — a profile that has never launched, a locked database, a browser
   /// with no supported cookie store.
   pub replace_delete_count: Option<usize>,
-  /// The profile wipes its browsing data when the browser exits, so an import
-  /// here lives exactly one session. Not an error, but silently losing a pasted
-  /// login is the worst thing this feature can do.
-  pub clears_on_close: bool,
   /// The `{"code":…}` string explaining why an import would be refused right
   /// now, ready for `translateBackendError`. `None` when the import can run.
   pub blocked_by: Option<String>,
@@ -803,19 +799,7 @@ impl CookieManager {
     if is_running {
       return Some(crate::backend_error("COOKIE_IMPORT_BROWSER_RUNNING"));
     }
-    // The profile directory on disk is ciphertext while locked; a plaintext
-    // SQLite write into it is not a cookie, it is corruption.
-    if profile.password_protected {
-      return Some(crate::backend_error("COOKIE_IMPORT_PROFILE_PROTECTED"));
-    }
     None
-  }
-
-  /// Whether a successful import into this profile would be wiped on browser
-  /// exit. Mirrors the condition `browser_runner` actually applies, which lets
-  /// ephemeral and password-protected profiles take their own paths first.
-  fn clears_cookies_on_close(profile: &BrowserProfile) -> bool {
-    profile.clear_on_close && !profile.ephemeral && !profile.password_protected
   }
 
   /// Public API: describe a pasted blob without writing anything.
@@ -851,7 +835,6 @@ impl CookieManager {
       site_required: parsed.site_required,
       expired_count: parsed.expired_count,
       replace_delete_count,
-      clears_on_close: Self::clears_cookies_on_close(&profile),
       blocked_by,
     })
   }

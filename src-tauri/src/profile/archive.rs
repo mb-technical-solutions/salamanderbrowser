@@ -4,23 +4,14 @@
 //! "bundle" of 1..N profiles so a single profile and a batch of profiles
 //! share one format, one command pair, and one mental model.
 //!
-//! ## Two independent encryption layers
-//! 1. **Archive transit password** (this module, mandatory on export —
-//!    `export_profiles_archive` rejects a missing or under-length password
-//!    with `PASSWORD_TOO_SHORT`, since the archive is meant to leave the
-//!    machine carrying a fingerprint, cookies and extensions): protects the
-//!    exported FILE in transit/at rest. Uses the same AES-256-GCM + Argon2id
-//!    primitives as local profile password-protection (`profile::encryption`),
-//!    wrapping the whole zip instead of per-file. `import_profiles_archive`
-//!    still accepts `None` so archives exported before this requirement
-//!    existed keep importing.
-//! 2. **Profile at-rest password** (`profile::password`, unchanged, separate
-//!    and optional): if a source profile is already password-protected, its
-//!    `profile/` directory is already encrypted on disk. Export zips those
-//!    bytes as-is and carries `encryption_salt`/`password_protected` in that
-//!    profile's manifest — after import it's still locked with its
-//!    *original* password, independent of the mandatory archive password
-//!    used for transit.
+//! ## Archive transit password
+//! Mandatory on export — `export_profiles_archive` rejects a missing or
+//! under-length password with `PASSWORD_TOO_SHORT`, since the archive is
+//! meant to leave the machine carrying a fingerprint, cookies and
+//! extensions. Protects the exported FILE in transit/at rest, using
+//! AES-256-GCM + Argon2id (`profile::encryption`), wrapping the whole zip
+//! instead of per-file. `import_profiles_archive` still accepts `None` so
+//! archives exported before this requirement existed keep importing.
 //!
 //! ## File format
 //! `"SALAMPROF"(9B) | format_version(1B) | encrypted_flag(1B)`, then either
@@ -118,23 +109,19 @@ struct ArchiveManifest {
   #[serde(default)]
   camoufox_config: Option<crate::camoufox_manager::CamoufoxConfig>,
   #[serde(default)]
+  browser_config: Option<serde_json::Value>,
+  #[serde(default)]
   tags: Vec<String>,
   #[serde(default)]
   note: Option<String>,
   #[serde(default)]
   window_color: Option<String>,
   #[serde(default)]
-  encryption_salt: Option<String>,
-  #[serde(default)]
-  password_protected: bool,
-  #[serde(default)]
   host_os: Option<String>,
   #[serde(default)]
   proxy_bypass_rules: Vec<String>,
   #[serde(default)]
   dns_blocklist: Option<String>,
-  #[serde(default)]
-  clear_on_close: bool,
   #[serde(default)]
   extensions: Vec<ArchivedExtension>,
   #[serde(default)]
@@ -286,15 +273,13 @@ fn write_profile_entry<W: Write + std::io::Seek>(
     version: profile.version.clone(),
     release_type: profile.release_type.clone(),
     camoufox_config: profile.camoufox_config.clone(),
+    browser_config: profile.browser_config.clone(),
     tags: profile.tags.clone(),
     note: profile.note.clone(),
     window_color: profile.window_color.clone(),
-    encryption_salt: profile.encryption_salt.clone(),
-    password_protected: profile.password_protected,
     host_os: profile.host_os.clone(),
     proxy_bypass_rules: profile.proxy_bypass_rules.clone(),
     dns_blocklist: profile.dns_blocklist.clone(),
-    clear_on_close: profile.clear_on_close,
     extensions: archived_extensions,
     network,
   };
@@ -309,7 +294,13 @@ fn write_profile_entry<W: Write + std::io::Seek>(
     .map_err(|e| code_detail("INTERNAL_ERROR", e))?;
 
   let data_dir = profile.get_profile_data_path(profiles_dir);
-  copy_dir_into_zip(zip, options, &data_dir, &data_dir, &format!("{prefix}/profile"))?;
+  copy_dir_into_zip(
+    zip,
+    options,
+    &data_dir,
+    &data_dir,
+    &format!("{prefix}/profile"),
+  )?;
 
   let mgr = ExtensionManager::new();
   for (idx, (ext_id, ext)) in payloads.iter().enumerate() {
@@ -512,7 +503,9 @@ fn inspect_archive_bytes(data: &[u8]) -> ImportSourceInfo {
     let mut names = Vec::with_capacity(bundle.profile_count);
     for i in 0..bundle.profile_count {
       let name = (|| -> Option<String> {
-        let mut entry = archive.by_name(&format!("profiles/{i}/manifest.json")).ok()?;
+        let mut entry = archive
+          .by_name(&format!("profiles/{i}/manifest.json"))
+          .ok()?;
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).ok()?;
         drop(entry);
@@ -575,14 +568,15 @@ pub async fn inspect_import_source(path: String) -> Result<ImportSourceInfo, Str
 
 /// Archives leave the machine (another PC, a backup drive, cloud storage a
 /// user might sync to) carrying a fingerprint, cookies and extensions, so a
-/// password is mandatory rather than opt-in — the same minimum length as
-/// local profile at-rest passwords (`profile::password::MIN_PASSWORD_LEN`).
+/// password is mandatory rather than opt-in.
+const MIN_ARCHIVE_PASSWORD_LEN: usize = 8;
+
 fn validate_archive_password(archive_password: &str) -> Result<(), String> {
-  if archive_password.len() < crate::profile::password::MIN_PASSWORD_LEN {
+  if archive_password.len() < MIN_ARCHIVE_PASSWORD_LEN {
     return Err(
       serde_json::json!({
         "code": "PASSWORD_TOO_SHORT",
-        "params": { "min": crate::profile::password::MIN_PASSWORD_LEN.to_string() }
+        "params": { "min": MIN_ARCHIVE_PASSWORD_LEN.to_string() }
       })
       .to_string(),
     );
@@ -678,9 +672,7 @@ fn extract_dir_from_zip<R: Read + std::io::Seek>(
     }
 
     let dest = dest_dir.join(rel_path);
-    let normalized_dest = dest
-      .components()
-      .collect::<std::path::PathBuf>();
+    let normalized_dest = dest.components().collect::<std::path::PathBuf>();
     if !normalized_dest.starts_with(dest_dir) {
       return Err(code("ARCHIVE_INVALID_PATH"));
     }
@@ -834,12 +826,14 @@ pub async fn import_profiles_archive(
         proxy_id,
         vpn_id,
         manifest.camoufox_config.clone(),
+        manifest.browser_config.clone(),
         None, // profile group membership is local organization, not portable
-        false,
         manifest.dns_blocklist.clone(),
-        None,
       )
       .await
+      .map_err(|e| e.to_string())?;
+    profile_manager
+      .save_profile(&created)
       .map_err(|e| e.to_string())?;
 
     // Replace the freshly-created (empty) data dir with the archived one.
@@ -862,7 +856,8 @@ pub async fn import_profiles_archive(
         let ext_dir = temp_dir.path().join(format!("ext-{}", ext.zip_index));
         let file_path = ext_dir.join(&ext.file_name);
         if let Ok(bytes) = fs::read(&file_path) {
-          if let Ok(created_ext) = mgr.add_extension(ext.name.clone(), ext.file_name.clone(), bytes) {
+          if let Ok(created_ext) = mgr.add_extension(ext.name.clone(), ext.file_name.clone(), bytes)
+          {
             new_ext_ids.push(created_ext.id);
           }
         }
@@ -880,11 +875,8 @@ pub async fn import_profiles_archive(
     profile.tags = manifest.tags.clone();
     profile.note = manifest.note.clone();
     profile.window_color = manifest.window_color.clone();
-    profile.encryption_salt = manifest.encryption_salt.clone();
-    profile.password_protected = manifest.password_protected;
     profile.host_os = manifest.host_os.clone();
     profile.proxy_bypass_rules = manifest.proxy_bypass_rules.clone();
-    profile.clear_on_close = manifest.clear_on_close;
     profile.extension_group_id = extension_group_id;
     profile.updated_at = Some(now_secs());
     profile_manager
@@ -939,7 +931,6 @@ mod tests {
       version: "135.0".to_string(),
       proxy_id: None,
       vpn_id: None,
-      launch_hook: None,
       process_id: None,
       last_launch: None,
       release_type: "stable".to_string(),
@@ -958,18 +949,17 @@ mod tests {
         os: Some(get_host_os()),
         preset_tabs: None,
       }),
+      browser_config: None,
       group_id: None,
       tags: vec!["work".to_string()],
       note: Some("a note".to_string()),
       window_color: Some("#abcdef".to_string()),
       encryption_salt: None,
       host_os: Some(get_host_os()),
-      ephemeral: false,
+      password_protected: false,
       extension_group_id: None,
       proxy_bypass_rules: vec![],
       dns_blocklist: None,
-      password_protected: false,
-      clear_on_close: false,
       created_at: Some(1),
       updated_at: Some(1),
     }
@@ -1104,7 +1094,10 @@ mod tests {
       } => {
         assert!(!needs_password);
         assert_eq!(profile_count, Some(2));
-        assert_eq!(preview_names, vec!["Alpha".to_string(), "Bravo".to_string()]);
+        assert_eq!(
+          preview_names,
+          vec!["Alpha".to_string(), "Bravo".to_string()]
+        );
       }
       other => panic!("expected Archive, got {other:?}"),
     }
@@ -1204,12 +1197,12 @@ mod tests {
 
     let err = validate_archive_password("short").unwrap_err();
     assert!(err.contains("PASSWORD_TOO_SHORT"));
-    assert!(err.contains(&crate::profile::password::MIN_PASSWORD_LEN.to_string()));
+    assert!(err.contains(&MIN_ARCHIVE_PASSWORD_LEN.to_string()));
   }
 
   #[test]
   fn validate_archive_password_accepts_a_password_at_the_minimum_length() {
-    let password = "a".repeat(crate::profile::password::MIN_PASSWORD_LEN);
+    let password = "a".repeat(MIN_ARCHIVE_PASSWORD_LEN);
     assert!(validate_archive_password(&password).is_ok());
   }
 

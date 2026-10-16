@@ -219,7 +219,18 @@ pub fn import_data_tree_from(source: &std::path::Path) -> std::io::Result<()> {
     ));
   }
 
-  copy_dir_skip_existing(&source, &destination)
+  // Stage the complete source first. This prevents a malformed tree or a
+  // failed source read from partially mutating the live data directory.
+  let staging = destination
+    .parent()
+    .unwrap_or_else(|| std::path::Path::new("."))
+    .join(format!(".salamander-import-{}", uuid::Uuid::new_v4()));
+  let result = (|| {
+    copy_dir_skip_existing(&source, &staging)?;
+    copy_dir_skip_existing(&staging, &destination)
+  })();
+  let _ = std::fs::remove_dir_all(&staging);
+  result
 }
 
 /// Recursively copy `src` into `dst`, creating directories as needed and

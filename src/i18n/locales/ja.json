@@ -159,10 +159,7 @@
       "copyLogsDescription": "最近のログを編集したバンドル（最大 5 MB）をコピーします。編集ではすべての種類の個人データを識別できないため、共有前に内容を確認してください。"
     },
     "disableAutoUpdates": "アプリの自動更新を無効にする",
-    "disableAutoUpdatesDescription": "Salamander Browserの自動更新確認・インストールを無効にします。ブラウザの更新には影響しません。",
-    "keepDecryptedProfilesInRam": "復号済みプロファイルをRAMに保持",
-    "keepDecryptedProfilesInRamDescription": "起動を高速化するため、パスワード保護されたプロファイルの復号済みコピーをRAMに保持します。ディスク上のコピーは常に暗号化されたままです。",
-    "privacy": {
+    "disableAutoUpdatesDescription": "Salamander Browserの自動更新確認・インストールを無効にします。ブラウザの更新には影響しません。",    "privacy": {
       "consistencyWarning": "フィンガープリント不一致時に起動をブロック",
       "consistencyWarningDescription": "プロファイルのタイムゾーンや言語がプロキシの出口ノードと一致しない場合、ブラウザーの起動を停止します。それでも起動を選択できます。",
       "clearTraffic": "すべてのトラフィック履歴を消去",
@@ -211,7 +208,6 @@
       "status": "実行中かどうか",
       "version": "ブラウザのバージョン",
       "locked": "パスワード保護",
-      "ephemeral": "一時プロファイル",
       "created": "作成日",
       "launched": "最終起動日"
     },
@@ -277,12 +273,10 @@
       "assignToGroup": "グループに割り当て",
       "changeFingerprint": "フィンガープリントを変更",
       "copyCookiesToProfile": "Cookieをプロファイルにコピー",
-      "launchHook": "起動フックURL",
       "setPassword": "パスワードを設定",
       "changePassword": "パスワードを変更",
       "removePassword": "パスワードを削除"
     },
-    "ephemeral": "一時的",
     "ephemeralDescription": "ブラウザはプロファイルデータをディスクではなくメモリに書き込むよう強制されます。ただし、OSはメモリ不足時にメモリの一部をディスクにスワップすることがあるため、セッションの痕跡が復元可能な状態で残る場合があります。",
     "ephemeralBadge": "一時的",
     "bulkDelete": {
@@ -310,12 +304,7 @@
       "runSelected": "選択を実行",
       "stopSelected": "選択を停止",
       "proRequired": "一括実行・停止には Pro プランが必要です"
-    },
-    "passwordProtectedBadge": "パスワード保護",
-    "launchHook": {
-      "placeholder": "https://example.com/track-launch"
-    },
-    "bulkRun": {
+    },    "bulkRun": {
       "confirmTitle": "{{count}} 個のプロファイルを実行しますか？",
       "confirmDescription": "{{count}} 個のプロファイルを一度に起動すると、システムリソースを大量に消費する可能性があります。続行しますか？",
       "confirmButton": "{{count}} 個を実行",
@@ -347,10 +336,6 @@
       "search": "プロキシまたは VPN を検索...",
       "notFound": "プロキシまたは VPN が見つかりません。"
     },
-    "launchHook": {
-      "label": "起動フックURL",
-      "placeholder": "https://example.com/hooks/profile-launch"
-    },
     "version": {
       "fetching": "利用可能なバージョンを取得中...",
       "fetchError": "ブラウザバージョンの取得に失敗しました。インターネット接続を確認して再試行してください。",
@@ -362,12 +347,8 @@
       "latestDownloading": "バージョン ({{version}}) をダウンロード中...",
       "upgradeAvailable": "{{browser}} の新しいバージョン（{{version}}）が利用可能です。"
     },
-    "chromiumLabel": "Camoufox",
+    "chromiumLabel": "Firefox",
     "platformUnavailable": "{{browser}} はまだお使いのプラットフォームで利用できません。",
-    "passwordProtect": {
-      "label": "このプロファイルをパスワードで保護",
-      "description": "ディスク上のプロファイルデータを暗号化します。起動に必要です。"
-    },
     "downloadingSubtitle": "ダウンロード中…",
     "browsersDownloading": "ブラウザをダウンロード中です。ダウンロードが完了するとプロファイルを作成できます。",
     "os": {
@@ -618,7 +599,7 @@
       "sourcePlaceholder": "Cookie をコピーするプロファイルを選択",
       "running": "(実行中)",
       "targetProfiles": "対象プロファイル ({{count}})",
-      "noOtherTargets": "他に Camoufox プロファイルが選択されていません",
+      "noOtherTargets": "他に Firefox プロファイルが選択されていません",
       "selectSourceFirst": "最初にソースプロファイルを選択してください",
       "selectionStatus": "({{selected}} / {{total}} 選択中)",
       "searchPlaceholder": "ドメインまたは Cookie を検索...",
@@ -832,7 +813,7 @@
     "renameProfileFailed": "プロファイルの名前変更に失敗しました: {{error}}",
     "killBrowserFailed": "ブラウザの停止に失敗しました: {{error}}",
     "deleteSelectedProfilesFailed": "選択したプロファイルの削除に失敗しました: {{error}}",
-    "cookieCopyUnsupportedBrowser": "Cookieのコピーは Camoufox プロファイルでのみ機能します",
+    "cookieCopyUnsupportedBrowser": "Cookieのコピーは Firefox のみ対応しています。Chrome はまだ対応していません",
     "cloneProfileFailed": "プロファイルの複製に失敗しました: {{error}}",
     "loadSupportedBrowsersFailed": "サポートされているブラウザの読み込みに失敗しました",
     "setupExtensionListenersFailed": "拡張機能イベントリスナーの設定に失敗しました: {{error}}",
@@ -978,13 +959,11 @@
       "browser": "ブラウザ",
       "releaseType": "リリースタイプ",
       "proxyVpn": "プロキシ / VPN",
-      "launchHook": "起動フック",
       "group": "グループ",
       "tags": "タグ",
       "note": "メモ",
       "lastLaunched": "最終起動",
       "hostOs": "ホストOS",
-      "ephemeral": "エフェメラル",
       "extensionGroup": "拡張機能グループ",
       "totalSessions": "合計セッション",
       "proxy": "プロキシ",
@@ -1015,13 +994,6 @@
       "vpnLabel": "VPN: {{name}}",
       "proxyLabel": "Proxy: {{name}}"
     },
-    "launchHook": {
-      "title": "起動フックURL",
-      "label": "起動フックURL",
-      "description": "プロファイルが起動するたびに、このURLにGETリクエストが送信されます。",
-      "placeholder": "https://example.com/hooks/profile-launch",
-      "invalidUrlHint": "有効な http:// または https:// URL を入力してください。"
-    },
     "actions": {
       "manageCookies": "Cookieを管理",
       "assignExtensionGroup": "拡張機能グループを割り当て"
@@ -1041,24 +1013,19 @@
       "network": "ネットワーク",
       "cookies": "Cookie",
       "extensions": "拡張機能",
-      "automation": "自動化",
       "security": "セキュリティ",
       "delete": "プロファイルを削除",
-      "activity": "アクティビティ",
-      "launchHook": "起動フック"
+      "activity": "アクティビティ"
     },
     "sectionDesc": {
       "fingerprint": "フィンガープリント対策スクリプトに対するこのプロファイルの表示を設定します。",
       "network": "このプロファイルが使用するプロキシまたは VPN を管理します。",
       "cookies": "このプロファイルの Cookie をインポート、コピー、消去します。",
       "extensions": "このプロファイル起動時に読み込む拡張機能を選択します。",
-      "automation": "このプロファイル起動時に実行するコマンドを設定します。",
-      "security": "プロファイルデータをパスワードで暗号化します。",
-      "launchHook": "プロファイルが起動するたびに、このURLにGETリクエストを送信します。"
+      "security": "プロファイルデータをパスワードで暗号化します。"
     },
     "badges": {
-      "locked": "ロック中",
-      "active": "有効"
+      "locked": "ロック中"
     },
     "cookies": {
       "runningNotice": "ブラウザの実行中は Cookie を読み取れません。先にこのプロファイルを閉じてください。",
@@ -1072,36 +1039,9 @@
     "fingerprint": {
       "lockedTitle": "フィンガープリントの表示と編集は Pro 機能です",
       "lockedDescription": "デバイス情報はすべてのプロファイルで保護されています。プロファイルのフィンガープリントを表示・編集するには、有効な有料プランが必要です。",
-      "camoufoxDescription": "Camoufoxはプロファイル作成（またはインポート）時にローカルでフィンガープリントを生成します。項目ごとの編集機能はまだありません。保存されたフィンガープリントを消去すると、次回起動時に新しく生成されます。",
+      "camoufoxDescription": "Firefoxはプロファイル作成（またはインポート）時にローカルでフィンガープリントを生成します。項目ごとの編集機能はまだありません。保存されたフィンガープリントを消去すると、次回起動時に新しく生成されます。",
       "camoufoxRegenerateButton": "フィンガープリントを消去（次回起動時に再生成）",
       "camoufoxRegenerateQueued": "フィンガープリントを消去しました。次回このプロファイルを起動すると新しいものが生成されます。"
-    },
-    "ephemeral": {
-      "cookiesUnavailable": "一時プロファイルはブラウザーを閉じると破棄されるため、ここで管理できる Cookie はありません。",
-      "extensionsUnavailable": "一時プロファイルはブラウザーを閉じると破棄されるため、拡張機能グループを割り当てられません。",
-      "hint": "データを保持したい場合は通常のプロファイルを作成してください。"
-    }
-  },
-  "extensions": {
-    "title": "拡張機能",
-    "description": "プロファイル用のブラウザ拡張機能と拡張機能グループを管理します。",
-    "upload": "アップロード",
-    "delete": "削除",
-    "extensionsTab": "拡張機能",
-    "groupsTab": "グループ",
-    "managedNotice": "ここで管理される拡張機能は、起動時にプロファイルに手動でインストールされた拡張機能を置き換えます。",
-    "proRequired": "拡張機能管理はプロ機能です",
-    "empty": "まだ拡張機能がアップロードされていません。",
-    "noGroups": "まだ拡張機能グループが作成されていません。",
-    "createGroup": "グループを作成",
-    "newGroup": "新しいグループ",
-    "addToGroup": "拡張機能を追加...",
-    "removeFromGroup": "グループから削除",
-    "deleteGroup": "グループを削除",
-    "extensionGroup": "拡張機能グループ",
-    "compatibility": {
-      "label": "互換性",
-      "chromium": "Chromium"
     },
     "selectedFile": "選択されたファイル",
     "namePlaceholder": "拡張機能名",
@@ -1646,62 +1586,6 @@
       "lookingForUpdates": "{{browser}} の更新を確認しています"
     }
   },
-  "profilePassword": {
-    "set": {
-      "title": "プロファイルにパスワードを設定",
-      "description": "{{name}} のディスク上のデータを暗号化します。プロファイルを起動するたびにこのパスワードが必要になります。",
-      "button": "プロファイルを暗号化"
-    },
-    "unlock": {
-      "title": "プロファイルを解除",
-      "description": "{{name}} を解除するためのパスワードを入力してください。",
-      "button": "解除"
-    },
-    "change": {
-      "title": "プロファイルのパスワードを変更",
-      "description": "新しいパスワードで {{name}} を再暗号化します。",
-      "button": "パスワードを変更"
-    },
-    "remove": {
-      "title": "プロファイルのパスワードを削除",
-      "description": "{{name}} のディスク上のデータを復号します。プロファイルはパスワード保護されなくなります。",
-      "button": "パスワードを削除"
-    },
-    "fields": {
-      "password": "パスワード",
-      "currentPassword": "現在のパスワード",
-      "newPassword": "新しいパスワード",
-      "confirm": "パスワードの確認",
-      "confirmPassword": "新しいパスワード（確認）"
-    },
-    "errors": {
-      "oldPasswordRequired": "現在のパスワードが必要です",
-      "passwordRequired": "パスワードが必要です",
-      "tooShort": "パスワードは 8 文字以上必要です",
-      "mismatch": "パスワードが一致しません"
-    },
-    "toasts": {
-      "set": "プロファイルがパスワードで保護されました",
-      "changed": "プロファイルのパスワードを変更しました",
-      "removed": "プロファイルのパスワードを削除しました"
-    },
-    "warnings": {
-      "forgetWarningTitle": "重要: このパスワードは復元できません",
-      "forgetWarningBody": "Salamander Browserはこのパスワードをリセット、復元、回避することはできません。忘れた場合、このプロファイルのデータへのアクセスは永続的に失われます。"
-    },
-    "modes": {
-      "set": "設定",
-      "change": "変更",
-      "remove": "削除",
-      "validate": "確認"
-    },
-    "verifyDialog": {
-      "title": "プロファイルパスワードを確認",
-      "description": "ディスクに保存されているプロファイルパスワードと一致するか入力してください。",
-      "submit": "確認",
-      "matchToast": "パスワードが一致しました"
-    }
-  },
   "backendErrors": {
     "incorrectPassword": "パスワードが正しくありません",
     "lockedOut": "失敗回数が多すぎます。{{duration}}後に再試行してください。",
@@ -1734,7 +1618,6 @@
     "extensionPathHasComma": "そのフォルダのパスにカンマが含まれており、Chromium が読み込めません。フォルダの名前を変更するか、移動してください。",
     "extensionLinkRequiresDirectory": "その場で読み込めるのはフォルダのみです。アーカイブを追加するにはリンクをオフにしてください。",
     "internal": "問題が発生しました: {{detail}}",
-    "invalidLaunchHookUrl": "起動フックURLが無効です。完全な http:// または https:// URL を使用してください。",
     "cookieDbLocked": "Cookie を読み取れません — データベースがロックされています。ブラウザを閉じてから再試行してください。",
     "cookieDbUnavailable": "Cookie を読み取れません — Cookie ストアを利用できません。",
     "cookieImportBrowserRunning": "ブラウザの実行中は Cookie をインポートできません。ブラウザを閉じてから再試行してください。",
@@ -1754,9 +1637,7 @@
     "camoufoxImportCopyFailed": "Camoufoxのインポートでプロファイルは作成されましたが、ファイルのコピーに失敗しました: {{detail}}",
     "browserNotDownloaded": "{{browser}}のダウンロード済みバージョンがありません。先にダウンロードしてから、再度インポートしてください。",
     "archiveExtractionFailed": "アーカイブの展開に失敗しました：{{detail}}",
-    "unsupportedArchiveFormat": "サポートされていないアーカイブ形式です。ZIPアーカイブのみサポートされています。",
-    "clearOnCloseUnavailable": "終了時消去は、一時プロファイルやパスワード保護されたプロファイルでは利用できません。",
-    "proxyAndVpnMutuallyExclusive": "プロファイルにはプロキシまたは VPN のいずれかを設定できます（両方は設定できません）。",
+    "unsupportedArchiveFormat": "サポートされていないアーカイブ形式です。ZIPアーカイブのみサポートされています。",    "proxyAndVpnMutuallyExclusive": "プロファイルにはプロキシまたは VPN のいずれかを設定できます（両方は設定できません）。",
     "invalidDnsRulesJson": "選択したファイルは有効な DNS ルール JSON ではありません。",
     "unsupportedDnsRulesFormat": "サポートされていないルール形式: {{format}}",
     "dnsRulesSaveFailed": "DNS ルールを保存できませんでした。",
@@ -1871,7 +1752,7 @@
     "steps": {
       "createProfile": {
         "title": "最初のプロファイルを作成",
-        "content": "ここをクリックして最初のプロファイルを作成します。フィンガープリント対策済みのブラウザ Camoufox が自動的に使用されます。"
+        "content": "ここをクリックして最初のプロファイルを作成します。フィンガープリント対策済みのブラウザ Firefox が自動的に使用されます。"
       },
       "dnsBlocking": {
         "title": "DNS ブロック",
@@ -1904,7 +1785,7 @@
     },
     "ready": {
       "title": "準備しています",
-      "descDownloading": "最初のブラウザ（Camoufox）をダウンロードしています。この初回セットアップはバックグラウンドで実行されます。少々お待ちください。",
+      "descDownloading": "最初のブラウザ（Firefox）をダウンロードしています。この初回セットアップはバックグラウンドで実行されます。少々お待ちください。",
       "descReady": "ブラウザの準備ができました。最初のプロファイルを作成しましょう。",
       "cta": "最初のプロファイルを作成",
       "downloading": "ダウンロード中…",
@@ -1943,10 +1824,6 @@
     "searchLicenses": "ライセンスを検索…",
     "noMatchingLicenses": "一致するライセンスはありません。",
     "openSource": "{{name}} のソースコードを表示"
-  },
-  "clearOnClose": {
-    "label": "終了時にデータを消去",
-    "description": "ブラウザを閉じるときに Cookie、履歴、キャッシュを消去します。拡張機能とブックマークは保持されます。"
   },
   "consistencyWarning": {
     "timezoneDetail": "出口ノードは {{exit}} にありますが、フィンガープリントは {{fingerprint}} を示しています。",

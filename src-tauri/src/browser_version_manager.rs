@@ -1,4 +1,4 @@
-use crate::api_client::{sort_versions, ApiClient, BrowserRelease};
+use crate::api_client::{ApiClient, BrowserRelease, sort_versions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -62,13 +62,14 @@ impl BrowserVersionManager {
             | "windows-arm64"
         ))
       }
+      "clearcote" => Ok(os == "windows" && arch == "x64" || os == "linux" && arch == "x64"),
       _ => Err(format!("Unknown browser: {browser}").into()),
     }
   }
 
   /// Get list of browsers supported on the current platform
   pub fn get_supported_browsers(&self) -> Vec<String> {
-    let all_browsers = vec!["camoufox"];
+    let all_browsers = vec!["camoufox", "clearcote"];
 
     all_browsers
       .into_iter()
@@ -114,7 +115,7 @@ impl BrowserVersionManager {
     &self,
     browser: &str,
   ) -> Result<BrowserReleaseTypes, Box<dyn std::error::Error + Send + Sync>> {
-    if browser != "camoufox" {
+    if browser != "camoufox" && browser != "clearcote" {
       return Err(format!("Unsupported browser: {browser}").into());
     }
 
@@ -172,6 +173,7 @@ impl BrowserVersionManager {
     // Fetch fresh versions from API
     let fresh_versions = match browser {
       "camoufox" => self.fetch_camoufox_versions(true).await?,
+      "clearcote" => self.fetch_clearcote_versions(true).await?,
       _ => return Err(format!("Unsupported browser: {browser}").into()),
     };
 
@@ -234,7 +236,7 @@ impl BrowserVersionManager {
     // Since we don't have detailed date/prerelease info for cached versions,
     // we'll fetch fresh detailed info and map it to our merged versions
     let detailed_info: Vec<BrowserVersionInfo> = match browser {
-      "camoufox" => merged_versions
+      "camoufox" | "clearcote" => merged_versions
         .into_iter()
         .map(|version| BrowserVersionInfo {
           version: version.clone(),
@@ -313,7 +315,7 @@ impl BrowserVersionManager {
           _ => {
             return Err(
               format!("Unsupported platform/architecture for Camoufox: {os}/{arch}").into(),
-            )
+            );
           }
         };
 
@@ -322,6 +324,28 @@ impl BrowserVersionManager {
             "https://github.com/daijro/camoufox/releases/download/{version}/camoufox-{version}-{os_name}.{arch_name}.zip"
           ),
           filename: format!("camoufox-{version}-{os_name}.{arch_name}.zip"),
+          is_archive: true,
+        })
+      }
+      "clearcote" => {
+        if os == "macos" {
+          return Err("Clearcote does not publish macOS builds".into());
+        }
+        if arch != "x64" {
+          return Err(format!("Clearcote does not publish {arch} builds").into());
+        }
+        let (suffix, extension) = if os == "windows" {
+          ("windows-x64", "zip")
+        } else if os == "linux" {
+          ("linux-x64", "tar.xz")
+        } else {
+          return Err(format!("Unsupported platform for Clearcote: {os}").into());
+        };
+        Ok(DownloadInfo {
+          url: format!(
+            "https://github.com/clearcotelabs/clearcote-browser/releases/download/{version}/clearcote-{version}-{suffix}.{extension}"
+          ),
+          filename: format!("clearcote-{version}.{extension}"),
           is_archive: true,
         })
       }
@@ -361,6 +385,22 @@ impl BrowserVersionManager {
       .fetch_camoufox_releases_with_caching(no_caching)
       .await?;
     Ok(releases.into_iter().map(|r| r.tag_name).collect())
+  }
+
+  async fn fetch_clearcote_versions(
+    &self,
+    no_caching: bool,
+  ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    let releases = self
+      .api_client
+      .fetch_clearcote_releases_with_caching(no_caching)
+      .await?;
+    Ok(
+      releases
+        .into_iter()
+        .map(|release| release.tag_name)
+        .collect(),
+    )
   }
 }
 
@@ -448,6 +488,21 @@ mod tests {
 
     let unsupported_result = service.get_download_info("testbrowser", "1.0.0");
     assert!(unsupported_result.is_err());
+  }
+
+  #[test]
+  fn clearcote_download_info_uses_github_release_assets() {
+    let service = BrowserVersionManager::instance();
+    let info = service.get_download_info("clearcote", "v0.1.0-pre.23");
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    assert_eq!(info.unwrap().filename, "clearcote-v0.1.0-pre.23.zip");
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    assert_eq!(info.unwrap().filename, "clearcote-v0.1.0-pre.23.tar.xz");
+    #[cfg(not(any(
+      all(target_os = "windows", target_arch = "x86_64"),
+      all(target_os = "linux", target_arch = "x86_64")
+    )))]
+    assert!(info.is_err());
   }
 }
 

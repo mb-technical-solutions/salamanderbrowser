@@ -19,6 +19,7 @@ import {
   LuChevronUp,
   LuDownload,
   LuPencil,
+  LuShield,
   LuTrash2,
   LuUpload,
 } from "react-icons/lu";
@@ -143,7 +144,13 @@ export function ProxyManagementDialog({
     useState(false);
 
   const { storedProxies: rawProxies, proxyUsage, isLoading } = useProxyEvents();
-  const { vpnConfigs, vpnUsage, isLoading: isLoadingVpns } = useVpnEvents();
+  const {
+    vpnConfigs,
+    vpnUsage,
+    error: vpnError,
+    loadVpnConfigs,
+    isLoading: isLoadingVpns,
+  } = useVpnEvents();
 
   // Memoized — without this the derived array gets a new reference on every
   // render, which made the [storedProxies] effect below refire every render
@@ -156,6 +163,13 @@ export function ProxyManagementDialog({
         a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
       ),
     [rawProxies],
+  );
+  const sortedVpnConfigs = useMemo(
+    () =>
+      [...vpnConfigs].sort((a, b) =>
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+      ),
+    [vpnConfigs],
   );
 
   // Load cached check results on mount and when proxies change
@@ -513,7 +527,9 @@ export function ProxyManagementDialog({
         size: 96,
         enableSorting: false,
         header: () => t("common.labels.type"),
-        cell: () => <Badge variant="outline">WG</Badge>,
+        cell: () => (
+          <Badge variant="outline">WG</Badge>
+        ),
       },
       {
         id: "usage",
@@ -595,7 +611,7 @@ export function ProxyManagementDialog({
   );
 
   const vpnsTable = useReactTable({
-    data: vpnConfigs,
+    data: sortedVpnConfigs,
     columns: vpnColumns,
     state: {
       sorting: vpnsSorting,
@@ -932,9 +948,48 @@ export function ProxyManagementDialog({
                     <div className="text-sm text-muted-foreground">
                       {t("vpns.management.loading")}
                     </div>
+                  ) : vpnError ? (
+                    <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
+                      <h3 className="font-medium text-destructive-text">
+                        {t("vpns.management.loadFailed")}
+                      </h3>
+                      <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+                        {vpnError}
+                      </p>
+                      <RippleButton
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => void loadVpnConfigs()}
+                      >
+                        {t("common.buttons.retry")}
+                      </RippleButton>
+                    </div>
                   ) : vpnConfigs.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      {t("vpns.management.noneCreated")}
+                    <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
+                      <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <LuShield className="size-6" />
+                      </div>
+                      <h3 className="font-medium">
+                        {t("vpns.management.emptyTitle")}
+                      </h3>
+                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                        {t("vpns.management.emptyDescription")}
+                      </p>
+                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                        <RippleButton
+                          onClick={() => setShowVpnImportDialog(true)}
+                        >
+                          <LuUpload className="mr-2 size-4" />
+                          {t("vpns.management.importCta")}
+                        </RippleButton>
+                        <RippleButton
+                          variant="outline"
+                          onClick={handleCreateVpn}
+                        >
+                          <GoPlus className="mr-2 size-4" />
+                          {t("vpns.management.createCta")}
+                        </RippleButton>
+                      </div>
                     </div>
                   ) : (
                     <FadingScrollArea
