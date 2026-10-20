@@ -167,6 +167,11 @@
       "clearTrafficSuccess": "流量历史已清除",
       "vpnExtensionWarning": "VPN 扩展警告",
       "vpnExtensionWarningDescription": "当配置文件中存在可改变浏览器流量路径的扩展时，在启动前发出警告。"
+    },
+    "account": {
+      "title": "账户",
+      "signOutDescription": "退出你所在组织的账户。再次使用 Salamander 需要重新登录。",
+      "signOut": "退出登录"
     }
   },
   "header": {
@@ -1861,5 +1866,15 @@
     "vpnExtensionEntry": " {{version}} — {{capability}}、{{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}、{{source}}",
     "scanIncompleteMissing": "此配置文件尚未启动过，因此只能检查由 Salamander 管理的扩展。"
+  },
+  "auth": {
+    "checking": "正在检查你的登录状态…",
+    "signInTitle": "需要登录",
+    "signInTagline": "使用 Salamander 需要通过你所在组织的账号登录。",
+    "signInButton": "登录",
+    "waitingForBrowser": "请在刚打开的浏览器窗口中完成登录…",
+    "cancel": "取消",
+    "retry": "重试",
+    "errorTitle": "无法验证你的登录状态"
   }
 }

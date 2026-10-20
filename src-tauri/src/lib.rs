@@ -10,6 +10,12 @@ use tauri_plugin_log::{Target, TargetKind};
 // Store pending URLs that need to be handled when the window is ready
 static PENDING_URLS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
+/// The OAuth redirect scheme (see `tauri.conf.json`'s
+/// `deep-link.desktop.schemes` and the Authentik provider's Redirect URI).
+/// Kept distinct from the `http`/`https` deep-link registration, which drives
+/// an unrelated "open this URL in a profile" flow.
+const AUTH_CALLBACK_SCHEME: &str = "salamander-auth://";
+
 // Set to true once the user has confirmed they want to quit, so the close
 // interceptor lets the next CloseRequested through instead of looping back
 // to the confirmation dialog.
@@ -55,6 +61,7 @@ fn e2e_automation_profile_dir() -> Option<std::path::PathBuf> {
 mod api_client;
 mod app_auto_updater;
 pub mod app_dirs;
+mod auth;
 mod auto_updater;
 mod browser;
 mod browser_runner;
@@ -101,6 +108,8 @@ pub mod vpn_worker_storage;
 pub mod xray;
 pub mod xray_worker_runner;
 pub mod xray_worker_storage;
+
+use auth::{auth_bootstrap, auth_logout, auth_start_login, AuthManager, AuthStatusDto};
 
 use browser_runner::{
   check_browser_exists, kill_browser_profile, launch_browser_profile, open_url_with_profile,
@@ -531,6 +540,36 @@ async fn handle_url_open(app: tauri::AppHandle, url: String) -> Result<(), Strin
   }
 
   Ok(())
+}
+
+// Called internally for the OAuth redirect deep link
+// (`salamander-auth://callback`). Kept separate from `handle_url_open` so an
+// OAuth callback can never be routed into the "open this URL in a profile"
+// flow that function drives.
+async fn handle_auth_callback_url(app: tauri::AppHandle, url: String) {
+  if let Some(window) = app.get_webview_window("main") {
+    let _ = window.show();
+    let _ = window.set_focus();
+    let _ = window.unminimize();
+  }
+
+  let status = AuthManager::instance().handle_callback(&url).await;
+  if let AuthStatusDto::Error { message } = &status {
+    log::error!("OAuth callback failed: {message}");
+  }
+  if let Err(e) = events::emit("auth-state-changed", status) {
+    log::warn!("Failed to emit auth-state-changed event: {e}");
+  }
+}
+
+/// Routes a URL coming from any deep-link/startup-argv path to the handler
+/// for what it actually is.
+async fn dispatch_opened_url(app: tauri::AppHandle, url: String) {
+  if url.starts_with(AUTH_CALLBACK_SCHEME) {
+    handle_auth_callback_url(app, url).await;
+  } else if let Err(e) = handle_url_open(app, url).await {
+    log::error!("Failed to handle opened URL: {e}");
+  }
 }
 
 /// Preserve structured backend errors and wrap lower-level diagnostics in the
@@ -1288,7 +1327,10 @@ fn urls_from_args<'a>(args: impl IntoIterator<Item = &'a String>) -> Vec<String>
     .into_iter()
     .skip(1)
     .filter_map(|arg| {
-      if arg.starts_with("http://") || arg.starts_with("https://") {
+      if arg.starts_with("http://")
+        || arg.starts_with("https://")
+        || arg.starts_with(AUTH_CALLBACK_SCHEME)
+      {
         return Some(arg.clone());
       }
 
@@ -1396,11 +1438,7 @@ pub fn run_with_builder(
       // whenever Salamander was already open, which is every time after the first.
       for url in urls_from_args(args.iter()) {
         let handle = app_handle.clone();
-        tauri::async_runtime::spawn(async move {
-          if let Err(e) = handle_url_open(handle, url).await {
-            log::error!("Failed to handle a forwarded URL: {e}");
-          }
-        });
+        tauri::async_runtime::spawn(dispatch_opened_url(handle, url));
       }
     },
   ));
@@ -1623,11 +1661,7 @@ pub fn run_with_builder(
               log::info!("Processing deep link URL");
               let handle_clone = handle.clone();
 
-              tauri::async_runtime::spawn(async move {
-                if let Err(e) = handle_url_open(handle_clone, url_string.clone()).await {
-                  log::error!("Failed to handle deep link URL: {e}");
-                }
-              });
+              tauri::async_runtime::spawn(dispatch_opened_url(handle_clone, url_string));
             }
           }
         });
@@ -1637,9 +1671,7 @@ pub fn run_with_builder(
         let handle_clone = handle.clone();
         tauri::async_runtime::spawn(async move {
           log::info!("Processing startup URL from command line");
-          if let Err(e) = handle_url_open(handle_clone, startup_url.clone()).await {
-            log::error!("Failed to handle startup URL: {e}");
-          }
+          dispatch_opened_url(handle_clone, startup_url).await;
         });
       }
 
@@ -1839,9 +1871,7 @@ pub fn run_with_builder(
 
         for url in pending_urls {
           log::info!("Processing pending URL");
-          if let Err(e) = handle_url_open(handle_pending.clone(), url).await {
-            log::error!("Failed to handle pending URL: {e}");
-          }
+          dispatch_opened_url(handle_pending.clone(), url).await;
         }
       });
 
@@ -2088,6 +2118,9 @@ pub fn run_with_builder(
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
+      auth_bootstrap,
+      auth_start_login,
+      auth_logout,
       confirm_quit,
       hide_to_tray,
       update_tray_menu,

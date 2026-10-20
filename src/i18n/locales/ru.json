@@ -174,6 +174,11 @@
       "clearTrafficSuccess": "История трафика очищена",
       "vpnExtensionWarning": "Предупреждение о VPN-расширении",
       "vpnExtensionWarningDescription": "Предупреждать перед запуском, если в профиле есть расширение, способное перенаправить трафик браузера."
+    },
+    "account": {
+      "title": "Аккаунт",
+      "signOutDescription": "Выйти из аккаунта вашей организации. Чтобы снова пользоваться Salamander, нужно будет войти заново.",
+      "signOut": "Выйти"
     }
   },
   "header": {
@@ -1972,5 +1977,15 @@
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
     "scanIncompleteMissing": "Профиль ещё ни разу не запускался, поэтому удалось проверить только расширения, управляемые Salamander."
+  },
+  "auth": {
+    "checking": "Проверка сессии…",
+    "signInTitle": "Требуется вход",
+    "signInTagline": "Для использования Salamander нужно войти через аккаунт вашей организации.",
+    "signInButton": "Войти",
+    "waitingForBrowser": "Завершите вход в открывшемся окне браузера…",
+    "cancel": "Отмена",
+    "retry": "Повторить",
+    "errorTitle": "Не удалось проверить сессию"
   }
 }

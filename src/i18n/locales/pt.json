@@ -167,6 +167,11 @@
       "clearTrafficSuccess": "Histórico de tráfego limpo",
       "vpnExtensionWarning": "Aviso de extensão VPN",
       "vpnExtensionWarningDescription": "Avisar antes de iniciar quando um perfil contiver uma extensão capaz de redirecionar o tráfego do navegador."
+    },
+    "account": {
+      "title": "Conta",
+      "signOutDescription": "Saia da conta da sua organização. Você precisará entrar novamente para usar o Salamander.",
+      "signOut": "Sair"
     }
   },
   "header": {
@@ -1910,5 +1915,15 @@
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
     "scanIncompleteMissing": "Este perfil ainda não foi iniciado, portanto só foi possível verificar as extensões gerenciadas pelo Salamander."
+  },
+  "auth": {
+    "checking": "Verificando sua sessão…",
+    "signInTitle": "Login necessário",
+    "signInTagline": "O Salamander exige login com a conta da sua organização.",
+    "signInButton": "Entrar",
+    "waitingForBrowser": "Conclua o login na janela do navegador que acabou de abrir…",
+    "cancel": "Cancelar",
+    "retry": "Tentar novamente",
+    "errorTitle": "Não foi possível verificar sua sessão"
   }
 }

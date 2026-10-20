@@ -167,6 +167,11 @@
       "clearTrafficSuccess": "Trafik geçmişi temizlendi",
       "vpnExtensionWarning": "VPN uzantısı uyarısı",
       "vpnExtensionWarningDescription": "Bir profil, tarayıcı trafiğini yeniden yönlendirebilecek bir uzantı içerdiğinde başlatmadan önce uyarır."
+    },
+    "account": {
+      "title": "Hesap",
+      "signOutDescription": "Kuruluşunuzun hesabından çıkış yapın. Salamander'ı kullanmak için tekrar giriş yapmanız gerekir.",
+      "signOut": "Çıkış yap"
     }
   },
   "header": {
@@ -1861,5 +1866,15 @@
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
     "scanIncompleteMissing": "Bu profil henüz başlatılmadığından yalnızca Salamander tarafından yönetilen uzantılar denetlenebildi."
+  },
+  "auth": {
+    "checking": "Oturumunuz kontrol ediliyor…",
+    "signInTitle": "Giriş gerekli",
+    "signInTagline": "Salamander'ı kullanmak için kuruluşunuzun hesabıyla giriş yapmanız gerekir.",
+    "signInButton": "Giriş yap",
+    "waitingForBrowser": "Az önce açılan tarayıcı penceresinde girişi tamamlayın…",
+    "cancel": "İptal",
+    "retry": "Tekrar dene",
+    "errorTitle": "Oturumunuz doğrulanamadı"
   }
 }

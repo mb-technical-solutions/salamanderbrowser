@@ -116,6 +116,7 @@ export function SettingsDialog({
   const [isSettingDefault, setIsSettingDefault] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [isClearingTraffic, setIsClearingTraffic] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [permissions, setPermissions] = useState<PermissionInfo[]>([]);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [requestingPermission, setRequestingPermission] =
@@ -1358,6 +1359,30 @@ export function SettingsDialog({
                   <p className="mt-2 text-xs text-muted-foreground">
                     {t("settings.privacy.clearTrafficDescription")}
                   </p>
+                </div>
+              </div>
+
+              {/* Account Section */}
+              <div className="space-y-4 border-t pt-4">
+                <Label className="text-base font-medium">
+                  {t("settings.account.title")}
+                </Label>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    {t("settings.account.signOutDescription")}
+                  </p>
+                  <LoadingButton
+                    isLoading={isSigningOut}
+                    variant="outline"
+                    onClick={() => {
+                      setIsSigningOut(true);
+                      invoke("auth_logout")
+                        .catch((err: unknown) => showErrorToast(String(err)))
+                        .finally(() => setIsSigningOut(false));
+                    }}
+                  >
+                    {t("settings.account.signOut")}
+                  </LoadingButton>
                 </div>
               </div>
 

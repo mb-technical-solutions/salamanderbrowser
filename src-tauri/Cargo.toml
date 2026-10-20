@@ -46,7 +46,7 @@ log = "0.4"
 env_logger = "0.11"
 
 directories = "6"
-reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "stream", "socks", "charset", "http2", "system-proxy"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "form", "stream", "socks", "charset", "http2", "system-proxy"] }
 tokio = { version = "1", features = ["full", "sync"] }
 tokio-util = "0.7"
 sysinfo = "0.39"
@@ -106,6 +106,7 @@ image = "0.25"
 dirs = "6"
 crossbeam-channel = "0.5"
 sys-locale = "0.3"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31", features = ["signal", "process"] }

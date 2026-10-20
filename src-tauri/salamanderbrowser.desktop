@@ -11,6 +11,6 @@ Icon=salamanderbrowser
 StartupNotify=true
 NoDisplay=false
 Categories=Network;WebBrowser;
-MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;application/xhtml+xml;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/salamander-auth;text/html;application/xhtml+xml;
 StartupWMClass=salamanderbrowser
 Keywords=browser;web;internet;productivity;

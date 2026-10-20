@@ -37,6 +37,14 @@
 				<string>https</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Salamander sign-in callback</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>salamander-auth</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

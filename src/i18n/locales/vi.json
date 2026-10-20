@@ -167,6 +167,11 @@
       "clearTrafficSuccess": "Đã xóa lịch sử lưu lượng",
       "vpnExtensionWarning": "Cảnh báo tiện ích VPN",
       "vpnExtensionWarningDescription": "Cảnh báo trước khi khởi chạy khi hồ sơ có tiện ích có thể định tuyến lại lưu lượng của trình duyệt."
+    },
+    "account": {
+      "title": "Tài khoản",
+      "signOutDescription": "Đăng xuất khỏi tài khoản tổ chức của bạn. Bạn sẽ cần đăng nhập lại để dùng Salamander.",
+      "signOut": "Đăng xuất"
     }
   },
   "header": {
@@ -1861,5 +1866,15 @@
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
     "scanIncompleteMissing": "Hồ sơ này chưa từng được khởi chạy nên chỉ có thể kiểm tra các tiện ích do Salamander quản lý."
+  },
+  "auth": {
+    "checking": "Đang kiểm tra phiên đăng nhập…",
+    "signInTitle": "Yêu cầu đăng nhập",
+    "signInTagline": "Salamander yêu cầu đăng nhập bằng tài khoản tổ chức của bạn.",
+    "signInButton": "Đăng nhập",
+    "waitingForBrowser": "Hoàn tất đăng nhập trong cửa sổ trình duyệt vừa mở…",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "errorTitle": "Không thể xác minh phiên đăng nhập"
   }
 }

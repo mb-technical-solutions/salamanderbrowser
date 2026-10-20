@@ -167,6 +167,11 @@
       "clearTrafficSuccess": "トラフィック履歴を消去しました",
       "vpnExtensionWarning": "VPN拡張機能の警告",
       "vpnExtensionWarningDescription": "ブラウザーの通信を経路変更できる拡張機能がプロファイルに含まれる場合、起動前に警告します。"
+    },
+    "account": {
+      "title": "アカウント",
+      "signOutDescription": "組織のアカウントからサインアウトします。Salamanderを使うには再度サインインが必要です。",
+      "signOut": "サインアウト"
     }
   },
   "header": {
@@ -1861,5 +1866,15 @@
     "vpnExtensionEntry": " {{version}}（{{capability}}、{{source}}）",
     "vpnExtensionEntryNoVersion": "（{{capability}}、{{source}}）",
     "scanIncompleteMissing": "このプロファイルはまだ起動されていないため、Salamanderが管理する拡張機能のみ確認できました。"
+  },
+  "auth": {
+    "checking": "セッションを確認しています…",
+    "signInTitle": "サインインが必要です",
+    "signInTagline": "Salamanderの利用には組織アカウントでのサインインが必要です。",
+    "signInButton": "サインイン",
+    "waitingForBrowser": "開いたブラウザウィンドウでサインインを完了してください…",
+    "cancel": "キャンセル",
+    "retry": "再試行",
+    "errorTitle": "セッションを確認できませんでした"
   }
 }

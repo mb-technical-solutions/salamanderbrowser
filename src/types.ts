@@ -454,3 +454,13 @@ export interface PreLaunchChecks {
 export type SetDefaultBrowserOutcome =
   | { status: "set" }
   | { status: "awaitingSystemSettings" };
+
+/**
+ * What the auth gate should show. Returned by `auth_bootstrap`, and sent as
+ * the payload of the `auth-state-changed` event once a deep-link sign-in
+ * callback has been processed on the Rust side.
+ */
+export type AuthStatusDto =
+  | { status: "authenticated"; username: string | null; email: string | null }
+  | { status: "loginRequired" }
+  | { status: "error"; message: string };

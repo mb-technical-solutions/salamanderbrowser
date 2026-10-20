@@ -1048,6 +1048,10 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
+    "name": "dbus-secret-service",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
     "name": "decimal.js-light",
     "license": "MIT"
   },
@@ -1744,6 +1748,10 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
+    "name": "keyring",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
     "name": "lazy_static",
     "license": "Apache-2.0 OR MIT"
   },
@@ -1944,6 +1952,10 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
+    "name": "num",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
     "name": "num-bigint",
     "license": "Apache-2.0 OR MIT"
   },
@@ -1961,6 +1973,10 @@
   },
   {
     "name": "num-integer",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
+    "name": "num-iter",
     "license": "Apache-2.0 OR MIT"
   },
   {
@@ -2492,6 +2508,10 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
+    "name": "secret-service",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
     "name": "security-framework",
     "license": "Apache-2.0 OR MIT"
   },
@@ -2673,6 +2693,10 @@
   },
   {
     "name": "stable_deref_trait",
+    "license": "Apache-2.0 OR MIT"
+  },
+  {
+    "name": "static_assertions",
     "license": "Apache-2.0 OR MIT"
   },
   {
@@ -3254,6 +3278,10 @@
   {
     "name": "xattr",
     "license": "Apache-2.0 OR MIT"
+  },
+  {
+    "name": "xdg-home",
+    "license": "MIT"
   },
   {
     "name": "Xray-core",
